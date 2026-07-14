@@ -14,20 +14,24 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import PaginationBlock from "./pagination-block";
+import Link from "next/link"
 
-const workspaces = Array.from({ length: 48 }, (_, i) => ({
-  id: i + 1,
-  title: `Project ${["Alpha", "Beta", "Gamma", "Delta", "Echo", "Foxtrot", "Hotel", "IQ", "Jade", "Kappa"][i % 10]}`,
-  author: ["Aurelio", "Sari", "Budi", "Citra", "Dewi", "Eko", "Fajar", "Gita"][i % 8],
-  desc: ["Frontend revamp", "API migration", "Design system", "Mobile app", "Data pipeline", "Docs portal", "Admin panel", "Marketing site"][i % 8],
-}));
+const workspaces = [
+  { id: 1, title: "Project Alpha", author: "Aurelio", desc: "Frontend revamp" },
+  { id: 2, title: "Project Beta", author: "Sari", desc: "API migration" },
+  { id: 3, title: "Project Gamma", author: "Budi", desc: "Design system" },
+  { id: 4, title: "Project Delta", author: "Citra", desc: "Mobile app" },
+  { id: 5, title: "Project Echo", author: "Dewi", desc: "Data pipeline" },
+  { id: 6, title: "Project Foxtrot", author: "Eko", desc: "Docs portal" },
+];
 
 export default function WorkspaceList() {
   return (
     <>
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {workspaces.length !== 0 ? workspaces.map((w) => (
-        <Card key={w.id}>
+        <Link href="/check" key={w.id} className="contents">
+        <Card className="hover:cursor-pointer">
           <CardHeader>
             <CardTitle>{w.title}</CardTitle>
             <CardDescription>{w.desc}</CardDescription>
@@ -51,6 +55,7 @@ export default function WorkspaceList() {
             <p className="text-muted-foreground text-sm">BY {w.author}</p>
           </CardContent>
         </Card>
+        </Link>
       )) : (
         <div className="flex justify-center items-center">
             <h4 className="text-lg text-gray-500">No Workspaces showed</h4>
