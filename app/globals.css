@@ -131,3 +131,92 @@
     @apply font-sans;
   }
 }
+
+.rich-editor .ProseMirror {
+  @apply min-h-[calc(100dvh-12rem)] px-0 py-6 outline-none;
+}
+
+.rich-editor .ProseMirror h1 {
+  @apply text-3xl font-bold tracking-tight mt-8 mb-3;
+}
+
+.rich-editor .ProseMirror h2 {
+  @apply text-2xl font-semibold tracking-tight mt-6 mb-2;
+}
+
+.rich-editor .ProseMirror h3 {
+  @apply text-xl font-semibold tracking-tight mt-5 mb-1;
+}
+
+.rich-editor .ProseMirror p {
+  @apply text-base leading-7 my-1;
+}
+
+.rich-editor .ProseMirror ul,
+.rich-editor .ProseMirror ol {
+  @apply pl-6 my-2 space-y-1;
+}
+
+.rich-editor .ProseMirror ul {
+  @apply list-disc;
+}
+
+.rich-editor .ProseMirror ol {
+  @apply list-decimal;
+}
+
+.rich-editor .ProseMirror li {
+  @apply text-base leading-7;
+}
+
+.rich-editor .ProseMirror ul[data-type="taskList"] {
+  @apply list-none pl-0 space-y-1;
+}
+
+.rich-editor .ProseMirror ul[data-type="taskList"] li {
+  @apply flex items-start gap-3;
+}
+
+.rich-editor .ProseMirror ul[data-type="taskList"] li > label {
+  @apply flex-none mt-1;
+}
+
+.rich-editor .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
+  @apply size-4 accent-primary cursor-pointer;
+}
+
+.rich-editor .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div {
+  @apply line-through text-muted-foreground;
+}
+
+.rich-editor .ProseMirror ul[data-type="taskList"] li > div {
+  @apply flex-1;
+}
+
+.rich-editor .ProseMirror blockquote {
+  @apply border-l-[3px] border-primary/40 pl-5 my-3 text-[15px] leading-7 text-muted-foreground;
+}
+
+.rich-editor .ProseMirror pre {
+  @apply bg-muted rounded-xl p-4 my-3 overflow-x-auto;
+}
+
+.rich-editor .ProseMirror pre code {
+  @apply text-sm font-mono bg-transparent p-0 leading-relaxed;
+}
+
+.rich-editor .ProseMirror code {
+  @apply bg-muted rounded-md px-1.5 py-0.5 text-sm font-mono text-[unset];
+}
+
+.rich-editor .ProseMirror hr {
+  @apply border-border/50 my-6;
+}
+
+.rich-editor .ProseMirror a {
+  @apply text-primary underline underline-offset-2 cursor-pointer hover:text-primary/80;
+}
+
+.rich-editor .ProseMirror p.is-editor-empty:first-child::before {
+  @apply text-muted-foreground/40 pointer-events-none float-left h-0 content-[attr(data-placeholder)];
+}
