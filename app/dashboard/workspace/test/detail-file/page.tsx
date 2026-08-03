@@ -3,6 +3,14 @@
 import { useState, useRef } from "react"
 import { RichEditor } from "@/components/dashboard/rich-editor"
 import { Button } from "@/components/ui/button"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import { ArrowLeft, Save } from "lucide-react"
 import Link from "next/link"
 
@@ -18,7 +26,29 @@ export default function DetailFilePage() {
         </Button>
         <div className="flex-1 min-w-0">
           <h1 className="text-sm font-semibold truncate">Untitled Document</h1>
-          <p className="text-xs text-muted-foreground truncate">Workspace / Test</p>
+          <Breadcrumb>
+            <BreadcrumbList className="flex-nowrap">
+              <BreadcrumbItem>
+                <BreadcrumbLink render={<Link href="/dashboard" />}>
+                  Dashboard
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink
+                  render={<Link href="/dashboard/workspace/test" />}
+                >
+                  Workspace
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage className="truncate">
+                  Untitled Document
+                </BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
         </div>
         <Button size="sm" onClick={() => console.log("Saved:", content)}>
           <Save />
