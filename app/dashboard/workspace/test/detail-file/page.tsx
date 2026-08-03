@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { RichEditor } from "@/components/rich-editor"
+import { RichEditor } from "@/components/dashboard/rich-editor"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Save } from "lucide-react"
 import Link from "next/link"
