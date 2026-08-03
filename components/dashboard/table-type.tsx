@@ -1,6 +1,11 @@
 "use client"
 
-import { useRef, useState, type ComponentProps, type ReactNode } from "react"
+import {
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react"
 import {
   ALargeSmall,
   Calendar,
@@ -10,8 +15,10 @@ import {
   Hash,
   Link2,
   Paperclip,
+  Pencil,
   Plus,
-  X,
+  Trash2,
+  Upload,
   type LucideIcon,
 } from "lucide-react"
 import { Popover } from "@base-ui/react/popover"
@@ -38,7 +45,6 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu"
 
-// --- Model -------------------------------------------------------------------
 
 type ColumnType = "text" | "number" | "url" | "date" | "status" | "file"
 
@@ -61,7 +67,16 @@ type Column =
 /** Column narrowed to the status variant (carries an options list). */
 type StatusColumn = Extract<Column, { type: "status" }>
 
-type FileAttachment = { id: string; name: string; type: string; url: string }
+type FileAttachment = {
+  id: string
+  /** Display name — renameable so long URLs/filenames stay hidden. */
+  name: string
+  /** MIME type (uploaded files only; empty for links). */
+  type: string
+  /** Blob object URL for uploads, external URL for links. */
+  url: string
+  kind: "file" | "link"
+}
 
 type CellValue = string | FileAttachment[]
 
@@ -159,10 +174,28 @@ const coerceCell = (
   return typeof value === "string" ? value : ""
 }
 
+/** Release an attachment's object URL if it is a local blob (links need none). */
+const revokeAttachmentUrl = (attachment: FileAttachment) => {
+  if (attachment.url.startsWith("blob:")) URL.revokeObjectURL(attachment.url)
+}
+
 /** Release object URLs held by a cell value (no-op for non-file values). */
 const revokeAttachments = (value: CellValue | undefined) => {
-  if (Array.isArray(value)) {
-    value.forEach((attachment) => URL.revokeObjectURL(attachment.url))
+  if (Array.isArray(value)) value.forEach(revokeAttachmentUrl)
+}
+
+/** Normalize a user-typed link into a URL + short display name (its hostname). */
+const parseLinkUrl = (raw: string): { url: string; name: string } | null => {
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  const withProtocol = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`
+  try {
+    const parsed = new URL(withProtocol)
+    return { url: parsed.href, name: parsed.hostname }
+  } catch {
+    return null
   }
 }
 
@@ -225,7 +258,7 @@ const INITIAL_ROWS: Row[] = [
   },
 ]
 
-// --- Shared styles -----------------------------------------------------------
+// Shared styles
 
 /** Narrow leading column that holds the row action menu. */
 const GUTTER_CELL_CLASS = "w-8"
@@ -252,7 +285,16 @@ const EMPTY_LABEL_CLASS =
 const NUMBER_INPUT_CLASS =
   "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
 
-// --- State -------------------------------------------------------------------
+/** Shared floating panel chrome (status options, attachment picker). */
+const POPUP_CLASS =
+  "w-56 rounded-lg bg-popover/80 p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 backdrop-blur-xl outline-none duration-100 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95"
+
+const POPUP_POSITIONER_CLASS = "isolate z-50 outline-none"
+
+/** Action row inside a popup panel. */
+const POPUP_ITEM_CLASS =
+  "flex h-7 w-full items-center gap-2 rounded-md px-2 text-xs transition-colors hover:bg-accent"
+
 
 function useEditableTable() {
   const [columns, setColumns] = useState<Column[]>(INITIAL_COLUMNS)
@@ -482,7 +524,7 @@ function ColumnHeaderCell({
   const { label: typeLabel, icon: TypeIcon } = COLUMN_TYPES[column.type]
 
   return (
-    <TableHead className={cn(DATA_CELL_CLASS, "group h-9")}>
+    <TableHead className={cn(DATA_CELL_CLASS, "group z-20 h-9")}>
       <div className="flex h-9 items-center gap-1.5 pr-1 pl-2">
         <TypeIcon className="size-3.5 shrink-0 text-muted-foreground/70" />
         <EditableInput
@@ -490,7 +532,7 @@ function ColumnHeaderCell({
           onChange={(event) => onRename(event.target.value)}
           aria-label="Column name"
           placeholder="Untitled"
-          className="px-0 font-medium text-muted-foreground placeholder:text-muted-foreground/50"
+          className="h-7 px-1 font-medium text-muted-foreground placeholder:text-muted-foreground/50 focus-visible:bg-muted/60 focus-visible:ring-0"
         />
         <ActionsMenu
           triggerLabel={`Actions for column ${column.title || "Untitled"}`}
@@ -528,7 +570,7 @@ function ColumnHeaderCell({
 
 function AddColumnCell({ onAdd }: { onAdd: () => void }) {
   return (
-    <TableHead className={cn(DATA_CELL_CLASS, "h-9 w-9 min-w-9")}>
+    <TableHead className={cn(DATA_CELL_CLASS, "z-20 h-9 w-9 min-w-9")}>
       <div className="flex h-9 items-center justify-center">
         <button
           type="button"
@@ -542,8 +584,6 @@ function AddColumnCell({ onAdd }: { onAdd: () => void }) {
     </TableHead>
   )
 }
-
-// --- Cell editors ------------------------------------------------------------
 
 type CellEditorProps = {
   column: Column
@@ -635,53 +675,172 @@ type FileCellProps = {
   onChange: (value: FileAttachment[]) => void
 }
 
-/** Files & media editor: attachment chips with image thumbnails and a picker. */
+/** Files & media editor: attachment chips plus an upload/link add popover. */
 function FileCell({ value, label, onChange }: FileCellProps) {
   const pickerRef = useRef<HTMLInputElement>(null)
+  const [addOpen, setAddOpen] = useState(false)
+  const [mode, setMode] = useState<"menu" | "link">("menu")
+  const [linkUrl, setLinkUrl] = useState("")
+  const [linkError, setLinkError] = useState(false)
+
+  const resetAddFlow = () => {
+    setMode("menu")
+    setLinkUrl("")
+    setLinkError(false)
+  }
 
   const addFiles = (files: FileList | null) => {
     if (!files?.length) return
-    const attachments = Array.from(files, (file) => ({
+    const attachments: FileAttachment[] = Array.from(files, (file) => ({
       id: newId(),
       name: file.name,
       type: file.type,
       url: URL.createObjectURL(file),
+      kind: "file",
     }))
     onChange([...value, ...attachments])
   }
 
+  const addLink = () => {
+    const parsed = parseLinkUrl(linkUrl)
+    if (!parsed) {
+      setLinkError(true)
+      return
+    }
+    onChange([
+      ...value,
+      {
+        id: newId(),
+        name: parsed.name,
+        type: "",
+        url: parsed.url,
+        kind: "link",
+      },
+    ])
+    resetAddFlow()
+    setAddOpen(false)
+  }
+
+  const renameFile = (id: string, name: string) => {
+    onChange(value.map((file) => (file.id === id ? { ...file, name } : file)))
+  }
+
   const removeFile = (id: string) => {
     const target = value.find((file) => file.id === id)
-    if (target) URL.revokeObjectURL(target.url)
+    if (target) revokeAttachmentUrl(target)
     onChange(value.filter((file) => file.id !== id))
   }
 
   return (
-    <div className="flex min-h-9 flex-wrap items-center gap-1 px-2 py-1">
-      {value.map((file) => (
-        <AttachmentChip
-          key={file.id}
-          file={file}
-          onRemove={() => removeFile(file.id)}
-        />
-      ))}
+    // Rows are fixed-height for virtualization; chips stay on one line and
+    // clip instead of wrapping (Notion-style single-line cells).
+    <div className="flex h-9 items-center gap-1 px-2">
+      {value.length > 0 ? (
+        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+          {value.map((file) => (
+            <AttachmentChip
+              key={file.id}
+              file={file}
+              onRename={(name) => renameFile(file.id, name)}
+              onRemove={() => removeFile(file.id)}
+            />
+          ))}
+        </div>
+      ) : null}
 
-      <button
-        type="button"
-        onClick={() => pickerRef.current?.click()}
-        aria-label={label}
-        className={
-          value.length === 0
-            ? "flex h-7 w-full items-center px-1 text-left text-sm"
-            : cn(ICON_BUTTON_CLASS, REVEAL_ON_HOVER_CLASS)
-        }
+      <Popover.Root
+        open={addOpen}
+        onOpenChange={(next) => {
+          if (!next) resetAddFlow()
+          setAddOpen(next)
+        }}
       >
-        {value.length === 0 ? (
-          <span className={EMPTY_LABEL_CLASS}>Empty</span>
-        ) : (
-          <Plus className="size-4" />
-        )}
-      </button>
+        <Popover.Trigger
+          aria-label={label}
+          className={
+            value.length === 0
+              ? "flex h-7 w-full items-center px-1 text-left text-sm"
+              : cn(ICON_BUTTON_CLASS, REVEAL_ON_HOVER_CLASS, "shrink-0")
+          }
+        >
+          {value.length === 0 ? (
+            <span className={EMPTY_LABEL_CLASS}>Empty</span>
+          ) : (
+            <Plus className="size-4" />
+          )}
+        </Popover.Trigger>
+
+        <Popover.Portal>
+          <Popover.Positioner
+            side="bottom"
+            align="start"
+            sideOffset={4}
+            className={POPUP_POSITIONER_CLASS}
+          >
+            <Popover.Popup className={POPUP_CLASS}>
+              {mode === "menu" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddOpen(false)
+                      pickerRef.current?.click()
+                    }}
+                    className={POPUP_ITEM_CLASS}
+                  >
+                    <Upload className="size-3.5" />
+                    Upload file
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("link")}
+                    className={POPUP_ITEM_CLASS}
+                  >
+                    <Link2 className="size-3.5" />
+                    Embed link
+                  </button>
+                </>
+              ) : (
+                <div>
+                  <div className="flex items-center gap-1">
+                    <input
+                      autoFocus
+                      value={linkUrl}
+                      onChange={(event) => {
+                        setLinkUrl(event.target.value)
+                        setLinkError(false)
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") addLink()
+                      }}
+                      placeholder="https://..."
+                      aria-label="Link URL"
+                      aria-invalid={linkError}
+                      className={cn(
+                        "h-7 flex-1 rounded-md bg-muted px-2 text-xs outline-none placeholder:text-muted-foreground/70 focus-visible:ring-1 focus-visible:ring-ring",
+                        linkError && "ring-1 ring-destructive"
+                      )}
+                    />
+                    <button
+                      type="button"
+                      onClick={addLink}
+                      disabled={!linkUrl.trim()}
+                      className="h-7 rounded-md bg-primary px-2 text-xs font-medium text-primary-foreground transition-opacity disabled:opacity-50"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {linkError ? (
+                    <p className="px-1 pt-1 text-[0.6875rem] text-destructive">
+                      Enter a valid URL
+                    </p>
+                  ) : null}
+                </div>
+              )}
+            </Popover.Popup>
+          </Popover.Positioner>
+        </Popover.Portal>
+      </Popover.Root>
 
       <input
         ref={pickerRef}
@@ -699,17 +858,31 @@ function FileCell({ value, label, onChange }: FileCellProps) {
   )
 }
 
-function AttachmentChip({
-  file,
-  onRemove,
-}: {
+type AttachmentChipProps = {
   file: FileAttachment
+  onRename: (name: string) => void
   onRemove: () => void
-}) {
-  const isImage = file.type.startsWith("image/")
+}
+
+function AttachmentChip({ file, onRename, onRemove }: AttachmentChipProps) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(file.name)
+
+  const isImage = file.kind === "file" && file.type.startsWith("image/")
+
+  const commitRename = () => {
+    const name = draft.trim()
+    if (name) onRename(name)
+    setEditing(false)
+  }
+
+  const cancelRename = () => {
+    setDraft(file.name)
+    setEditing(false)
+  }
 
   return (
-    <span className="group/chip flex h-6 max-w-44 items-center gap-1.5 rounded-md bg-muted pr-1 pl-1.5 text-xs">
+    <span className="group/chip flex h-6 max-w-44 shrink-0 items-center gap-1.5 rounded-md bg-muted pr-1 pl-1.5 text-xs">
       {isImage ? (
         // Object URLs can't go through next/image; a plain img is intentional.
         // eslint-disable-next-line @next/next/no-img-element
@@ -718,25 +891,60 @@ function AttachmentChip({
           alt=""
           className="size-4 shrink-0 rounded-sm object-cover"
         />
+      ) : file.kind === "link" ? (
+        <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
       ) : (
         <File className="size-3.5 shrink-0 text-muted-foreground" />
       )}
-      <a
-        href={file.url}
-        target="_blank"
-        rel="noreferrer"
-        className="truncate hover:underline"
-      >
-        {file.name}
-      </a>
-      <button
-        type="button"
-        onClick={onRemove}
-        aria-label={`Remove ${file.name}`}
-        className="shrink-0 rounded-sm text-muted-foreground opacity-0 transition-opacity group-hover/chip:opacity-100 hover:text-foreground focus-visible:opacity-100"
-      >
-        <X className="size-3" />
-      </button>
+
+      {editing ? (
+        <input
+          autoFocus
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={commitRename}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") commitRename()
+            if (event.key === "Escape") cancelRename()
+          }}
+          aria-label={`Rename ${file.name}`}
+          size={Math.min(Math.max(draft.length, 1), 24)}
+          className="h-5 max-w-36 rounded-sm bg-background px-0.5 text-xs outline-none ring-1 ring-ring/70"
+        />
+      ) : (
+        <a
+          href={file.url}
+          target="_blank"
+          rel="noreferrer"
+          className="truncate hover:underline"
+        >
+          {file.name}
+        </a>
+      )}
+
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          aria-label={`Actions for ${file.name}`}
+          className="shrink-0 rounded-sm text-muted-foreground opacity-0 transition-opacity group-hover/chip:opacity-100 hover:text-foreground focus-visible:opacity-100 data-popup-open:opacity-100"
+        >
+          <EllipsisVertical className="size-3" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuItem
+            onClick={() => {
+              setDraft(file.name)
+              setEditing(true)
+            }}
+          >
+            <Pencil />
+            Rename
+          </DropdownMenuItem>
+          <DropdownMenuItem variant="destructive" onClick={onRemove}>
+            <Trash2 />
+            Remove
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </span>
   )
 }
@@ -834,6 +1042,7 @@ function StatusCell({
 
   const select = (optionId: string) => {
     onChange(optionId)
+    setQuery("")
     setOpen(false)
   }
 
@@ -865,9 +1074,9 @@ function StatusCell({
           side="bottom"
           align="start"
           sideOffset={4}
-          className="isolate z-50 outline-none"
+          className={POPUP_POSITIONER_CLASS}
         >
-          <Popover.Popup className="w-56 rounded-lg bg-popover/80 p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 backdrop-blur-xl outline-none duration-100 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95">
+          <Popover.Popup className={POPUP_CLASS}>
             <div className="p-1">
               <input
                 autoFocus
@@ -884,7 +1093,7 @@ function StatusCell({
               />
             </div>
 
-            <div className="max-h-48 overflow-y-auto p-1">
+            <div className="max-h-48 overflow-y-auto overscroll-y-contain p-1">
               {filtered.map((option) => (
                 <div key={option.id} className="group/option flex items-center">
                   <button
@@ -979,14 +1188,18 @@ function AddRowRow({ colSpan, onAdd }: { colSpan: number; onAdd: () => void }) {
   return (
     <TableRow className="hover:bg-transparent">
       <TableCell colSpan={colSpan} className="p-0">
-        <button
-          type="button"
-          onClick={onAdd}
-          className="flex h-9 w-full items-center gap-1.5 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
-        >
-          <Plus className="size-4" />
-          New
-        </button>
+        {/* Content-width button: the rest of the row stays inert, so users
+            can't add a row by accidentally clicking the empty space. */}
+        <div className="flex px-1 py-1">
+          <button
+            type="button"
+            onClick={onAdd}
+            className="flex h-7 items-center gap-1.5 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+          >
+            <Plus className="size-4" />
+            New
+          </button>
+        </div>
       </TableCell>
     </TableRow>
   )
@@ -1009,15 +1222,19 @@ export default function TableType() {
   } = useEditableTable()
 
   return (
-    <div className="overflow-hidden rounded-lg border bg-background">
+    <div className="overflow-hidden border bg-background">
       {/* `min-w-max` lets the table outgrow its container so it scrolls
           horizontally inside the container instead of squeezing columns
-          or pushing the dashboard root. */}
-      <Table className="min-w-max text-sm">
-        <TableHeader>
+          or pushing the dashboard root. The container is also capped
+          vertically so long tables scroll in place (not the page). */}
+      <Table
+        className="min-w-max text-sm"
+        containerClassName="max-h-[70vh] overscroll-y-contain"
+      >
+        <TableHeader className="[&_th]:sticky [&_th]:top-0 [&_th]:bg-background">
           <TableRow className="hover:bg-transparent">
             <TableHead
-              className={cn(GUTTER_CELL_CLASS, "h-9 px-0")}
+              className={cn(GUTTER_CELL_CLASS, "z-20 h-9 px-0")}
               aria-hidden="true"
             />
 
