@@ -1,9 +1,20 @@
 "use client"
 
+import type { LucideIcon } from "lucide-react"
+import {
+  CalendarDays,
+  Columns3,
+  FileText,
+  FolderKanban,
+  LayoutDashboard,
+  Table2,
+} from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -11,105 +22,136 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
+  SidebarRail,
 } from "@/components/ui/sidebar"
-import {
-  Calendar,
-  Inbox,
-  MessageSquare,
-  Projector,
-  Settings,
-  Users,
-} from "lucide-react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import type { ProjectType } from "@/features/project/types"
 
-const navItems = [
-  { title: "Workspaces", icon: Projector, url: "/dashboard" },
-  { title: "Tasks", icon: Inbox, url: "/dashboard/tasks" },
-  { title: "Team", icon: Users, url: "/dashboard/team" },
-  { title: "Calendar", icon: Calendar, url: "/dashboard/calendar" },
-  { title: "Messages", icon: MessageSquare, url: "/dashboard/messages" },
-]
+const PROJECT_TYPE_ICONS: Record<ProjectType, LucideIcon> = {
+  document: FileText,
+  kanban: Columns3,
+  table: Table2,
+  calendar: CalendarDays,
+}
 
-interface RecentProject {
+interface SidebarWorkspace {
   title: string
   url: string
 }
 
-interface AppSidebarProps {
-  recentProjects: RecentProject[]
+interface SidebarProject {
+  title: string
+  type: ProjectType
+  url: string
 }
 
-export function AppSidebar({ recentProjects }: AppSidebarProps) {
+interface AppSidebarProps {
+  workspace: SidebarWorkspace | null
+  projects: SidebarProject[]
+}
+
+export function AppSidebar({ workspace, projects }: AppSidebarProps) {
   const pathname = usePathname()
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
+      <SidebarHeader className="border-b border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" render={<Link href="/dashboard" />}>
-              <span className="font-semibold">ProjePlano</span>
+            <SidebarMenuButton
+              size="lg"
+              tooltip="ProjePlano"
+              render={
+                <Link href="/dashboard" aria-label="ProjePlano dashboard" />
+              }
+            >
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-xs font-semibold text-sidebar-primary-foreground">
+                P
+              </span>
+              <span className="grid min-w-0 flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
+                <span className="truncate text-sm font-semibold">
+                  ProjePlano
+                </span>
+                <span className="truncate text-[10px] text-sidebar-foreground/60">
+                  Project workspace
+                </span>
+              </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
+
+      <SidebarContent className="py-1">
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    render={<Link href={item.url} />}
-                    tooltip={item.title}
-                    isActive={pathname === item.url}
-                  >
-                    <item.icon />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              <SidebarNavigationItem
+                title="Overview"
+                url="/dashboard"
+                icon={LayoutDashboard}
+                isActive={pathname === "/dashboard"}
+              />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        <SidebarSeparator />
-        <SidebarGroup>
-          <SidebarGroupLabel>Recent Projects</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {recentProjects.map((project) => (
-                <SidebarMenuItem key={project.title}>
-                  <SidebarMenuButton
-                    render={<Link href={project.url} />}
-                    tooltip={project.title}
+
+        {workspace ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>{workspace.title}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarNavigationItem
+                  title="Workspace overview"
+                  url={workspace.url}
+                  icon={FolderKanban}
+                  isActive={pathname === workspace.url}
+                />
+                {projects.map((project) => (
+                  <SidebarNavigationItem
+                    key={project.url}
+                    title={project.title}
+                    url={project.url}
+                    icon={PROJECT_TYPE_ICONS[project.type]}
                     isActive={pathname === project.url}
-                  >
-                    <Projector />
-                    <span>{project.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                  />
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
       </SidebarContent>
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              render={<Link href="/dashboard/settings" />}
-              tooltip="Settings"
-              isActive={pathname === "/dashboard/settings"}
-            >
-              <Settings />
-              <span>Settings</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
+
+      <SidebarRail />
     </Sidebar>
+  )
+}
+
+function SidebarNavigationItem({
+  icon: Icon,
+  isActive,
+  title,
+  url,
+}: {
+  icon: LucideIcon
+  isActive: boolean
+  title: string
+  url: string
+}) {
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        tooltip={title}
+        isActive={isActive}
+        render={
+          <Link
+            href={url}
+            aria-current={isActive ? "page" : undefined}
+          />
+        }
+      >
+        <Icon aria-hidden="true" />
+        <span>{title}</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
   )
 }

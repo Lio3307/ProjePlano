@@ -1,9 +1,9 @@
 import { EllipsisVertical, Pencil, Trash2 } from "lucide-react"
 import Link from "next/link"
 
+import { Button } from "@/components/ui/button"
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -35,38 +35,50 @@ export function WorkspaceList({ workspaces }: WorkspaceListProps) {
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {workspaces.map((workspace) => (
-          <Link
-            key={workspace.id}
-            href={`/dashboard/workspaces/${workspace.id}`}
-            className="contents"
-          >
-            <Card className="hover:cursor-pointer">
-              <CardHeader>
-                <CardTitle>{workspace.title}</CardTitle>
-                <CardDescription>{workspace.description}</CardDescription>
-                <CardAction>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger>
-                      <EllipsisVertical className="size-[18px]" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Pencil /> Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem variant="destructive">
-                        <Trash2 /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </CardAction>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  BY {workspace.author}
-                </p>
-              </CardContent>
-            </Card>
-          </Link>
+          <div key={workspace.id} className="relative">
+            <Link
+              href={`/dashboard/workspaces/${workspace.id}`}
+              aria-label={"Open " + workspace.title}
+              className="block h-full rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <Card className="h-full transition-colors hover:bg-muted/40">
+                <CardHeader className="pr-12">
+                  <CardTitle>{workspace.title}</CardTitle>
+                  <CardDescription>{workspace.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    BY {workspace.author}
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <div className="absolute top-2 right-2 z-10">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={"Open actions for " + workspace.title}
+                    />
+                  }
+                >
+                  <EllipsisVertical aria-hidden="true" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem>
+                    <Pencil /> Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem variant="destructive">
+                    <Trash2 /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
         ))}
       </div>
       <WorkspacePagination />
