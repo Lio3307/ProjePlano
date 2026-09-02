@@ -1,29 +1,17 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { ArrowLeft, Save } from "lucide-react"
-import Link from "next/link"
+import { Save } from "lucide-react"
 
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
-import type { Project } from "@/features/project/types"
-import type { Workspace } from "@/features/workspace/types"
 
 import { RichEditor } from "./rich-editor"
 
 interface DocumentViewProps {
-  workspace: Workspace
-  project: Project
+  resourceTitle: string
 }
 
-export function DocumentView({ workspace, project }: DocumentViewProps) {
+export function DocumentView({ resourceTitle }: DocumentViewProps) {
   const [content, setContent] = useState("")
   const savedContentRef = useRef(content)
 
@@ -33,43 +21,17 @@ export function DocumentView({ workspace, project }: DocumentViewProps) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center gap-2 border-b px-4 py-2.5">
-        <Button
-          variant="ghost"
-          size="icon"
-          nativeButton={false}
-          render={<Link href={`/dashboard/workspaces/${workspace.id}`} />}
-        >
-          <ArrowLeft className="size-4" />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-sm font-semibold">{project.title}</h1>
-          <Breadcrumb>
-            <BreadcrumbList className="flex-nowrap">
-              <BreadcrumbItem>
-                <BreadcrumbLink render={<Link href="/dashboard" />}>
-                  Dashboard
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbLink
-                  render={<Link href={`/dashboard/workspaces/${workspace.id}`} />}
-                >
-                  {workspace.title}
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="truncate">
-                  {project.title}
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b px-4 py-2.5">
+        <div className="min-w-0">
+          <p className="text-[0.625rem] uppercase tracking-wide text-muted-foreground">
+            Local editor content
+          </p>
+          <h2 className="truncate text-sm font-semibold">
+            {resourceTitle}
+          </h2>
         </div>
-        <Button size="sm" onClick={handleSave}>
-          <Save />
+        <Button type="button" size="sm" onClick={handleSave}>
+          <Save aria-hidden="true" />
           Save
         </Button>
       </div>

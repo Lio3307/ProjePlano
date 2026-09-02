@@ -44,13 +44,3 @@ export const PROJECTS: Project[] = [
     author: "Farah",
   },
 ]
-
-export function getProjectsByWorkspaceId(workspaceId: string) {
-  return PROJECTS.filter((project) => project.workspaceId === workspaceId)
-}
-
-export function getProjectById(workspaceId: string, projectId: string) {
-  return PROJECTS.find(
-    (project) => project.workspaceId === workspaceId && project.id === projectId
-  )
-}

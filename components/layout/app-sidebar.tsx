@@ -1,16 +1,13 @@
 "use client"
 
-import type { LucideIcon } from "lucide-react"
 import {
-  CalendarDays,
-  Columns3,
-  FileText,
   FolderKanban,
   LayoutDashboard,
-  Table2,
 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useShallow } from "zustand/react/shallow"
 
 import {
   Sidebar,
@@ -24,33 +21,27 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import type { ProjectType } from "@/features/project/types"
-
-const PROJECT_TYPE_ICONS: Record<ProjectType, LucideIcon> = {
-  document: FileText,
-  kanban: Columns3,
-  table: Table2,
-  calendar: CalendarDays,
-}
+import { selectProjectsByWorkspaceId } from "@/features/project/selectors"
+import { useProjectStore } from "@/features/project/store-provider"
 
 interface SidebarWorkspace {
+  id: string
   title: string
-  url: string
-}
-
-interface SidebarProject {
-  title: string
-  type: ProjectType
   url: string
 }
 
 interface AppSidebarProps {
   workspace: SidebarWorkspace | null
-  projects: SidebarProject[]
 }
 
-export function AppSidebar({ workspace, projects }: AppSidebarProps) {
+export function AppSidebar({ workspace }: AppSidebarProps) {
   const pathname = usePathname()
+  const workspaceId = workspace?.id ?? ""
+  const projects = useProjectStore(
+    useShallow((state) =>
+      selectProjectsByWorkspaceId(state, workspaceId)
+    )
+  )
 
   return (
     <Sidebar collapsible="icon">
@@ -106,15 +97,23 @@ export function AppSidebar({ workspace, projects }: AppSidebarProps) {
                   icon={FolderKanban}
                   isActive={pathname === workspace.url}
                 />
-                {projects.map((project) => (
-                  <SidebarNavigationItem
-                    key={project.url}
-                    title={project.title}
-                    url={project.url}
-                    icon={PROJECT_TYPE_ICONS[project.type]}
-                    isActive={pathname === project.url}
-                  />
-                ))}
+                {projects.map((project) => {
+                  const url =
+                    "/dashboard/workspaces/" +
+                    project.workspaceId +
+                    "/projects/" +
+                    project.id
+
+                  return (
+                    <SidebarNavigationItem
+                      key={project.id}
+                      title={project.title}
+                      url={url}
+                      icon={FolderKanban}
+                      isActive={pathname === url}
+                    />
+                  )
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

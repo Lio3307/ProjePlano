@@ -1,9 +1,7 @@
-import { CircleUserRound, EllipsisVertical, Plus } from "lucide-react"
+import { CircleUserRound, EllipsisVertical } from "lucide-react"
 import { notFound } from "next/navigation"
 
-import { Button } from "@/components/ui/button"
-import { ProjectList } from "@/features/project/components/project-list"
-import { getProjectsByWorkspaceId } from "@/features/project/mock-data"
+import { WorkspaceProjects } from "@/features/project/components/workspace-projects"
 import { getWorkspaceById } from "@/features/workspace/mock-data"
 
 type WorkspacePageProps = {
@@ -15,8 +13,6 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
   const workspace = getWorkspaceById(workspaceId)
 
   if (!workspace) notFound()
-
-  const projects = getProjectsByWorkspaceId(workspace.id)
 
   return (
     <div className="mt-4 flex flex-col space-y-6 p-4">
@@ -34,12 +30,7 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
           <CircleUserRound className="size-6" />
         </div>
       </div>
-      <div className="mt-2 flex justify-between">
-        <Button size="lg">
-          <Plus /> New
-        </Button>
-      </div>
-      <ProjectList workspaceId={workspace.id} projects={projects} />
+      <WorkspaceProjects workspaceId={workspace.id} />
     </div>
   )
 }

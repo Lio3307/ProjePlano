@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation"
 
-import { ProjectView } from "@/features/project/components/project-view"
-import { getProjectById } from "@/features/project/mock-data"
+import { ProjectWorkspace } from "@/features/project/components/project-workspace"
+import { getLocalDateKey } from "@/features/project/overview"
+import type { ProjectQueryValue } from "@/features/project/query-state"
 import { getWorkspaceById } from "@/features/workspace/mock-data"
 
 interface ProjectPageProps {
@@ -9,16 +10,33 @@ interface ProjectPageProps {
     workspaceId: string
     projectId: string
   }>
+  searchParams: Promise<{
+    view?: ProjectQueryValue
+    resource?: ProjectQueryValue
+  }>
 }
 
-export default async function ProjectPage({ params }: ProjectPageProps) {
-  const { workspaceId, projectId } = await params
+export default async function ProjectPage({
+  params,
+  searchParams,
+}: ProjectPageProps) {
+  const [{ workspaceId, projectId }, query] = await Promise.all([
+    params,
+    searchParams,
+  ])
   const workspace = getWorkspaceById(workspaceId)
-  const project = getProjectById(workspaceId, projectId)
 
-  if (!workspace || !project) {
+  if (!workspace) {
     notFound()
   }
 
-  return <ProjectView workspace={workspace} project={project} />
+  return (
+    <ProjectWorkspace
+      workspace={workspace}
+      projectId={projectId}
+      today={getLocalDateKey(new Date())}
+      viewQuery={query.view}
+      resourceQuery={query.resource}
+    />
+  )
 }

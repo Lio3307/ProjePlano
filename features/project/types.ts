@@ -7,10 +7,3 @@ export type Project = {
   type: ProjectType
   author: string
 }
-
-export const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
-  table: "Table",
-  document: "Document",
-  kanban: "Kanban",
-  calendar: "Calendar",
-}
