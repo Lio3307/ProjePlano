@@ -1,7 +1,7 @@
 import { Plus } from "lucide-react"
 import Link from "next/link"
 
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +16,7 @@ import {
 } from "../query-state"
 import {
   PROJECT_VIEW_DEFINITIONS,
+  SUPPORTED_PROJECT_VIEW_TYPES,
   type SupportedProjectView,
   type SupportedProjectViewType,
 } from "../view-definitions"
@@ -27,7 +28,6 @@ type ProjectNavigationProps = {
   selection: ProjectSelection
   workViews: readonly SupportedProjectView[]
   documents: readonly ProjectDocumentResource[]
-  missingViewTypes: readonly SupportedProjectViewType[]
   onAddView: (type: SupportedProjectViewType) => void
   onAddDocument: (trigger: HTMLButtonElement) => void
 }
@@ -38,17 +38,17 @@ export function ProjectNavigation({
   selection,
   workViews,
   documents,
-  missingViewTypes,
   onAddView,
   onAddDocument,
 }: ProjectNavigationProps) {
-  const activeWorkView =
-    selection.kind === "work" ? selection.view : workViews[0] ?? null
+  const activeWorkViewId =
+    selection.kind === "work" ? selection.view.id : null
   const activeDocument =
     selection.kind === "document"
       ? selection.resource
       : documents[0] ?? null
-  const workIsActive = selection.kind === "work"
+  const workIsActive =
+    selection.kind === "work" || selection.kind === "empty-work"
   const documentsAreActive =
     selection.kind === "document" ||
     selection.kind === "missing-resource"
@@ -73,19 +73,17 @@ export function ProjectNavigation({
             Overview
           </ProjectTabLink>
 
-          {activeWorkView ? (
-            <ProjectTabLink
-              href={getProjectViewHref(
-                workspaceId,
-                projectId,
-                activeWorkView.type
-              )}
-              active={workIsActive}
-              current={false}
-            >
-              Work
-            </ProjectTabLink>
-          ) : null}
+          <ProjectTabLink
+            href={getProjectViewHref(
+              workspaceId,
+              projectId,
+              "work"
+            )}
+            active={workIsActive}
+            current={selection.kind === "empty-work"}
+          >
+            Work
+          </ProjectTabLink>
 
           {activeDocument ? (
             <ProjectTabLink
@@ -93,7 +91,7 @@ export function ProjectNavigation({
                 workspaceId,
                 projectId,
                 "documents",
-                activeDocument.id
+                { resourceId: activeDocument.id }
               )}
               active={documentsAreActive}
               current={selection.kind === "document"}
@@ -104,7 +102,7 @@ export function ProjectNavigation({
         </nav>
       </div>
 
-      {selection.kind === "work" ? (
+      {workIsActive ? (
         <div className="overflow-x-auto border-t px-4 py-2">
           <nav
             aria-label="Work views"
@@ -117,43 +115,43 @@ export function ProjectNavigation({
                 href={getProjectViewHref(
                   workspaceId,
                   projectId,
-                  view.type
+                  view.type,
+                  { workViewId: view.id }
                 )}
-                active={view.id === selection.view.id}
-                current={view.id === selection.view.id}
+                active={view.id === activeWorkViewId}
+                current={view.id === activeWorkViewId}
                 compact
               >
                 {view.title}
               </ProjectTabLink>
             ))}
 
-            {missingViewTypes.length > 0 ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="rounded-none border-0 px-3"
-                    />
-                  }
-                >
-                  <Plus aria-hidden="true" />
-                  Add view
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  {missingViewTypes.map((type) => (
-                    <DropdownMenuItem
-                      key={type}
-                      onClick={() => onAddView(type)}
-                    >
-                      {PROJECT_VIEW_DEFINITIONS[type].title}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : null}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    type="button"
+                    size="icon-sm"
+                    variant="ghost"
+                    className="rounded-none border-0"
+                    aria-label="Add work view"
+                    data-add-work-view-trigger
+                  />
+                }
+              >
+                <Plus aria-hidden="true" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {SUPPORTED_PROJECT_VIEW_TYPES.map((type) => (
+                  <DropdownMenuItem
+                    key={type}
+                    onClick={() => onAddView(type)}
+                  >
+                    {PROJECT_VIEW_DEFINITIONS[type].title}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </nav>
         </div>
       ) : null}
@@ -189,22 +187,19 @@ function ProjectTabLink({
   href: string
 }) {
   return (
-    <Button
-      nativeButton={false}
-      size={compact ? "sm" : "default"}
-      variant={active ? "secondary" : "ghost"}
+    <Link
+      href={href}
+      aria-current={current ? "page" : undefined}
       className={cn(
+        buttonVariants({
+          size: compact ? "sm" : "default",
+          variant: active ? "secondary" : "ghost",
+        }),
         "shrink-0 rounded-none border-0 px-3",
         active && "text-foreground"
       )}
-      render={
-        <Link
-          href={href}
-          aria-current={current ? "page" : undefined}
-        />
-      }
     >
       {children}
-    </Button>
+    </Link>
   )
 }

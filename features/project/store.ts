@@ -13,9 +13,9 @@ import {
   saveProjectDocumentState,
   type CreateProjectDocumentInput,
   type CreateProjectInput,
+  type CreateProjectViewInput,
 } from "./project-state.ts"
 import { createProjectSeedState } from "./seed-data.ts"
-import type { SupportedProjectViewType } from "./view-definitions"
 import {
   createWorkItemState,
   deleteWorkItemState,
@@ -28,10 +28,7 @@ import {
 
 export type ProjectStoreActions = {
   createProjectFromTemplate: (input: CreateProjectInput) => boolean
-  addProjectView: (
-    projectId: string,
-    type: SupportedProjectViewType
-  ) => boolean
+  addProjectView: (input: CreateProjectViewInput) => boolean
   addProjectDocument: (input: CreateProjectDocumentInput) => boolean
   saveProjectDocument: (resourceId: string, content: string) => boolean
   createWorkItem: (workItem: WorkItem) => boolean
@@ -80,9 +77,9 @@ export function createProjectStore(
       return true
     },
 
-    addProjectView(projectId, type) {
+    addProjectView(input) {
       const current = readProjectState(get())
-      const next = addProjectViewState(current, projectId, type)
+      const next = addProjectViewState(current, input)
 
       if (next === current) {
         return false

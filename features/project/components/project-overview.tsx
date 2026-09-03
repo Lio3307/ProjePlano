@@ -1,6 +1,7 @@
 import {
   Activity,
   AlertTriangle,
+  ArrowUpRight,
   CalendarClock,
   CheckCircle2,
   FileText,
@@ -18,10 +19,7 @@ import {
 } from "@/components/ui/card"
 import type { ProjectOverviewSummary } from "../overview"
 import { getProjectViewHref } from "../query-state"
-import {
-  PROJECT_VIEW_DEFINITIONS,
-  type SupportedProjectViewType,
-} from "../view-definitions"
+import type { SupportedProjectView } from "../view-definitions"
 
 const DEMO_ACTIVITY = [
   "Project workspace is ready",
@@ -33,8 +31,7 @@ type ProjectOverviewProps = {
   workspaceId: string
   projectId: string
   summary: ProjectOverviewSummary
-  missingViewTypes: readonly SupportedProjectViewType[]
-  onAddView: (type: SupportedProjectViewType) => void
+  workViews: readonly SupportedProjectView[]
   onAddDocument: (trigger: HTMLButtonElement) => void
 }
 
@@ -42,8 +39,7 @@ export function ProjectOverview({
   workspaceId,
   projectId,
   summary,
-  missingViewTypes,
-  onAddView,
+  workViews,
   onAddDocument,
 }: ProjectOverviewProps) {
   return (
@@ -121,7 +117,7 @@ export function ProjectOverview({
           <CardHeader>
             <CardTitle>Pinned resources</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             {summary.pinnedDocuments.length > 0 ? (
               <div className="space-y-2">
                 {summary.pinnedDocuments.map((document) => (
@@ -136,7 +132,7 @@ export function ProjectOverview({
                           workspaceId,
                           projectId,
                           "documents",
-                          document.id
+                          { resourceId: document.id }
                         )}
                       />
                     }
@@ -151,6 +147,14 @@ export function ProjectOverview({
                 No pinned resources yet
               </p>
             )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={(event) => onAddDocument(event.currentTarget)}
+            >
+              <Plus aria-hidden="true" />
+              Add document
+            </Button>
           </CardContent>
         </Card>
 
@@ -176,28 +180,42 @@ export function ProjectOverview({
 
       <Card>
         <CardHeader>
-          <CardTitle>Build your workspace</CardTitle>
+          <CardTitle>Work views</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          {missingViewTypes.map((type) => (
-            <Button
-              key={type}
-              type="button"
-              variant="outline"
-              onClick={() => onAddView(type)}
-            >
-              <Plus aria-hidden="true" />
-              Add {PROJECT_VIEW_DEFINITIONS[type].title}
-            </Button>
-          ))}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={(event) => onAddDocument(event.currentTarget)}
-          >
-            <Plus aria-hidden="true" />
-            Add document
-          </Button>
+        <CardContent data-overview-work-views>
+          {workViews.length > 0 ? (
+            <ul className="divide-y rounded-md border">
+              {workViews.map((view) => (
+                <li key={view.id}>
+                  <Button
+                    nativeButton={false}
+                    variant="ghost"
+                    className="h-auto w-full justify-between rounded-none px-3 py-2.5"
+                    render={
+                      <Link
+                        href={getProjectViewHref(
+                          workspaceId,
+                          projectId,
+                          view.type,
+                          { workViewId: view.id }
+                        )}
+                      />
+                    }
+                  >
+                    {view.title}
+                    <ArrowUpRight
+                      aria-hidden="true"
+                      className="text-muted-foreground"
+                    />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground">
+              No work views yet. Open Work and use + to add one.
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -140,40 +140,53 @@ test("rejects project creation when a generated child ID collides", () => {
   )
 })
 
-test("adds one missing supported view and rejects duplicates", () => {
+test("adds repeated supported views with numbered titles", () => {
   const state = createProjectSeedState()
-  const next = addProjectViewState(state, "1", "board")
+  const firstInput = {
+    id: "view-1-board-custom-1",
+    projectId: "1",
+    type: "board",
+  }
+  const secondInput = {
+    id: "view-1-board-custom-2",
+    projectId: "1",
+    type: "board",
+  }
+  const first = addProjectViewState(state, firstInput)
+  const second = addProjectViewState(first, secondInput)
 
-  assert.notStrictEqual(next, state)
-  assert.deepEqual(next.projectsById["1"].viewIds, ["view-1-board"])
-  assert.equal(next.projectViewsById["view-1-board"].type, "board")
-  assert.strictEqual(addProjectViewState(next, "1", "board"), next)
-  assert.strictEqual(addProjectViewState(next, "1", "timeline"), next)
-  assert.strictEqual(addProjectViewState(next, "unknown", "table"), next)
+  assert.notStrictEqual(first, state)
+  assert.notStrictEqual(second, first)
+  assert.deepEqual(state.projectsById["1"].viewIds, [])
+  assert.deepEqual(second.projectsById["1"].viewIds, [
+    firstInput.id,
+    secondInput.id,
+  ])
+  assert.equal(second.projectViewsById[firstInput.id].id, firstInput.id)
+  assert.equal(second.projectViewsById[firstInput.id].projectId, "1")
+  assert.equal(second.projectViewsById[firstInput.id].title, "Board")
+  assert.equal(second.projectViewsById[firstInput.id].type, "board")
+  assert.equal(second.projectViewsById[secondInput.id].title, "Board 2")
+  assert.equal(second.projectViewsById[secondInput.id].type, "board")
 })
 
-test("rejects adding a view when its deterministic ID already exists", () => {
+test("rejects invalid view creation without mutating state", () => {
   const state = createProjectSeedState()
-  const collidedState = {
-    ...state,
-    projectViewsById: {
-      ...state.projectViewsById,
-      "view-1-board": {
-        id: "view-1-board",
-        projectId: "2",
-        title: "Existing collision",
-        type: "board",
-        visibleFieldIds: [],
-        groupBy: "status",
-        filterIds: [],
-      },
-    },
+  const valid = {
+    id: "view-1-board-custom",
+    projectId: "1",
+    type: "board",
   }
 
-  assert.strictEqual(
-    addProjectViewState(collidedState, "1", "board"),
-    collidedState
-  )
+  for (const input of [
+    { ...valid, id: " " },
+    { ...valid, id: " view-1-board-custom " },
+    { ...valid, id: "view-2-board" },
+    { ...valid, projectId: "unknown" },
+    { ...valid, type: "timeline" },
+  ]) {
+    assert.strictEqual(addProjectViewState(state, input), state)
+  }
 })
 
 test("adds multiple documents to an existing project", () => {

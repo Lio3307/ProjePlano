@@ -155,16 +155,35 @@ test("delegates atomic project, view, and document actions", () => {
   assert.equal(store.getState().createProjectFromTemplate(input), false)
   assert.equal(notifications, 1)
 
-  assert.equal(
-    store.getState().addProjectView("project-created", "board"),
-    true
-  )
+  const firstBoard = {
+    id: "view-project-created-board-1",
+    projectId: "project-created",
+    type: "board",
+  }
+  const secondBoard = {
+    id: "view-project-created-board-2",
+    projectId: "project-created",
+    type: "board",
+  }
+
+  assert.equal(store.getState().addProjectView(firstBoard), true)
   assert.equal(notifications, 2)
-  assert.equal(
-    store.getState().addProjectView("project-created", "board"),
-    false
+  assert.equal(store.getState().addProjectView(secondBoard), true)
+  assert.equal(notifications, 3)
+  assert.deepEqual(
+    store.getState().projectsById["project-created"].viewIds,
+    [firstBoard.id, secondBoard.id]
   )
-  assert.equal(notifications, 2)
+  assert.equal(
+    store.getState().projectViewsById[firstBoard.id].title,
+    "Board"
+  )
+  assert.equal(
+    store.getState().projectViewsById[secondBoard.id].title,
+    "Board 2"
+  )
+  assert.equal(store.getState().addProjectView(secondBoard), false)
+  assert.equal(notifications, 3)
 
   const notes = {
     id: "resource-project-created-document-notes",
@@ -178,11 +197,11 @@ test("delegates atomic project, view, and document actions", () => {
   }
 
   assert.equal(store.getState().addProjectDocument(notes), true)
-  assert.equal(notifications, 3)
+  assert.equal(notifications, 4)
   assert.equal(store.getState().addProjectDocument(runbook), true)
-  assert.equal(notifications, 4)
+  assert.equal(notifications, 5)
   assert.equal(store.getState().addProjectDocument(notes), false)
-  assert.equal(notifications, 4)
+  assert.equal(notifications, 5)
   assert.deepEqual(
     store.getState().projectsById["project-created"].resourceIds,
     [notes.id, runbook.id]
@@ -190,15 +209,15 @@ test("delegates atomic project, view, and document actions", () => {
 
   const content = "<h1>Project notes</h1>"
   assert.equal(store.getState().saveProjectDocument(notes.id, content), true)
-  assert.equal(notifications, 5)
+  assert.equal(notifications, 6)
   assert.equal(store.getState().resourcesById[notes.id].content, content)
   assert.equal(store.getState().saveProjectDocument(notes.id, content), false)
-  assert.equal(notifications, 5)
+  assert.equal(notifications, 6)
   assert.equal(
     store.getState().saveProjectDocument("missing-resource", content),
     false
   )
-  assert.equal(notifications, 5)
+  assert.equal(notifications, 6)
 
   unsubscribe()
 })

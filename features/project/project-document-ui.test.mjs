@@ -62,7 +62,10 @@ test("creates document IDs only from the submit handler", () => {
   assert.ok(createHandler)
   assert.match(createHandler, /crypto\.randomUUID\(\)/)
   assert.match(createHandler, /addProjectDocument\(\{/)
-  assert.equal((source.match(/crypto\.randomUUID\(\)/g) ?? []).length, 1)
+  assert.equal(
+    (createHandler.match(/crypto\.randomUUID\(\)/g) ?? []).length,
+    1
+  )
   assert.equal((source.match(/<NewDocumentDialog/g) ?? []).length, 1)
   assert.match(source, /open=\{documentDialogOpen\}/)
 })

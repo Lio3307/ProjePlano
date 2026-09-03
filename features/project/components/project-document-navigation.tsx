@@ -80,7 +80,7 @@ export function ProjectDocumentNavigation({
                         workspaceId,
                         projectId,
                         "documents",
-                        document.id
+                        { resourceId: document.id }
                       )}
                       aria-current={active ? "page" : undefined}
                     />

@@ -9,22 +9,42 @@ export type ProjectQueryValue = string | string[] | undefined
 
 export type ProjectSelection =
   | { kind: "overview" }
+  | { kind: "empty-work" }
   | { kind: "work"; view: SupportedProjectView }
   | { kind: "document"; resource: ProjectDocumentResource }
   | { kind: "missing-resource"; resourceId: string }
 
 type ProjectViewTarget =
   | "overview"
+  | "work"
   | "documents"
   | SupportedProjectViewType
+
+export type ProjectSelectionQuery = {
+  view?: ProjectQueryValue
+  workView?: ProjectQueryValue
+  resource?: ProjectQueryValue
+}
+
+export type ProjectViewHrefOptions = {
+  resourceId?: string
+  workViewId?: string
+}
 
 export function resolveProjectSelection(
   workViews: readonly SupportedProjectView[],
   documents: readonly ProjectDocumentResource[],
-  viewQuery: ProjectQueryValue,
-  resourceQuery: ProjectQueryValue
+  query: ProjectSelectionQuery
 ): ProjectSelection {
-  const view = firstQueryValue(viewQuery)
+  const view = firstQueryValue(query.view)
+
+  if (view === "work") {
+    const firstWorkView = workViews[0]
+
+    return firstWorkView
+      ? { kind: "work", view: firstWorkView }
+      : { kind: "empty-work" }
+  }
 
   if (view === "documents") {
     const firstDocument = documents[0]
@@ -33,11 +53,11 @@ export function resolveProjectSelection(
       return { kind: "overview" }
     }
 
-    if (resourceQuery === undefined) {
+    if (query.resource === undefined) {
       return { kind: "document", resource: firstDocument }
     }
 
-    const resourceId = firstQueryValue(resourceQuery) ?? ""
+    const resourceId = firstQueryValue(query.resource) ?? ""
     const resource = documents.find(
       (document) => document.id === resourceId
     )
@@ -48,9 +68,14 @@ export function resolveProjectSelection(
   }
 
   if (view && isSupportedProjectViewType(view)) {
-    const projectView = workViews.find(
-      (candidate) => candidate.type === view
-    )
+    const workViewId = firstQueryValue(query.workView)
+    const projectView = workViews.find((candidate) => {
+      if (candidate.type !== view) {
+        return false
+      }
+
+      return workViewId === undefined || candidate.id === workViewId
+    })
 
     if (projectView) {
       return { kind: "work", view: projectView }
@@ -64,7 +89,7 @@ export function getProjectViewHref(
   workspaceId: string,
   projectId: string,
   view: ProjectViewTarget,
-  resourceId?: string
+  options: ProjectViewHrefOptions = {}
 ) {
   const pathname =
     "/dashboard/workspaces/" +
@@ -73,8 +98,12 @@ export function getProjectViewHref(
     encodeURIComponent(projectId)
   const query = new URLSearchParams({ view })
 
-  if (view === "documents" && resourceId) {
-    query.set("resource", resourceId)
+  if (view === "documents" && options.resourceId) {
+    query.set("resource", options.resourceId)
+  }
+
+  if (isSupportedProjectViewType(view) && options.workViewId) {
+    query.set("workView", options.workViewId)
   }
 
   return pathname + "?" + query.toString()

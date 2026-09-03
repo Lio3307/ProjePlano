@@ -27,6 +27,12 @@ export type CreateProjectDocumentInput = {
   title: string
 }
 
+export type CreateProjectViewInput = {
+  id: string
+  projectId: string
+  type: ProjectViewType
+}
+
 export function createProjectFromTemplateState(
   state: ProjectWorkspaceState,
   input: CreateProjectInput
@@ -106,32 +112,44 @@ export function createProjectFromTemplateState(
 
 export function addProjectViewState(
   state: ProjectWorkspaceState,
-  projectId: string,
-  type: ProjectViewType
+  input: CreateProjectViewInput
 ): ProjectWorkspaceState {
-  const project = state.projectsById[projectId]
+  const project = state.projectsById[input.projectId]
 
   if (
     !project ||
-    !isSupportedProjectViewType(type) ||
-    Object.values(state.projectViewsById).some(
-      (view) => view.projectId === projectId && view.type === type
-    )
+    !isSupportedProjectViewType(input.type) ||
+    input.id.trim().length === 0 ||
+    input.id.trim() !== input.id ||
+    state.projectViewsById[input.id]
   ) {
     return state
   }
 
-  const view = createProjectViewConfig(projectId, type)
+  const sameTypeCount = project.viewIds.filter((viewId) => {
+    const ownedView = state.projectViewsById[viewId]
 
-  if (state.projectViewsById[view.id]) {
-    return state
+    return (
+      ownedView?.projectId === input.projectId &&
+      ownedView.type === input.type
+    )
+  }).length
+  const baseView = createProjectViewConfig(input.projectId, input.type)
+  const instanceNumber = sameTypeCount + 1
+  const view = {
+    ...baseView,
+    id: input.id,
+    title:
+      instanceNumber === 1
+        ? baseView.title
+        : baseView.title + " " + instanceNumber,
   }
 
   return {
     ...state,
     projectsById: {
       ...state.projectsById,
-      [projectId]: {
+      [input.projectId]: {
         ...project,
         viewIds: [...project.viewIds, view.id],
       },

@@ -9,7 +9,6 @@ import type {
   ProjectWorkspaceState,
 } from "./model"
 import {
-  SUPPORTED_PROJECT_VIEW_TYPES,
   isSupportedProjectViewType,
   type SupportedProjectView,
 } from "./view-definitions.ts"
@@ -65,19 +64,6 @@ export function selectSupportedProjectViews(
 ) {
   return selectProjectViews(state, projectId).filter(
     isSupportedProjectView
-  )
-}
-
-export function selectMissingSupportedViewTypes(
-  state: ProjectWorkspaceState,
-  projectId: string
-) {
-  const existingTypes = new Set(
-    selectSupportedProjectViews(state, projectId).map((view) => view.type)
-  )
-
-  return SUPPORTED_PROJECT_VIEW_TYPES.filter(
-    (type) => !existingTypes.has(type)
   )
 }
 

@@ -30,9 +30,9 @@ test("renders Overview as the default and invalid-view fallback", async () => {
   }
 })
 
-test("renders an owned work view from the query", async () => {
+test("renders an owned work view from its exact instance query", async () => {
   const html = await getHtml(
-    "/dashboard/workspaces/project-alpha/projects/2?view=board"
+    "/dashboard/workspaces/project-alpha/projects/2?view=board&workView=view-2-board"
   )
 
   assert.equal(html.includes('data-project-selection="board"'), true)
@@ -40,6 +40,39 @@ test("renders an owned work view from the query", async () => {
   assert.equal(html.includes('data-project-work-view="board"'), true)
   assert.equal(html.includes("New task"), true)
   assert.equal(html.includes("Backlog"), true)
+  assert.equal(
+    html.includes("?view=board&amp;workView=view-2-board"),
+    true
+  )
+})
+
+test("rejects an explicit Work instance with a mismatched type", async () => {
+  const html = await getHtml(
+    "/dashboard/workspaces/project-alpha/projects/2?view=board&workView=view-3-table"
+  )
+
+  assert.equal(html.includes('data-project-selection="overview"'), true)
+})
+
+test("keeps an empty Work area available for a project without views", async () => {
+  const html = await getHtml(
+    "/dashboard/workspaces/project-alpha/projects/1?view=work"
+  )
+
+  assert.equal(
+    html.includes('data-project-selection="empty-work"'),
+    true
+  )
+  assert.match(
+    html,
+    /<a\b[^>]*aria-current="page"[^>]*>Work<\/a>/
+  )
+  assert.equal(
+    html.includes('data-project-tab-strip="secondary"'),
+    true
+  )
+  assert.equal(html.includes("data-add-work-view-trigger"), true)
+  assert.equal(html.includes("No work views yet"), true)
 })
 
 test("renders an owned Document and an explicit missing-resource state", async () => {

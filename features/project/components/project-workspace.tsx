@@ -31,7 +31,6 @@ import {
   type ProjectSelection,
 } from "../query-state"
 import {
-  selectMissingSupportedViewTypes,
   selectProjectDocumentResources,
   selectProjectForWorkspace,
   selectProjectMilestones,
@@ -51,6 +50,7 @@ type ProjectWorkspaceProps = {
   projectId: string
   today: string
   viewQuery: ProjectQueryValue
+  workViewQuery: ProjectQueryValue
   resourceQuery: ProjectQueryValue
 }
 
@@ -59,6 +59,7 @@ export function ProjectWorkspace({
   projectId,
   today,
   viewQuery,
+  workViewQuery,
   resourceQuery,
 }: ProjectWorkspaceProps) {
   const router = useRouter()
@@ -93,11 +94,6 @@ export function ProjectWorkspace({
       selectProjectMilestones(state, projectId)
     )
   )
-  const missingViewTypes = useProjectStore(
-    useShallow((state) =>
-      selectMissingSupportedViewTypes(state, projectId)
-    )
-  )
   const addProjectView = useProjectStore(
     (state) => state.addProjectView
   )
@@ -112,10 +108,13 @@ export function ProjectWorkspace({
       resolveProjectSelection(
         workViews,
         documents,
-        viewQuery,
-        resourceQuery
+        {
+          view: viewQuery,
+          workView: workViewQuery,
+          resource: resourceQuery,
+        }
       ),
-    [documents, resourceQuery, viewQuery, workViews]
+    [documents, resourceQuery, viewQuery, workViewQuery, workViews]
   )
   const summary = useMemo(
     () =>
@@ -133,14 +132,29 @@ export function ProjectWorkspace({
   }
 
   function handleAddView(type: SupportedProjectViewType) {
-    if (!addProjectView(projectId, type)) {
+    const viewId =
+      "view-" +
+      projectId +
+      "-" +
+      type +
+      "-" +
+      crypto.randomUUID()
+    const created = addProjectView({
+      id: viewId,
+      projectId,
+      type,
+    })
+
+    if (!created) {
       setActionError("The view could not be added.")
       return
     }
 
     setActionError(null)
     router.push(
-      getProjectViewHref(workspace.id, projectId, type)
+      getProjectViewHref(workspace.id, projectId, type, {
+        workViewId: viewId,
+      })
     )
   }
 
@@ -172,7 +186,7 @@ export function ProjectWorkspace({
         workspace.id,
         projectId,
         "documents",
-        resourceId
+        { resourceId }
       )
     )
     return true
@@ -250,7 +264,6 @@ export function ProjectWorkspace({
         selection={selection}
         workViews={workViews}
         documents={documents}
-        missingViewTypes={missingViewTypes}
         onAddView={handleAddView}
         onAddDocument={handleAddDocument}
       />
@@ -278,11 +291,12 @@ export function ProjectWorkspace({
               workspaceId={workspace.id}
               projectId={project.id}
               summary={summary}
-              missingViewTypes={missingViewTypes}
-              onAddView={handleAddView}
+              workViews={workViews}
               onAddDocument={handleAddDocument}
             />
           </div>
+        ) : selection.kind === "empty-work" ? (
+          <EmptyWorkState />
         ) : selection.kind === "missing-resource" ? (
           <MissingResourceState
             workspaceId={workspace.id}
@@ -297,6 +311,23 @@ export function ProjectWorkspace({
           />
         )}
       </div>
+    </div>
+  )
+}
+
+function EmptyWorkState() {
+  return (
+    <div className="h-full overflow-y-auto p-4 sm:p-6">
+      <Card data-empty-work-state className="mx-auto max-w-xl">
+        <CardHeader>
+          <CardTitle>No work views yet</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="max-w-prose text-muted-foreground">
+            Use the + menu above to add a Board, Table, or Calendar view.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -366,7 +397,7 @@ function MissingResourceState({
                     workspaceId,
                     projectId,
                     "documents",
-                    fallbackResourceId
+                    { resourceId: fallbackResourceId }
                   )}
                 />
               }
@@ -399,6 +430,8 @@ function getSelectionName(selection: ProjectSelection) {
   switch (selection.kind) {
     case "overview":
       return "overview"
+    case "empty-work":
+      return "empty-work"
     case "work":
       return selection.view.type
     case "document":

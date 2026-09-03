@@ -3,7 +3,6 @@ import test from "node:test"
 
 import { createProjectSeedState } from "./seed-data.ts"
 import {
-  selectMissingSupportedViewTypes,
   selectProjectById,
   selectProjectDocumentResources,
   selectProjectForWorkspace,
@@ -89,17 +88,13 @@ test("constrains a project to its owning workspace", () => {
   )
 })
 
-test("selects only supported work views and missing Phase 2 types", () => {
+test("selects only supported work views and document resources", () => {
   const state = createProjectSeedState()
 
   assert.deepEqual(
     selectSupportedProjectViews(state, "2").map((view) => view.type),
     ["board"]
   )
-  assert.deepEqual(selectMissingSupportedViewTypes(state, "2"), [
-    "table",
-    "calendar",
-  ])
   assert.deepEqual(
     selectProjectDocumentResources(state, "1").map(
       (resource) => resource.id

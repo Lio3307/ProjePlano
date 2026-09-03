@@ -12,6 +12,7 @@ interface ProjectPageProps {
   }>
   searchParams: Promise<{
     view?: ProjectQueryValue
+    workView?: ProjectQueryValue
     resource?: ProjectQueryValue
   }>
 }
@@ -36,6 +37,7 @@ export default async function ProjectPage({
       projectId={projectId}
       today={getLocalDateKey(new Date())}
       viewQuery={query.view}
+      workViewQuery={query.workView}
       resourceQuery={query.resource}
     />
   )
