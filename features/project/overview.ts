@@ -3,7 +3,11 @@ import {
   type WorkItem,
   type WorkItemStatus,
 } from "../work-item/model.ts"
-import type { Milestone, ProjectResource } from "./model"
+import type {
+  Milestone,
+  ProjectDocumentResource,
+  ProjectResource,
+} from "./model"
 
 const ACTIVE_WORK_ITEM_STATUSES: readonly WorkItemStatus[] = [
   "todo",
@@ -26,7 +30,7 @@ export type ProjectOverviewSummary = {
   activeWorkItems: number
   overdueWorkItems: number
   nextMilestone: Milestone | null
-  pinnedDocuments: ProjectResource[]
+  pinnedDocuments: ProjectDocumentResource[]
 }
 
 export function buildProjectOverviewSummary({
@@ -68,10 +72,7 @@ export function buildProjectOverviewSummary({
     activeWorkItems,
     overdueWorkItems,
     nextMilestone,
-    pinnedDocuments: resources.filter(
-      (resource) =>
-        resource.type === "document" && resource.isPinned
-    ),
+    pinnedDocuments: resources.filter(isPinnedDocument),
   }
 }
 
@@ -82,6 +83,12 @@ function hasOutstandingTargetDate(
     milestone.status !== "completed" &&
     milestone.targetDate !== null
   )
+}
+
+function isPinnedDocument(
+  resource: ProjectResource
+): resource is ProjectDocumentResource {
+  return resource.type === "document" && resource.isPinned
 }
 
 export function getLocalDateKey(date: Date) {

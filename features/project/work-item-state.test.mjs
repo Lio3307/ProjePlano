@@ -6,6 +6,7 @@ import {
   createWorkItemState,
   deleteWorkItemState,
   moveWorkItemState,
+  saveWorkItemState,
   updateWorkItemDateRangeState,
   updateWorkItemState,
 } from "./work-item-state.ts"
@@ -42,6 +43,22 @@ function getOrderedIds(state, projectId, status) {
     )
     .sort((left, right) => left.position - right.position)
     .map((workItem) => workItem.id)
+}
+
+function getEditableFields(workItem, overrides = {}) {
+  return {
+    title: workItem.title,
+    description: workItem.description,
+    type: workItem.type,
+    status: workItem.status,
+    priority: workItem.priority,
+    assignee: workItem.assignee ? { ...workItem.assignee } : null,
+    dueDate: workItem.dueDate,
+    estimate: workItem.estimate,
+    labels: [...workItem.labels],
+    checklist: workItem.checklist.map((item) => ({ ...item })),
+    ...overrides,
+  }
 }
 
 test("creates an item at the requested status position immutably", () => {
@@ -187,6 +204,97 @@ test("updates details but rejects a proposed dependency cycle", () => {
     updated
   )
   assert.equal(updateWorkItemState(updated, "missing", { title: "No" }), updated)
+})
+
+test("saves every dialog field without moving its position", () => {
+  const state = createProjectSeedState()
+  const itemId = "work-item-2-workspace-filters"
+  const current = state.workItemsById[itemId]
+  const result = saveWorkItemState(
+    state,
+    itemId,
+    getEditableFields(current, {
+      title: "Workspace filters ready",
+      type: "bug",
+      priority: "urgent",
+      assignee: { name: "Ada Lovelace", initials: "AL" },
+      dueDate: "2026-09-20",
+      estimate: 5,
+      labels: ["Frontend", "Quality"],
+      checklist: [
+        {
+          id: "verify",
+          label: "Verify filters",
+          completed: true,
+        },
+      ],
+    })
+  )
+
+  assert.notEqual(result, state)
+  assert.equal(result.workItemsById[itemId].position, current.position)
+  assert.equal(
+    result.workItemsById[itemId].title,
+    "Workspace filters ready"
+  )
+  assert.equal(result.workItemsById[itemId].priority, "urgent")
+  assert.deepEqual(result.workItemsById[itemId].labels, [
+    "Frontend",
+    "Quality",
+  ])
+})
+
+test("moves an atomically saved item to the end of its new status", () => {
+  const state = createProjectSeedState()
+  const itemId = "work-item-2-audit-onboarding"
+  const current = state.workItemsById[itemId]
+  const result = saveWorkItemState(
+    state,
+    itemId,
+    getEditableFields(current, {
+      title: "Audit complete",
+      status: "todo",
+      dueDate: "2026-09-22",
+    })
+  )
+
+  assert.deepEqual(getOrderedIds(result, "2", "backlog"), [
+    "work-item-2-api-error-model",
+  ])
+  assert.deepEqual(getOrderedIds(result, "2", "todo"), [
+    "work-item-2-workspace-filters",
+    "work-item-2-release-checklist",
+    itemId,
+  ])
+  assert.equal(result.workItemsById[itemId].title, "Audit complete")
+  assert.equal(result.workItemsById[itemId].dueDate, "2026-09-22")
+})
+
+test("preserves state identity for invalid and value-equivalent saves", () => {
+  const state = createProjectSeedState()
+  const itemId = "work-item-2-audit-onboarding"
+  const current = state.workItemsById[itemId]
+
+  assert.equal(
+    saveWorkItemState(state, itemId, getEditableFields(current)),
+    state
+  )
+  assert.equal(
+    saveWorkItemState(
+      state,
+      itemId,
+      getEditableFields(current, { title: " " })
+    ),
+    state
+  )
+  assert.equal(
+    saveWorkItemState(
+      state,
+      itemId,
+      getEditableFields(current, { dueDate: "2026-02-29" })
+    ),
+    state
+  )
 })
 
 test("moves and reorders items while reindexing only affected groups", () => {

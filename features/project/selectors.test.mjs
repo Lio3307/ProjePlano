@@ -37,7 +37,7 @@ test("resolves ordered views, resources, and milestones by project", () => {
   )
   assert.deepEqual(
     selectProjectResources(state, "1").map((resource) => resource.type),
-    ["document"]
+    ["document", "document", "document"]
   )
   assert.deepEqual(selectProjectMilestones(state, "2"), [])
 })
@@ -104,7 +104,15 @@ test("selects only supported work views and missing Phase 2 types", () => {
     selectProjectDocumentResources(state, "1").map(
       (resource) => resource.id
     ),
-    ["resource-1-document"]
+    [
+      "resource-1-document",
+      "resource-1-endpoint-guidelines",
+      "resource-1-decision-log",
+    ]
+  )
+  assert.equal(
+    selectProjectDocumentResources(state, "1")[1].content,
+    "<h1>Endpoint guidelines</h1><p>Keep routes predictable and errors consistent.</p>"
   )
   assert.deepEqual(selectProjectDocumentResources(state, "2"), [])
 

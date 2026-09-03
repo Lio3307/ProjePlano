@@ -34,9 +34,8 @@ type ProjectOverviewProps = {
   projectId: string
   summary: ProjectOverviewSummary
   missingViewTypes: readonly SupportedProjectViewType[]
-  canAddDocument: boolean
   onAddView: (type: SupportedProjectViewType) => void
-  onAddDocument: () => void
+  onAddDocument: (trigger: HTMLButtonElement) => void
 }
 
 export function ProjectOverview({
@@ -44,13 +43,9 @@ export function ProjectOverview({
   projectId,
   summary,
   missingViewTypes,
-  canAddDocument,
   onAddView,
   onAddDocument,
 }: ProjectOverviewProps) {
-  const hasQuickActions =
-    missingViewTypes.length > 0 || canAddDocument
-
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -179,36 +174,32 @@ export function ProjectOverview({
         </Card>
       </div>
 
-      {hasQuickActions ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Build your workspace</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
-            {missingViewTypes.map((type) => (
-              <Button
-                key={type}
-                type="button"
-                variant="outline"
-                onClick={() => onAddView(type)}
-              >
-                <Plus aria-hidden="true" />
-                Add {PROJECT_VIEW_DEFINITIONS[type].title}
-              </Button>
-            ))}
-            {canAddDocument ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onAddDocument}
-              >
-                <Plus aria-hidden="true" />
-                Add document
-              </Button>
-            ) : null}
-          </CardContent>
-        </Card>
-      ) : null}
+      <Card>
+        <CardHeader>
+          <CardTitle>Build your workspace</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          {missingViewTypes.map((type) => (
+            <Button
+              key={type}
+              type="button"
+              variant="outline"
+              onClick={() => onAddView(type)}
+            >
+              <Plus aria-hidden="true" />
+              Add {PROJECT_VIEW_DEFINITIONS[type].title}
+            </Button>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={(event) => onAddDocument(event.currentTarget)}
+          >
+            <Plus aria-hidden="true" />
+            Add document
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   )
 }

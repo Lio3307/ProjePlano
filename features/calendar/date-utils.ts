@@ -91,10 +91,6 @@ export function getCalendarDateLabel(value: string) {
   }).format(createLocalDate(date.year, date.month, date.day))
 }
 
-export function getLocalTodayIsoDate(now = new Date()) {
-  return toCalendarIsoDate(now)
-}
-
 export function buildCalendarDays(
   month: CalendarMonth,
   todayIsoDate: string

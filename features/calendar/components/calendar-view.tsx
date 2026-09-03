@@ -1,122 +1,105 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useState } from "react"
 import { DragDropProvider } from "@dnd-kit/react"
 
+import type { WorkItem } from "@/features/work-item/model"
 import {
   getCalendarMonthFromIsoDate,
   getCalendarMonthLabel,
-  getLocalTodayIsoDate,
   shiftCalendarMonth,
 } from "../date-utils"
 import {
-  findCalendarTask,
-  moveCalendarTask,
   parseCalendarDateDropId,
   parseCalendarTaskDragId,
+  partitionCalendarWorkItems,
 } from "../model"
-import {
-  INITIAL_CALENDAR_MONTH,
-  INITIAL_CALENDAR_TASKS,
-} from "../mock-data"
 import { CalendarGrid } from "./calendar-grid"
-import { CalendarTaskDialog } from "./calendar-task-dialog"
 import { CalendarToolbar } from "./calendar-toolbar"
+import { CalendarUnscheduled } from "./calendar-unscheduled"
 
-export function CalendarView() {
-  const [activeMonth, setActiveMonth] = useState(() => ({
-    ...INITIAL_CALENDAR_MONTH,
-  }))
-  const [tasks, setTasks] = useState(() => INITIAL_CALENDAR_TASKS)
-  const [todayIsoDate] = useState(() => getLocalTodayIsoDate())
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
-  const selectedTaskTriggerRef = useRef<HTMLButtonElement | null>(null)
-  const selectedTask = selectedTaskId
-    ? findCalendarTask(tasks, selectedTaskId)
-    : null
+interface CalendarViewProps {
+  workItems: readonly WorkItem[]
+  todayIsoDate: string
+  onOpenWorkItem: (workItemId: string, trigger: HTMLElement) => void
+  onMoveWorkItemDate: (workItemId: string, dueDate: string) => void
+}
 
-  function handlePreviousMonth() {
-    setActiveMonth((currentMonth) =>
-      shiftCalendarMonth(currentMonth, -1)
-    )
-  }
-
-  function handleNextMonth() {
-    setActiveMonth((currentMonth) => shiftCalendarMonth(currentMonth, 1))
-  }
-
-  function handleToday() {
-    const currentMonth = getCalendarMonthFromIsoDate(todayIsoDate)
-
-    if (currentMonth) {
-      setActiveMonth(currentMonth)
-    }
-  }
-
-  function handleOpenTask(taskId: string, trigger: HTMLButtonElement) {
-    selectedTaskTriggerRef.current = trigger
-    setSelectedTaskId(taskId)
-  }
-
-  function handleDialogOpenChange(open: boolean) {
-    if (!open) {
-      setSelectedTaskId(null)
-    }
-  }
-
-  function handleDragEnd(
-    canceled: boolean,
-    sourceId: string | number | undefined,
-    targetId: string | number | undefined
-  ) {
-    if (canceled || sourceId == null || targetId == null) {
-      return
-    }
-
-    const taskId = parseCalendarTaskDragId(sourceId)
-    const dueDate = parseCalendarDateDropId(targetId)
-
-    if (!taskId || !dueDate) {
-      return
-    }
-
-    setTasks((currentTasks) =>
-      moveCalendarTask(currentTasks, taskId, dueDate)
-    )
-  }
+export function CalendarView({
+  workItems,
+  todayIsoDate,
+  onOpenWorkItem,
+  onMoveWorkItemDate,
+}: CalendarViewProps) {
+  const [activeMonth, setActiveMonth] = useState(
+    () =>
+      getCalendarMonthFromIsoDate(todayIsoDate) ?? {
+        year: 1970,
+        month: 0,
+      }
+  )
+  const { scheduled, unscheduled } =
+    partitionCalendarWorkItems(workItems)
 
   return (
     <div className="min-w-0 space-y-4">
       <CalendarToolbar
         monthLabel={getCalendarMonthLabel(activeMonth)}
-        onNext={handleNextMonth}
-        onPrevious={handlePreviousMonth}
-        onToday={handleToday}
+        onPrevious={() =>
+          setActiveMonth((month) => shiftCalendarMonth(month, -1))
+        }
+        onNext={() =>
+          setActiveMonth((month) => shiftCalendarMonth(month, 1))
+        }
+        onToday={() => {
+          const month = getCalendarMonthFromIsoDate(todayIsoDate)
+
+          if (month) {
+            setActiveMonth(month)
+          }
+        }}
+      />
+
+      <CalendarUnscheduled
+        workItems={unscheduled}
+        onOpenWorkItem={onOpenWorkItem}
       />
 
       <DragDropProvider
-        onDragEnd={(event) =>
-          handleDragEnd(
-            event.canceled,
-            event.operation.source?.id,
-            event.operation.target?.id
+        onDragEnd={(event) => {
+          if (event.canceled) {
+            return
+          }
+
+          const sourceId = event.operation.source?.id
+          const targetId = event.operation.target?.id
+
+          if (sourceId == null || targetId == null) {
+            return
+          }
+
+          const workItemId = parseCalendarTaskDragId(sourceId)
+          const dueDate = parseCalendarDateDropId(targetId)
+          const current = scheduled.find(
+            (workItem) => workItem.id === workItemId
           )
-        }
+
+          if (
+            workItemId &&
+            dueDate &&
+            current?.dueDate !== dueDate
+          ) {
+            onMoveWorkItemDate(workItemId, dueDate)
+          }
+        }}
       >
         <CalendarGrid
           activeMonth={activeMonth}
-          tasks={tasks}
+          tasks={scheduled}
           todayIsoDate={todayIsoDate}
-          onOpenTask={handleOpenTask}
+          onOpenWorkItem={onOpenWorkItem}
         />
       </DragDropProvider>
-
-      <CalendarTaskDialog
-        task={selectedTask}
-        finalFocus={selectedTaskTriggerRef}
-        open={selectedTask !== null}
-        onOpenChange={handleDialogOpenChange}
-      />
     </div>
   )
 }

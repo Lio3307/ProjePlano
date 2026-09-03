@@ -23,7 +23,7 @@ test("creates one normalized container for every current project", () => {
   )
   assert.equal(Object.keys(state.projectsById).length, PROJECTS.length)
   assert.equal(Object.keys(state.projectViewsById).length, 4)
-  assert.equal(Object.keys(state.resourcesById).length, 2)
+  assert.equal(Object.keys(state.resourcesById).length, 4)
   assert.equal(Object.keys(state.milestonesById).length, 0)
 })
 
@@ -41,6 +41,45 @@ test("maps each legacy renderer to its first view or resource", () => {
   assert.deepEqual(state.projectsById["1"].viewIds, [])
   assert.equal(state.resourcesById[documentResourceId].type, "document")
   assert.equal(state.resourcesById[documentResourceId].title, "API Design")
+  assert.deepEqual(state.projectsById["1"].resourceIds, [
+    "resource-1-document",
+    "resource-1-endpoint-guidelines",
+    "resource-1-decision-log",
+  ])
+  assert.deepEqual(
+    state.projectsById["1"].resourceIds.map((resourceId) => ({
+      id: resourceId,
+      title: state.resourcesById[resourceId].title,
+      content: state.resourcesById[resourceId].content,
+    })),
+    [
+      {
+        id: "resource-1-document",
+        title: "API Design",
+        content:
+          "<h1>API Design</h1><p>Capture endpoints, payloads, and response contracts.</p>",
+      },
+      {
+        id: "resource-1-endpoint-guidelines",
+        title: "Endpoint guidelines",
+        content:
+          "<h1>Endpoint guidelines</h1><p>Keep routes predictable and errors consistent.</p>",
+      },
+      {
+        id: "resource-1-decision-log",
+        title: "Decision log",
+        content:
+          "<h1>Decision log</h1><p>Record technical decisions and their trade-offs.</p>",
+      },
+    ]
+  )
+  assert.deepEqual(state.projectsById["5"].resourceIds, [
+    "resource-5-document",
+  ])
+  assert.equal(
+    state.resourcesById["resource-5-document"].content,
+    "<h1>Team Wiki</h1><p>Keep shared project knowledge in one place.</p>"
+  )
 })
 
 test("converts every current task fixture for its owning project", () => {

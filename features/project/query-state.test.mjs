@@ -16,6 +16,14 @@ const document = {
   type: "document",
   templateId: null,
   isPinned: true,
+  content: "<h1>Project Brief</h1>",
+}
+const decisionLog = {
+  ...document,
+  id: "resource-project-a-decision-log",
+  title: "Decision log",
+  isPinned: false,
+  content: "<h1>Decision log</h1>",
 }
 
 test("falls back to Overview for absent, invalid, or unavailable views", () => {
@@ -79,6 +87,15 @@ test("opens the first Document when resource is absent", () => {
 })
 
 test("resolves a valid Document and reports an explicit invalid resource", () => {
+  assert.deepEqual(
+    resolveProjectSelection(
+      [board],
+      [document, decisionLog],
+      "documents",
+      decisionLog.id
+    ),
+    { kind: "document", resource: decisionLog }
+  )
   assert.deepEqual(
     resolveProjectSelection(
       [board],

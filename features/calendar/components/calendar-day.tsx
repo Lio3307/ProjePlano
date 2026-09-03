@@ -3,27 +3,26 @@
 import { useDroppable } from "@dnd-kit/react"
 
 import { cn } from "@/lib/utils"
-
 import {
   getCalendarDateLabel,
   type CalendarDayRecord,
 } from "../date-utils"
 import {
   getCalendarDateDropId,
-  type CalendarTask,
+  type ScheduledWorkItem,
 } from "../model"
 import { CalendarTaskCard } from "./calendar-task-card"
 
 interface CalendarDayProps {
   day: CalendarDayRecord
-  tasks: CalendarTask[]
-  onOpenTask: (taskId: string, trigger: HTMLButtonElement) => void
+  tasks: ScheduledWorkItem[]
+  onOpenWorkItem: (workItemId: string, trigger: HTMLElement) => void
 }
 
 export function CalendarDay({
   day,
   tasks,
-  onOpenTask,
+  onOpenWorkItem,
 }: CalendarDayProps) {
   const { ref, isDropTarget } = useDroppable({
     id: getCalendarDateDropId(day.isoDate),
@@ -49,18 +48,18 @@ export function CalendarDay({
         >
           {day.day}
         </time>
-        {tasks.length > 0 && (
+        {tasks.length > 0 ? (
           <span className="text-[10px] text-muted-foreground">
             {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
           </span>
-        )}
+        ) : null}
       </div>
       <div className="space-y-2">
         {tasks.map((task) => (
           <CalendarTaskCard
             key={task.id}
-            task={task}
-            onOpen={onOpenTask}
+            workItem={task}
+            onOpen={onOpenWorkItem}
           />
         ))}
       </div>

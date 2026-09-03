@@ -7,6 +7,7 @@ import {
   addProjectViewState,
   createProjectFromTemplateState,
   getProjectDocumentResourceId,
+  saveProjectDocumentState,
 } from "./project-state.ts"
 import { PROJECT_TEMPLATES } from "./templates.ts"
 
@@ -78,6 +79,7 @@ for (const template of PROJECT_TEMPLATES) {
         type: "document",
         templateId: null,
         isPinned: true,
+        content: "",
       })
     } else {
       assert.deepEqual(project.resourceIds, [])
@@ -174,41 +176,85 @@ test("rejects adding a view when its deterministic ID already exists", () => {
   )
 })
 
-test("adds one pinned blank Document and rejects duplicates", () => {
+test("adds multiple documents to an existing project", () => {
   const state = createProjectSeedState()
-  const next = addProjectDocumentState(state, "2")
-  const resourceId = getProjectDocumentResourceId("2")
+  const initialCount = state.projectsById["1"].resourceIds.length
+  const input = {
+    id: "resource-1-document-release-notes",
+    projectId: "1",
+    title: "  Release notes  ",
+  }
+  const next = addProjectDocumentState(state, input)
 
   assert.notStrictEqual(next, state)
-  assert.deepEqual(next.projectsById["2"].resourceIds, [resourceId])
-  assert.deepEqual(next.resourcesById[resourceId], {
-    id: resourceId,
-    projectId: "2",
-    title: "Project notes",
+  assert.equal(next.projectsById["1"].resourceIds.at(-1), input.id)
+  assert.deepEqual(next.resourcesById[input.id], {
+    id: input.id,
+    projectId: "1",
+    title: "Release notes",
     type: "document",
     templateId: null,
-    isPinned: true,
+    isPinned: false,
+    content: "",
   })
-  assert.strictEqual(addProjectDocumentState(next, "2"), next)
-  assert.strictEqual(addProjectDocumentState(state, "1"), state)
-  assert.strictEqual(
-    addProjectDocumentState(state, "unknown-project"),
-    state
+
+  const third = addProjectDocumentState(next, {
+    id: "resource-1-document-runbook",
+    projectId: "1",
+    title: "Runbook",
+  })
+
+  assert.equal(
+    third.projectsById["1"].resourceIds.length,
+    initialCount + 2
   )
 })
 
-test("rejects adding a Document when its deterministic ID collides", () => {
+test("rejects invalid document creation without mutation", () => {
   const state = createProjectSeedState()
-  const resourceId = getProjectDocumentResourceId("2")
-  const collidedState = {
-    ...state,
+  const valid = {
+    id: "resource-2-document-notes",
+    projectId: "2",
+    title: "Notes",
+  }
+
+  for (const input of [
+    { ...valid, id: " " },
+    { ...valid, id: "resource-1-document" },
+    { ...valid, projectId: "missing" },
+    { ...valid, title: "   " },
+  ]) {
+    assert.strictEqual(addProjectDocumentState(state, input), state)
+  }
+})
+
+test("saves only changed document content", () => {
+  const state = createProjectSeedState()
+  const resourceId = "resource-1-document"
+  const content = "<h1>Updated API design</h1>"
+  const next = saveProjectDocumentState(state, resourceId, content)
+
+  assert.notStrictEqual(next, state)
+  assert.equal(next.resourcesById[resourceId].content, content)
+  assert.strictEqual(
+    saveProjectDocumentState(next, resourceId, content),
+    next
+  )
+  assert.strictEqual(
+    saveProjectDocumentState(next, "missing-resource", content),
+    next
+  )
+
+  const canvasId = "resource-1-canvas"
+  const stateWithCanvas = {
+    ...next,
     resourcesById: {
-      ...state.resourcesById,
-      [resourceId]: {
-        id: resourceId,
+      ...next.resourcesById,
+      [canvasId]: {
+        id: canvasId,
         projectId: "1",
-        title: "Existing collision",
-        type: "document",
+        title: "Architecture canvas",
+        type: "canvas",
         templateId: null,
         isPinned: false,
       },
@@ -216,7 +262,7 @@ test("rejects adding a Document when its deterministic ID collides", () => {
   }
 
   assert.strictEqual(
-    addProjectDocumentState(collidedState, "2"),
-    collidedState
+    saveProjectDocumentState(stateWithCanvas, canvasId, content),
+    stateWithCanvas
   )
 })

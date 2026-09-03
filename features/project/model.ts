@@ -26,14 +26,26 @@ export type ProjectViewConfig = {
   filterIds: string[]
 }
 
-export type ProjectResource = {
+type ProjectResourceBase = {
   id: string
   projectId: string
   title: string
-  type: "document" | "canvas"
   templateId: string | null
   isPinned: boolean
 }
+
+export type ProjectDocumentResource = ProjectResourceBase & {
+  type: "document"
+  content: string
+}
+
+export type ProjectCanvasResource = ProjectResourceBase & {
+  type: "canvas"
+}
+
+export type ProjectResource =
+  | ProjectDocumentResource
+  | ProjectCanvasResource
 
 export type Milestone = {
   id: string

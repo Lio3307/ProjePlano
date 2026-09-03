@@ -2,7 +2,7 @@ import {
   buildCalendarDays,
   type CalendarMonth,
 } from "../date-utils"
-import type { CalendarTask } from "../model"
+import type { ScheduledWorkItem } from "../model"
 import { CalendarDay } from "./calendar-day"
 
 const WEEKDAYS = [
@@ -17,16 +17,16 @@ const WEEKDAYS = [
 
 interface CalendarGridProps {
   activeMonth: CalendarMonth
-  tasks: CalendarTask[]
+  tasks: ScheduledWorkItem[]
   todayIsoDate: string
-  onOpenTask: (taskId: string, trigger: HTMLButtonElement) => void
+  onOpenWorkItem: (workItemId: string, trigger: HTMLElement) => void
 }
 
 export function CalendarGrid({
   activeMonth,
   tasks,
   todayIsoDate,
-  onOpenTask,
+  onOpenWorkItem,
 }: CalendarGridProps) {
   const days = buildCalendarDays(activeMonth, todayIsoDate)
   const tasksByDate = groupTasksByDate(tasks)
@@ -53,7 +53,7 @@ export function CalendarGrid({
               key={day.isoDate}
               day={day}
               tasks={tasksByDate.get(day.isoDate) ?? []}
-              onOpenTask={onOpenTask}
+              onOpenWorkItem={onOpenWorkItem}
             />
           ))}
         </div>
@@ -62,14 +62,15 @@ export function CalendarGrid({
   )
 }
 
-function groupTasksByDate(tasks: CalendarTask[]) {
-  const groupedTasks = new Map<string, CalendarTask[]>()
+function groupTasksByDate(tasks: ScheduledWorkItem[]) {
+  const grouped = new Map<string, ScheduledWorkItem[]>()
 
   for (const task of tasks) {
-    const tasksForDate = groupedTasks.get(task.dueDate) ?? []
-    tasksForDate.push(task)
-    groupedTasks.set(task.dueDate, tasksForDate)
+    grouped.set(task.dueDate, [
+      ...(grouped.get(task.dueDate) ?? []),
+      task,
+    ])
   }
 
-  return groupedTasks
+  return grouped
 }

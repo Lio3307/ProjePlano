@@ -68,6 +68,20 @@ export type WorkItem = {
   customFields: Record<string, FieldValue>
 }
 
+export type EditableWorkItemFields = Pick<
+  WorkItem,
+  | "title"
+  | "description"
+  | "type"
+  | "status"
+  | "priority"
+  | "assignee"
+  | "dueDate"
+  | "estimate"
+  | "labels"
+  | "checklist"
+>
+
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/
 
 export function isWorkItemStatus(value: string): value is WorkItemStatus {
@@ -127,7 +141,31 @@ export function isValidWorkItem(item: WorkItem) {
       item.assignee.initials.trim().length > 0)
   const estimateIsValid =
     item.estimate === null ||
-    (Number.isFinite(item.estimate) && item.estimate >= 0)
+    (Number.isInteger(item.estimate) && item.estimate >= 0)
+  const labelsAreValid =
+    Array.isArray(item.labels) &&
+    item.labels.every(
+      (label) =>
+        typeof label === "string" &&
+        label.length > 0 &&
+        label.trim() === label
+    ) &&
+    new Set(item.labels).size === item.labels.length
+  const checklistIsValid =
+    Array.isArray(item.checklist) &&
+    item.checklist.every(
+      (checklistItem) =>
+        typeof checklistItem.id === "string" &&
+        checklistItem.id.length > 0 &&
+        checklistItem.id.trim() === checklistItem.id &&
+        typeof checklistItem.label === "string" &&
+        checklistItem.label.length > 0 &&
+        checklistItem.label.trim() === checklistItem.label &&
+        typeof checklistItem.completed === "boolean"
+    ) &&
+    new Set(
+      item.checklist.map((checklistItem) => checklistItem.id)
+    ).size === item.checklist.length
 
   return (
     item.id.trim().length > 0 &&
@@ -140,8 +178,8 @@ export function isValidWorkItem(item: WorkItem) {
     estimateIsValid &&
     Number.isInteger(item.position) &&
     item.position >= 0 &&
-    Array.isArray(item.labels) &&
-    Array.isArray(item.checklist) &&
+    labelsAreValid &&
+    checklistIsValid &&
     Array.isArray(item.dependencyIds) &&
     Array.isArray(item.linkedResourceIds) &&
     item.customFields !== null &&

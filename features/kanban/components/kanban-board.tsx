@@ -1,14 +1,17 @@
-import type { KanbanColumn as KanbanColumnRecord } from "../model"
+import type { KanbanColumnRecord } from "../model"
 import { KanbanColumn } from "./kanban-column"
 
 interface KanbanBoardProps {
   columns: KanbanColumnRecord[]
-  onOpenCard: (cardId: string, trigger: HTMLButtonElement) => void
+  onOpenWorkItem: (
+    workItemId: string,
+    trigger: HTMLElement
+  ) => void
 }
 
 export function KanbanBoard({
   columns,
-  onOpenCard,
+  onOpenWorkItem,
 }: KanbanBoardProps) {
   return (
     <div
@@ -18,9 +21,9 @@ export function KanbanBoard({
       <div className="flex min-w-max items-start gap-4">
         {columns.map((column) => (
           <KanbanColumn
-            key={column.id}
+            key={column.status}
             column={column}
-            onOpenCard={onOpenCard}
+            onOpenWorkItem={onOpenWorkItem}
           />
         ))}
       </div>

@@ -4,34 +4,28 @@ import { useDraggable } from "@dnd-kit/react"
 import { GripVertical } from "lucide-react"
 
 import { Card } from "@/components/ui/card"
+import {
+  WorkItemAssignee,
+  WorkItemPriorityBadge,
+  WorkItemStatusBadge,
+  WorkItemTypeBadge,
+} from "@/features/work-item/components/work-item-meta"
+import type { WorkItem } from "@/features/work-item/model"
 import { cn } from "@/lib/utils"
-
-import {
-  getCalendarTaskDragId,
-  type CalendarTask,
-} from "../model"
-import {
-  CalendarLabelList,
-  CalendarPriorityBadge,
-  CalendarStatusBadge,
-} from "./calendar-task-meta"
+import { getCalendarTaskDragId } from "../model"
 
 interface CalendarTaskCardProps {
-  task: CalendarTask
-  onOpen: (taskId: string, trigger: HTMLButtonElement) => void
+  workItem: WorkItem
+  onOpen: (workItemId: string, trigger: HTMLElement) => void
 }
 
 export function CalendarTaskCard({
-  task,
+  workItem,
   onOpen,
 }: CalendarTaskCardProps) {
-  const {
-    ref,
-    handleRef,
-    isDragging,
-  } = useDraggable({
-    id: getCalendarTaskDragId(task.id),
-    type: "calendar-task",
+  const { ref, handleRef, isDragging } = useDraggable({
+    id: getCalendarTaskDragId(workItem.id),
+    type: "calendar-work-item",
   })
 
   return (
@@ -47,27 +41,28 @@ export function CalendarTaskCard({
         <button
           type="button"
           className="min-w-0 flex-1 space-y-2 p-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-          aria-label={"Open details for " + task.title}
-          onClick={(event) => onOpen(task.id, event.currentTarget)}
+          aria-label={"Open details for " + workItem.title}
+          onClick={(event) =>
+            onOpen(workItem.id, event.currentTarget)
+          }
         >
-          <h3 className="text-xs leading-4 font-medium">{task.title}</h3>
+          <h3 className="text-xs leading-4 font-medium">
+            {workItem.title}
+          </h3>
           <div className="flex flex-wrap gap-1">
-            <CalendarStatusBadge status={task.status} />
-            <CalendarPriorityBadge priority={task.priority} />
+            <WorkItemStatusBadge status={workItem.status} />
+            <WorkItemTypeBadge type={workItem.type} />
+            <WorkItemPriorityBadge priority={workItem.priority} />
           </div>
-          <CalendarLabelList labels={task.labels} />
-          <span
-            className="inline-flex size-6 items-center justify-center rounded-full bg-primary/10 text-[9px] font-semibold text-primary"
-            title={task.assignee.name}
-          >
-            {task.assignee.initials}
-          </span>
+          {workItem.assignee ? (
+            <WorkItemAssignee assignee={workItem.assignee} />
+          ) : null}
         </button>
         <button
           ref={handleRef}
           type="button"
           className="m-1.5 rounded-md p-1 text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label={"Reschedule " + task.title}
+          aria-label={"Reschedule " + workItem.title}
         >
           <GripVertical className="size-3.5" aria-hidden="true" />
         </button>

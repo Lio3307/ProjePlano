@@ -3,6 +3,8 @@ import {
   type WorkItemStatus,
 } from "../work-item/model.ts"
 import type {
+  ProjectDocumentResource,
+  ProjectResource,
   ProjectViewConfig,
   ProjectWorkspaceState,
 } from "./model"
@@ -143,7 +145,7 @@ export function selectProjectDocumentResources(
   projectId: string
 ) {
   return selectProjectResources(state, projectId).filter(
-    (resource) => resource.type === "document"
+    isProjectDocumentResource
   )
 }
 
@@ -167,4 +169,10 @@ function isSupportedProjectView(
   view: ProjectViewConfig
 ): view is SupportedProjectView {
   return isSupportedProjectViewType(view.type)
+}
+
+function isProjectDocumentResource(
+  resource: ProjectResource
+): resource is ProjectDocumentResource {
+  return resource.type === "document"
 }

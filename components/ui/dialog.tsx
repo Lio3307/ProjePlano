@@ -57,7 +57,7 @@ function DialogContent({
               data-slot="dialog-close"
               render={
                 <Button
-                  className="absolute top-4 right-4"
+                  className="absolute top-4 right-4 z-20"
                   size="icon-sm"
                   variant="ghost"
                 />
@@ -81,6 +81,22 @@ function DialogHeader({
     <div
       data-slot="dialog-header"
       className={cn("flex flex-col gap-2 pr-10", className)}
+      {...props}
+    />
+  )
+}
+
+function DialogFooter({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="dialog-footer"
+      className={cn(
+        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+        className
+      )}
       {...props}
     />
   )
@@ -119,6 +135,7 @@ export {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 }

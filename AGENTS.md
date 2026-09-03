@@ -89,9 +89,9 @@ Do not start by scanning the whole repository.
 
 ## Project snapshot
 
-ProjePlano is an early-stage project and workspace management UI. The current dashboard contains workspace and project lists, a template-based project creation flow, a query-driven project shell and Overview, plus editable table, rich-text document, Kanban, and Calendar prototypes.
+ProjePlano is an early-stage project and workspace management UI. The current dashboard contains workspace, project, editable document, a feature-local editable Table, shared Board/Calendar work-item views, and Project Overview prototypes.
 
-Project records, views, resources, milestones, and normalized work items are seeded into one dashboard-scoped Zustand store. That store is frontend-only and memory-only: projects or capabilities created in the browser reset after a full page reload. Board, Table, and Calendar currently render their feature-owned demo fixtures through the project adapter; their visible data is not yet driven by the normalized work-item state. Do not assume a backend, authentication system, or persistence layer exists unless the current source proves it.
+The dashboard uses a dashboard-scoped in-memory project store seeded from local mock adapters. Board, Calendar, and Overview share normalized `WorkItem` records. Each project may own multiple ordered Document resources whose saved HTML lives separately in the same store. Table intentionally keeps its own editable columns and rows in component-local memory. All of this remains frontend-only and resets after a full page reload. Do not assume a backend, authentication system, persistence layer, or realtime transport exists unless the current source proves it.
 
 ### Technology
 
@@ -122,12 +122,12 @@ Project records, views, resources, milestones, and normalized work items are see
   - `app/dashboard/workspaces/[workspaceId]/projects/[projectId]/` - canonical project route; query state selects Overview, Board, Table, Calendar, or a Document resource.
 - `features/` - domain-owned frontend code and typed mock boundaries.
   - `features/workspace/` - workspace types, mock data, list, and pagination.
-  - `features/project/` - normalized project state, seed adapters, selectors, immutable transitions, Zustand store/provider, templates, Overview, query navigation, project creation, and renderer selection.
-  - `features/work-item/` - normalized work-item types, validation, and dependency rules; current Board, Table, and Calendar presentation migration is still pending.
-  - `features/table/` - editable-table model, fixtures, state, cells, and view.
-  - `features/document/` - Tiptap editor and document view.
-  - `features/kanban/` - dnd-kit Kanban prototype.
-  - `features/calendar/` - month-grid Calendar model, date utilities, mock tasks, local state, drag interactions, and read-only task details.
+  - `features/project/` - normalized project state, ordered Document resources, seed adapters, selectors, immutable transitions, Zustand store/provider, templates, Overview, two-level query navigation, project/document creation, and renderer selection.
+  - `features/work-item/` - normalized work-item types, validation, form conversion, and the shared create/edit/delete dialog and metadata presentation.
+  - `features/table/` - Notion-style editable table model, fixtures, local state hook, cell editors, and view. Its mock rows also remain seed-adapter input for the normalized project store, but Table presentation does not read that store.
+  - `features/document/` - Tiptap editor and per-resource document view; editing starts from saved store HTML and saves through a typed project callback.
+  - `features/kanban/` - controlled dnd-kit Board projection over shared `WorkItem` records; its mock columns are seed-adapter input only.
+  - `features/calendar/` - controlled month-grid projection over shared `WorkItem` records, date utilities, Unscheduled presentation, and due-date drag interactions; its mock tasks are seed-adapter input only.
 - `components/layout/` - reusable application-shell UI such as the dashboard sidebar.
 - `components/ui/` - reusable low-level UI primitives. Check all consumers before changing a shared contract.
 - `hooks/` - shared React hooks.
@@ -146,11 +146,12 @@ Project records, views, resources, milestones, and normalized work items are see
 - Validate the workspace in the project Server Component, but resolve the project from the client store. A client-created project is intentionally absent from the server seed, so adding a server-side project `notFound()` check would break same-provider navigation.
 - Mount exactly one `ProjectStoreProvider` in the persistent dashboard layout. Project lists, the primary sidebar, creation flow, and project shell must read the normalized store through focused selectors rather than maintaining a second project array.
 - Keep project creation and capability additions memory-only until persistence is explicitly requested. The five current templates are Web Application, Mobile Application, API Service, Landing Page, and Empty Project.
-- Phase 2 exposes only Board, Table, Calendar, and at most one Document per project. Timeline and Canvas exist only as future model concepts and must not appear in current navigation or creation controls.
+- Phase 2 exposes Board, Table, Calendar, and any number of ordered Documents per project. Document IDs are generated only from the client creation event; saved HTML is keyed by resource ID and remains in memory until reload. Timeline and Canvas exist only as future model concepts and must not appear in current navigation or creation controls.
+- Keep primary project areas and their Work/Document subnavigation as horizontally scrollable, connected rectangular tab strips with left/right borders and vertical separators. The Documents subnavigation uses the shared Base UI-backed dropdown to select a canonical `resource` URL and the shared Dialog/Input/Button primitives to create a document.
 - Put domain UI, types, mock data, and feature-local state in the owning `features/<feature>/` folder.
-- Feature presentation components receive records through typed props; they do not import their own workspace or project mock records.
+- Controlled feature presentation components receive records through typed props. The standalone Table is the explicit exception: its feature-local hook initializes editable mock rows and columns owned by `features/table`.
 - Put reusable application-shell UI in `components/layout`, domain-agnostic primitives in `components/ui`, genuinely cross-feature hooks in `hooks`, and framework-independent shared helpers in `lib`.
-- Keep table, document, Kanban, and Calendar internals inside their respective features. `features/project/components/project-view.tsx` is the explicit bridge and may select their renderer, but `features/project` must not absorb their implementation or imply that demo fixtures already use normalized work items.
+- Keep table, document, Kanban, and Calendar internals inside their respective features. `features/project/components/project-work-view.tsx` renders the standalone Table branch and is the store-connected bridge for the controlled Board and Calendar renderers; `features/project` must not absorb their presentation implementation.
 - Keep `PaginationLink` as a direct anchor styled with `buttonVariants`. Do not compose it through the Base UI-backed `Button`; that previously produced different server/client `data-slot` attributes and a hydration mismatch. Preserve `components/ui/pagination.test.mjs` when changing this contract.
 - Do not add speculative `api`, `services`, `repositories`, or feature folders. Create a folder only when it owns real code required by the current task.
 - Reuse current UI primitives and design tokens before creating alternatives.

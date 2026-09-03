@@ -1,12 +1,30 @@
 import type { CalendarMonth } from "./date-utils"
-import type { CalendarTask } from "./model"
+import type { Assignee, WorkItem } from "../work-item/model"
+
+type CalendarSeedTask = Omit<
+  Pick<
+    WorkItem,
+    | "id"
+    | "title"
+    | "description"
+    | "status"
+    | "priority"
+    | "dueDate"
+    | "labels"
+    | "checklist"
+  >,
+  "dueDate"
+> & {
+  assignee: Assignee
+  dueDate: string
+}
 
 export const INITIAL_CALENDAR_MONTH: CalendarMonth = {
   year: 2026,
   month: 8,
 }
 
-export const INITIAL_CALENDAR_TASKS: CalendarTask[] = [
+export const INITIAL_CALENDAR_TASKS: CalendarSeedTask[] = [
   {
     id: "launch-kickoff",
     title: "Launch planning kickoff",

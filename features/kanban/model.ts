@@ -1,165 +1,101 @@
-export type KanbanPriority = "low" | "medium" | "high"
+import {
+  WORK_ITEM_STATUSES,
+  isWorkItemStatus,
+  type WorkItem,
+  type WorkItemStatus,
+} from "../work-item/model.ts"
 
-export type KanbanChecklistItem = {
-  id: string
-  label: string
-  completed: boolean
+const COLUMN_TITLES: Record<WorkItemStatus, string> = {
+  backlog: "Backlog",
+  todo: "To Do",
+  "in-progress": "In Progress",
+  review: "Review",
+  testing: "Testing",
+  done: "Done",
 }
 
-export type KanbanAssignee = {
-  name: string
-  initials: string
-}
+const ITEM_PREFIX = "kanban-item:"
+const COLUMN_PREFIX = "kanban-column:"
 
-export type KanbanCard = {
-  id: string
+export type KanbanColumnRecord = {
+  status: WorkItemStatus
   title: string
-  description: string
-  priority: KanbanPriority
-  assignee: KanbanAssignee
-  dueDate: string
-  labels: string[]
-  checklist: KanbanChecklistItem[]
-}
-
-export type KanbanColumn = {
-  id: string
-  title: string
-  cards: KanbanCard[]
+  workItems: WorkItem[]
 }
 
 export type KanbanDropDestination = {
-  columnId: string
+  status: WorkItemStatus
   index: number
 }
 
-export type KanbanCardLocation = {
-  card: KanbanCard
-  columnId: string
-  columnTitle: string
+export function buildKanbanColumns(
+  workItems: readonly WorkItem[]
+): KanbanColumnRecord[] {
+  return WORK_ITEM_STATUSES.map((status) => ({
+    status,
+    title: COLUMN_TITLES[status],
+    workItems: workItems
+      .filter((workItem) => workItem.status === status)
+      .sort(
+        (left, right) =>
+          left.position - right.position ||
+          left.id.localeCompare(right.id)
+      ),
+  }))
 }
 
-export function findKanbanCard(
-  columns: KanbanColumn[],
-  cardId: string
-): KanbanCardLocation | null {
-  for (const column of columns) {
-    const card = column.cards.find((candidate) => candidate.id === cardId)
+export function getKanbanWorkItemDragId(workItemId: string) {
+  return ITEM_PREFIX + workItemId
+}
 
-    if (card) {
-      return {
-        card,
-        columnId: column.id,
-        columnTitle: column.title,
-      }
-    }
+export function getKanbanColumnDropId(status: WorkItemStatus) {
+  return COLUMN_PREFIX + status
+}
+
+export function parseKanbanWorkItemDragId(value: string | number) {
+  const normalized = String(value)
+
+  if (!normalized.startsWith(ITEM_PREFIX)) {
+    return null
   }
 
-  return null
+  const workItemId = normalized.slice(ITEM_PREFIX.length)
+
+  return workItemId || null
 }
 
 export function getKanbanDropDestination(
-  columns: KanbanColumn[],
+  columns: readonly KanbanColumnRecord[],
   targetId: string | number
 ): KanbanDropDestination | null {
-  const normalizedTargetId = String(targetId)
-  const targetColumn = columns.find(
-    (column) => column.id === normalizedTargetId
-  )
+  const normalized = String(targetId)
 
-  if (targetColumn) {
-    return {
-      columnId: targetColumn.id,
-      index: targetColumn.cards.length,
-    }
+  if (normalized.startsWith(COLUMN_PREFIX)) {
+    const status = normalized.slice(COLUMN_PREFIX.length)
+    const column = isWorkItemStatus(status)
+      ? columns.find((candidate) => candidate.status === status)
+      : undefined
+
+    return column
+      ? { status: column.status, index: column.workItems.length }
+      : null
+  }
+
+  const workItemId = parseKanbanWorkItemDragId(normalized)
+
+  if (!workItemId) {
+    return null
   }
 
   for (const column of columns) {
-    const cardIndex = column.cards.findIndex(
-      (card) => card.id === normalizedTargetId
+    const index = column.workItems.findIndex(
+      (workItem) => workItem.id === workItemId
     )
 
-    if (cardIndex >= 0) {
-      return {
-        columnId: column.id,
-        index: cardIndex,
-      }
+    if (index >= 0) {
+      return { status: column.status, index }
     }
   }
 
   return null
-}
-
-export function moveKanbanCard(
-  columns: KanbanColumn[],
-  cardId: string,
-  destination: KanbanDropDestination
-): KanbanColumn[] {
-  const sourceColumnIndex = columns.findIndex((column) =>
-    column.cards.some((card) => card.id === cardId)
-  )
-  const destinationColumnIndex = columns.findIndex(
-    (column) => column.id === destination.columnId
-  )
-
-  if (sourceColumnIndex < 0 || destinationColumnIndex < 0) {
-    return columns
-  }
-
-  const sourceColumn = columns[sourceColumnIndex]
-  const sourceCardIndex = sourceColumn.cards.findIndex(
-    (card) => card.id === cardId
-  )
-
-  if (sourceColumnIndex === destinationColumnIndex) {
-    const cards = [...sourceColumn.cards]
-    const [card] = cards.splice(sourceCardIndex, 1)
-
-    if (!card) {
-      return columns
-    }
-
-    const insertIndex = clampIndex(destination.index, cards.length)
-    cards.splice(insertIndex, 0, card)
-
-    const orderDidNotChange = cards.every(
-      (candidate, index) => candidate === sourceColumn.cards[index]
-    )
-
-    if (orderDidNotChange) {
-      return columns
-    }
-
-    return columns.map((column, index) =>
-      index === sourceColumnIndex ? { ...column, cards } : column
-    )
-  }
-
-  const sourceCards = [...sourceColumn.cards]
-  const [card] = sourceCards.splice(sourceCardIndex, 1)
-
-  if (!card) {
-    return columns
-  }
-
-  const destinationColumn = columns[destinationColumnIndex]
-  const destinationCards = [...destinationColumn.cards]
-  const insertIndex = clampIndex(destination.index, destinationCards.length)
-  destinationCards.splice(insertIndex, 0, card)
-
-  return columns.map((column, index) => {
-    if (index === sourceColumnIndex) {
-      return { ...column, cards: sourceCards }
-    }
-
-    if (index === destinationColumnIndex) {
-      return { ...column, cards: destinationCards }
-    }
-
-    return column
-  })
-}
-
-function clampIndex(index: number, maximum: number) {
-  return Math.min(Math.max(index, 0), maximum)
 }

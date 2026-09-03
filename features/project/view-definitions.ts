@@ -29,6 +29,7 @@ export const PROJECT_VIEW_DEFINITIONS = {
     type: "board",
     visibleFieldIds: [
       "title",
+      "type",
       "priority",
       "assignee",
       "dueDate",
@@ -42,10 +43,10 @@ export const PROJECT_VIEW_DEFINITIONS = {
     title: "Table",
     type: "table",
     visibleFieldIds: [
-      "title",
+      "name",
       "status",
       "priority",
-      "dueDate",
+      "due",
       "attachments",
     ],
     groupBy: null,

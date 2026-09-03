@@ -1,4 +1,4 @@
-import type { ProjectResource } from "./model"
+import type { ProjectDocumentResource } from "./model"
 import {
   isSupportedProjectViewType,
   type SupportedProjectView,
@@ -10,7 +10,7 @@ export type ProjectQueryValue = string | string[] | undefined
 export type ProjectSelection =
   | { kind: "overview" }
   | { kind: "work"; view: SupportedProjectView }
-  | { kind: "document"; resource: ProjectResource }
+  | { kind: "document"; resource: ProjectDocumentResource }
   | { kind: "missing-resource"; resourceId: string }
 
 type ProjectViewTarget =
@@ -20,7 +20,7 @@ type ProjectViewTarget =
 
 export function resolveProjectSelection(
   workViews: readonly SupportedProjectView[],
-  documents: readonly ProjectResource[],
+  documents: readonly ProjectDocumentResource[],
   viewQuery: ProjectQueryValue,
   resourceQuery: ProjectQueryValue
 ): ProjectSelection {

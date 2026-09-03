@@ -1,11 +1,17 @@
 import { createStore, type StoreApi } from "zustand/vanilla"
 
-import type { WorkItem, WorkItemStatus } from "../work-item/model"
+import type {
+  EditableWorkItemFields,
+  WorkItem,
+  WorkItemStatus,
+} from "../work-item/model"
 import type { ProjectWorkspaceState } from "./model"
 import {
   addProjectDocumentState,
   addProjectViewState,
   createProjectFromTemplateState,
+  saveProjectDocumentState,
+  type CreateProjectDocumentInput,
   type CreateProjectInput,
 } from "./project-state.ts"
 import { createProjectSeedState } from "./seed-data.ts"
@@ -14,6 +20,7 @@ import {
   createWorkItemState,
   deleteWorkItemState,
   moveWorkItemState,
+  saveWorkItemState,
   updateWorkItemDateRangeState,
   updateWorkItemState,
   type WorkItemDetailsPatch,
@@ -25,11 +32,16 @@ export type ProjectStoreActions = {
     projectId: string,
     type: SupportedProjectViewType
   ) => boolean
-  addProjectDocument: (projectId: string) => boolean
+  addProjectDocument: (input: CreateProjectDocumentInput) => boolean
+  saveProjectDocument: (resourceId: string, content: string) => boolean
   createWorkItem: (workItem: WorkItem) => boolean
   updateWorkItem: (
     workItemId: string,
     patch: WorkItemDetailsPatch
+  ) => boolean
+  saveWorkItem: (
+    workItemId: string,
+    fields: EditableWorkItemFields
   ) => boolean
   moveWorkItem: (
     workItemId: string,
@@ -80,9 +92,21 @@ export function createProjectStore(
       return true
     },
 
-    addProjectDocument(projectId) {
+    addProjectDocument(input) {
       const current = readProjectState(get())
-      const next = addProjectDocumentState(current, projectId)
+      const next = addProjectDocumentState(current, input)
+
+      if (next === current) {
+        return false
+      }
+
+      set(next)
+      return true
+    },
+
+    saveProjectDocument(resourceId, content) {
+      const current = readProjectState(get())
+      const next = saveProjectDocumentState(current, resourceId, content)
 
       if (next === current) {
         return false
@@ -107,6 +131,18 @@ export function createProjectStore(
     updateWorkItem(workItemId, patch) {
       const current = readProjectState(get())
       const next = updateWorkItemState(current, workItemId, patch)
+
+      if (next === current) {
+        return false
+      }
+
+      set(next)
+      return true
+    },
+
+    saveWorkItem(workItemId, fields) {
+      const current = readProjectState(get())
+      const next = saveWorkItemState(current, workItemId, fields)
 
       if (next === current) {
         return false

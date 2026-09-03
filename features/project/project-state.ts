@@ -1,6 +1,6 @@
 import type {
+  ProjectDocumentResource,
   ProjectRecord,
-  ProjectResource,
   ProjectViewType,
   ProjectWorkspaceState,
 } from "./model"
@@ -19,6 +19,12 @@ export type CreateProjectInput = {
   templateId: ProjectTemplateId
   title: string
   description: string
+}
+
+export type CreateProjectDocumentInput = {
+  id: string
+  projectId: string
+  title: string
 }
 
 export function createProjectFromTemplateState(
@@ -43,7 +49,12 @@ export function createProjectFromTemplateState(
     createProjectViewConfig(input.id, type)
   )
   const document = template.documentTitle
-    ? createProjectDocument(input.id, template.documentTitle)
+    ? createProjectDocument(
+        getProjectDocumentResourceId(input.id),
+        input.id,
+        template.documentTitle,
+        true
+      )
     : null
 
   if (
@@ -134,29 +145,33 @@ export function addProjectViewState(
 
 export function addProjectDocumentState(
   state: ProjectWorkspaceState,
-  projectId: string
+  input: CreateProjectDocumentInput
 ): ProjectWorkspaceState {
-  const project = state.projectsById[projectId]
-  const resourceId = getProjectDocumentResourceId(projectId)
+  const project = state.projectsById[input.projectId]
+  const title = input.title.trim()
 
   if (
     !project ||
-    state.resourcesById[resourceId] ||
-    Object.values(state.resourcesById).some(
-      (resource) =>
-        resource.projectId === projectId && resource.type === "document"
-    )
+    input.id.trim().length === 0 ||
+    input.id.trim() !== input.id ||
+    title.length === 0 ||
+    state.resourcesById[input.id]
   ) {
     return state
   }
 
-  const document = createProjectDocument(projectId, "Project notes")
+  const document = createProjectDocument(
+    input.id,
+    input.projectId,
+    title,
+    false
+  )
 
   return {
     ...state,
     projectsById: {
       ...state.projectsById,
-      [projectId]: {
+      [input.projectId]: {
         ...project,
         resourceIds: [...project.resourceIds, document.id],
       },
@@ -168,20 +183,47 @@ export function addProjectDocumentState(
   }
 }
 
+export function saveProjectDocumentState(
+  state: ProjectWorkspaceState,
+  resourceId: string,
+  content: string
+): ProjectWorkspaceState {
+  const resource = state.resourcesById[resourceId]
+
+  if (
+    !resource ||
+    resource.type !== "document" ||
+    resource.content === content
+  ) {
+    return state
+  }
+
+  return {
+    ...state,
+    resourcesById: {
+      ...state.resourcesById,
+      [resourceId]: { ...resource, content },
+    },
+  }
+}
+
 export function getProjectDocumentResourceId(projectId: string) {
   return "resource-" + projectId + "-document"
 }
 
 function createProjectDocument(
+  id: string,
   projectId: string,
-  title: string
-): ProjectResource {
+  title: string,
+  isPinned: boolean
+): ProjectDocumentResource {
   return {
-    id: getProjectDocumentResourceId(projectId),
+    id,
     projectId,
     title,
     type: "document",
     templateId: null,
-    isPinned: true,
+    isPinned,
+    content: "",
   }
 }

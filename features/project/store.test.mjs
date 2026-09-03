@@ -87,6 +87,35 @@ test("delegates move, date-range, and delete actions", () => {
   assert.equal(store.getState().deleteWorkItem(itemId), false)
 })
 
+test("notifies once for an atomic save and never for a no-op", () => {
+  const store = createProjectStore()
+  const itemId = "work-item-2-audit-onboarding"
+  const item = store.getState().workItemsById[itemId]
+  const fields = {
+    title: "Audit onboarding",
+    description: item.description,
+    type: item.type,
+    status: "review",
+    priority: item.priority,
+    assignee: item.assignee,
+    dueDate: item.dueDate,
+    estimate: item.estimate,
+    labels: item.labels,
+    checklist: item.checklist,
+  }
+  let notifications = 0
+  const unsubscribe = store.subscribe(() => {
+    notifications += 1
+  })
+
+  assert.equal(store.getState().saveWorkItem(itemId, fields), true)
+  assert.equal(notifications, 1)
+  assert.equal(store.getState().saveWorkItem(itemId, fields), false)
+  assert.equal(notifications, 1)
+
+  unsubscribe()
+})
+
 test("resets to the store's private baseline without dropping actions", () => {
   const store = createProjectStore()
   const itemId = "work-item-2-audit-onboarding"
@@ -102,7 +131,7 @@ test("resets to the store's private baseline without dropping actions", () => {
   assert.equal(typeof store.getState().resetDemo, "function")
 })
 
-test("delegates atomic project, view, and Document actions", () => {
+test("delegates atomic project, view, and document actions", () => {
   const store = createProjectStore()
   let notifications = 0
   const unsubscribe = store.subscribe(() => {
@@ -137,16 +166,39 @@ test("delegates atomic project, view, and Document actions", () => {
   )
   assert.equal(notifications, 2)
 
-  assert.equal(
-    store.getState().addProjectDocument("project-created"),
-    true
-  )
+  const notes = {
+    id: "resource-project-created-document-notes",
+    projectId: "project-created",
+    title: "Notes",
+  }
+  const runbook = {
+    id: "resource-project-created-document-runbook",
+    projectId: "project-created",
+    title: "Runbook",
+  }
+
+  assert.equal(store.getState().addProjectDocument(notes), true)
   assert.equal(notifications, 3)
+  assert.equal(store.getState().addProjectDocument(runbook), true)
+  assert.equal(notifications, 4)
+  assert.equal(store.getState().addProjectDocument(notes), false)
+  assert.equal(notifications, 4)
+  assert.deepEqual(
+    store.getState().projectsById["project-created"].resourceIds,
+    [notes.id, runbook.id]
+  )
+
+  const content = "<h1>Project notes</h1>"
+  assert.equal(store.getState().saveProjectDocument(notes.id, content), true)
+  assert.equal(notifications, 5)
+  assert.equal(store.getState().resourcesById[notes.id].content, content)
+  assert.equal(store.getState().saveProjectDocument(notes.id, content), false)
+  assert.equal(notifications, 5)
   assert.equal(
-    store.getState().addProjectDocument("project-created"),
+    store.getState().saveProjectDocument("missing-resource", content),
     false
   )
-  assert.equal(notifications, 3)
+  assert.equal(notifications, 5)
 
   unsubscribe()
 })
@@ -171,4 +223,5 @@ test("reset removes client-created project structure", () => {
   assert.equal(typeof store.getState().createProjectFromTemplate, "function")
   assert.equal(typeof store.getState().addProjectView, "function")
   assert.equal(typeof store.getState().addProjectDocument, "function")
+  assert.equal(typeof store.getState().saveProjectDocument, "function")
 })

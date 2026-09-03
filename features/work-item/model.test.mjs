@@ -76,7 +76,38 @@ test("rejects invalid identity, scheduling, estimate, and position fields", () =
     false
   )
   assert.equal(isValidWorkItem(createWorkItem({ estimate: -1 })), false)
+  assert.equal(isValidWorkItem(createWorkItem({ estimate: 1.5 })), false)
   assert.equal(isValidWorkItem(createWorkItem({ position: 1.5 })), false)
+})
+
+test("rejects unnormalized or duplicate labels", () => {
+  assert.equal(isValidWorkItem(createWorkItem({ labels: [" UI"] })), false)
+  assert.equal(
+    isValidWorkItem(createWorkItem({ labels: ["UI", "UI"] })),
+    false
+  )
+})
+
+test("rejects invalid or duplicate checklist items", () => {
+  assert.equal(
+    isValidWorkItem(
+      createWorkItem({
+        checklist: [
+          { id: "same", label: "First", completed: false },
+          { id: "same", label: "Second", completed: true },
+        ],
+      })
+    ),
+    false
+  )
+  assert.equal(
+    isValidWorkItem(
+      createWorkItem({
+        checklist: [{ id: "check", label: " ", completed: false }],
+      })
+    ),
+    false
+  )
 })
 
 test("detects dependency cycles from the proposed dependency list", () => {

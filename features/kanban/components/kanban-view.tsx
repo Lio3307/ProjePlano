@@ -1,76 +1,68 @@
 "use client"
 
-import { useRef, useState } from "react"
 import { DragDropProvider } from "@dnd-kit/react"
 
+import type {
+  WorkItem,
+  WorkItemStatus,
+} from "@/features/work-item/model"
 import {
-  findKanbanCard,
+  buildKanbanColumns,
   getKanbanDropDestination,
-  moveKanbanCard,
+  parseKanbanWorkItemDragId,
 } from "../model"
-import { INITIAL_KANBAN_COLUMNS } from "../mock-data"
 import { KanbanBoard } from "./kanban-board"
-import { KanbanCardDialog } from "./kanban-card-dialog"
 
-export function KanbanView() {
-  const [columns, setColumns] = useState(() => INITIAL_KANBAN_COLUMNS)
-  const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
-  const selectedCardTriggerRef = useRef<HTMLButtonElement | null>(null)
-  const selectedCard = selectedCardId
-    ? findKanbanCard(columns, selectedCardId)
-    : null
+interface KanbanViewProps {
+  workItems: readonly WorkItem[]
+  onOpenWorkItem: (
+    workItemId: string,
+    trigger: HTMLElement
+  ) => void
+  onMoveWorkItem: (
+    workItemId: string,
+    status: WorkItemStatus,
+    index: number
+  ) => void
+}
 
-  function handleOpenCard(cardId: string, trigger: HTMLButtonElement) {
-    selectedCardTriggerRef.current = trigger
-    setSelectedCardId(cardId)
-  }
-
-  function handleDialogOpenChange(open: boolean) {
-    if (!open) {
-      setSelectedCardId(null)
-    }
-  }
-
-  function handleDragEnd(
-    canceled: boolean,
-    sourceId: string | number | undefined,
-    targetId: string | number | undefined
-  ) {
-    if (canceled || sourceId == null || targetId == null) {
-      return
-    }
-
-    setColumns((currentColumns) => {
-      const destination = getKanbanDropDestination(currentColumns, targetId)
-
-      if (!destination) {
-        return currentColumns
-      }
-
-      return moveKanbanCard(currentColumns, String(sourceId), destination)
-    })
-  }
+export function KanbanView({
+  workItems,
+  onOpenWorkItem,
+  onMoveWorkItem,
+}: KanbanViewProps) {
+  const columns = buildKanbanColumns(workItems)
 
   return (
-    <>
-      <DragDropProvider
-        onDragEnd={(event) =>
-          handleDragEnd(
-            event.canceled,
-            event.operation.source?.id,
-            event.operation.target?.id
+    <DragDropProvider
+      onDragEnd={(event) => {
+        if (event.canceled) {
+          return
+        }
+
+        const sourceId = event.operation.source?.id
+        const targetId = event.operation.target?.id
+
+        if (sourceId == null || targetId == null) {
+          return
+        }
+
+        const workItemId = parseKanbanWorkItemDragId(sourceId)
+        const destination = getKanbanDropDestination(columns, targetId)
+
+        if (workItemId && destination) {
+          onMoveWorkItem(
+            workItemId,
+            destination.status,
+            destination.index
           )
         }
-      >
-        <KanbanBoard columns={columns} onOpenCard={handleOpenCard} />
-      </DragDropProvider>
-
-      <KanbanCardDialog
-        cardLocation={selectedCard}
-        finalFocus={selectedCardTriggerRef}
-        open={selectedCard !== null}
-        onOpenChange={handleDialogOpenChange}
+      }}
+    >
+      <KanbanBoard
+        columns={columns}
+        onOpenWorkItem={onOpenWorkItem}
       />
-    </>
+    </DragDropProvider>
   )
 }

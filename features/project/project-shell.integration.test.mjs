@@ -36,7 +36,9 @@ test("renders an owned work view from the query", async () => {
   )
 
   assert.equal(html.includes('data-project-selection="board"'), true)
-  assert.equal(html.includes("Demo view data"), true)
+  assert.equal(html.includes("Demo view data"), false)
+  assert.equal(html.includes('data-project-work-view="board"'), true)
+  assert.equal(html.includes("New task"), true)
   assert.equal(html.includes("Backlog"), true)
 })
 
@@ -53,6 +55,18 @@ test("renders an owned Document and an explicit missing-resource state", async (
     true
   )
   assert.equal(documentHtml.includes("Local editor content"), true)
+  assert.equal(documentHtml.includes("API Design"), true)
+  assert.equal(documentHtml.includes("Endpoint guidelines"), true)
+  assert.equal(documentHtml.includes("Decision log"), true)
+  assert.equal(
+    documentHtml.includes('data-project-tab-strip="primary"'),
+    true
+  )
+  assert.equal(
+    documentHtml.includes('data-project-tab-strip="secondary"'),
+    true
+  )
+  assert.equal(documentHtml.includes("data-document-switcher"), true)
   assert.equal(
     missingHtml.includes('data-project-selection="missing-resource"'),
     true

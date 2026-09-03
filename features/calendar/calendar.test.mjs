@@ -4,7 +4,6 @@ import test from "node:test"
 import {
   buildCalendarDays,
   getCalendarDateLabel,
-  getLocalTodayIsoDate,
   getCalendarMonthFromIsoDate,
   getCalendarMonthLabel,
   isValidCalendarIsoDate,
@@ -12,38 +11,39 @@ import {
   shiftCalendarMonth,
 } from "./date-utils.ts"
 import {
-  findCalendarTask,
   getCalendarDateDropId,
   getCalendarTaskDragId,
-  moveCalendarTask,
   parseCalendarDateDropId,
   parseCalendarTaskDragId,
+  partitionCalendarWorkItems,
 } from "./model.ts"
 import {
   INITIAL_CALENDAR_MONTH,
   INITIAL_CALENDAR_TASKS,
 } from "./mock-data.ts"
 
-function createTask(id, dueDate) {
+function createWorkItem(id, dueDate) {
   return {
     id,
+    projectId: "project-a",
     title: "Task " + id,
     description: "Description for " + id,
-    dueDate,
+    type: "feature",
     status: "todo",
     priority: "medium",
-    assignee: {
-      name: "Test User",
-      initials: "TU",
-    },
+    assignee: { name: "Test User", initials: "TU" },
+    startDate: null,
+    dueDate,
+    estimate: null,
+    position: 0,
     labels: ["Test"],
     checklist: [
-      {
-        id: id + "-check",
-        label: "Verify " + id,
-        completed: false,
-      },
+      { id: id + "-check", label: "Verify " + id, completed: false },
     ],
+    milestoneId: null,
+    dependencyIds: [],
+    linkedResourceIds: [],
+    customFields: {},
   }
 }
 
@@ -110,43 +110,24 @@ test("derives a month and deterministic English label", () => {
   assert.equal(getCalendarDateLabel("invalid"), "invalid")
 })
 
-test("formats an explicit local date without UTC conversion", () => {
-  assert.equal(
-    getLocalTodayIsoDate(new Date(2026, 8, 2, 12, 0, 0, 0)),
-    "2026-09-02"
-  )
-})
+test("partitions scheduled and unscheduled shared work items", () => {
+  const scheduled = createWorkItem("scheduled", "2026-09-08")
+  const withoutDate = createWorkItem("without-date", null)
+  const invalidDate = createWorkItem("invalid-date", "invalid")
+  const result = partitionCalendarWorkItems([
+    withoutDate,
+    scheduled,
+    invalidDate,
+  ])
 
-test("moves one task deadline without mutating the source", () => {
-  const tasks = [
-    createTask("a", "2026-09-02"),
-    createTask("b", "2026-09-04"),
-  ]
-
-  const result = moveCalendarTask(tasks, "a", "2026-09-08")
-
-  assert.equal(result[0].dueDate, "2026-09-08")
-  assert.equal(result[1], tasks[1])
-  assert.equal(tasks[0].dueDate, "2026-09-02")
   assert.deepEqual(
-    result.map((task) => task.id),
-    ["a", "b"]
+    result.scheduled.map((item) => item.id),
+    ["scheduled"]
   )
-})
-
-test("keeps the original state for a no-op or invalid move", () => {
-  const tasks = [createTask("a", "2026-09-02")]
-
-  assert.equal(moveCalendarTask(tasks, "a", "2026-09-02"), tasks)
-  assert.equal(moveCalendarTask(tasks, "missing", "2026-09-08"), tasks)
-  assert.equal(moveCalendarTask(tasks, "a", "2026-02-29"), tasks)
-})
-
-test("finds the current task and returns null for an unknown ID", () => {
-  const tasks = [createTask("a", "2026-09-02")]
-
-  assert.equal(findCalendarTask(tasks, "a")?.title, "Task a")
-  assert.equal(findCalendarTask(tasks, "missing"), null)
+  assert.deepEqual(
+    result.unscheduled.map((item) => item.id),
+    ["without-date", "invalid-date"]
+  )
 })
 
 test("creates and parses unambiguous task and date drag IDs", () => {

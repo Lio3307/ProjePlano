@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useShallow } from "zustand/react/shallow"
@@ -24,7 +24,6 @@ import {
 import { useProjectStore } from "@/features/project/store-provider"
 import type { Workspace } from "@/features/workspace/types"
 import { buildProjectOverviewSummary } from "../overview"
-import { getProjectDocumentResourceId } from "../project-state"
 import {
   getProjectViewHref,
   resolveProjectSelection,
@@ -42,6 +41,7 @@ import {
 } from "../selectors"
 import { getProjectTemplate } from "../templates"
 import type { SupportedProjectViewType } from "../view-definitions"
+import { NewDocumentDialog } from "./new-document-dialog"
 import { ProjectNavigation } from "./project-navigation"
 import { ProjectOverview } from "./project-overview"
 import { ProjectView } from "./project-view"
@@ -63,6 +63,8 @@ export function ProjectWorkspace({
 }: ProjectWorkspaceProps) {
   const router = useRouter()
   const [actionError, setActionError] = useState<string | null>(null)
+  const [documentDialogOpen, setDocumentDialogOpen] = useState(false)
+  const documentDialogTriggerRef = useRef<HTMLButtonElement>(null)
   const project = useProjectStore((state) =>
     selectProjectForWorkspace(state, workspace.id, projectId)
   )
@@ -102,6 +104,9 @@ export function ProjectWorkspace({
   const addProjectDocument = useProjectStore(
     (state) => state.addProjectDocument
   )
+  const saveProjectDocument = useProjectStore(
+    (state) => state.saveProjectDocument
+  )
   const selection = useMemo(
     () =>
       resolveProjectSelection(
@@ -139,10 +144,26 @@ export function ProjectWorkspace({
     )
   }
 
-  function handleAddDocument() {
-    if (!addProjectDocument(projectId)) {
-      setActionError("The document could not be added.")
-      return
+  function handleAddDocument(trigger: HTMLButtonElement) {
+    documentDialogTriggerRef.current = trigger
+    setActionError(null)
+    setDocumentDialogOpen(true)
+  }
+
+  function handleCreateDocument(title: string) {
+    const resourceId =
+      "resource-" +
+      projectId +
+      "-document-" +
+      crypto.randomUUID()
+    const created = addProjectDocument({
+      id: resourceId,
+      projectId,
+      title,
+    })
+
+    if (!created) {
+      return false
     }
 
     setActionError(null)
@@ -151,9 +172,10 @@ export function ProjectWorkspace({
         workspace.id,
         projectId,
         "documents",
-        getProjectDocumentResourceId(projectId)
+        resourceId
       )
     )
+    return true
   }
 
   const templateName =
@@ -230,6 +252,14 @@ export function ProjectWorkspace({
         documents={documents}
         missingViewTypes={missingViewTypes}
         onAddView={handleAddView}
+        onAddDocument={handleAddDocument}
+      />
+
+      <NewDocumentDialog
+        open={documentDialogOpen}
+        finalFocus={documentDialogTriggerRef}
+        onOpenChange={setDocumentDialogOpen}
+        onCreate={handleCreateDocument}
       />
 
       {actionError ? (
@@ -249,7 +279,6 @@ export function ProjectWorkspace({
               projectId={project.id}
               summary={summary}
               missingViewTypes={missingViewTypes}
-              canAddDocument={documents.length === 0}
               onAddView={handleAddView}
               onAddDocument={handleAddDocument}
             />
@@ -261,7 +290,11 @@ export function ProjectWorkspace({
             fallbackResourceId={documents[0]?.id ?? null}
           />
         ) : (
-          <ProjectView selection={selection} />
+          <ProjectView
+            selection={selection}
+            today={today}
+            onSaveDocument={saveProjectDocument}
+          />
         )}
       </div>
     </div>

@@ -1,6 +1,29 @@
-import type { KanbanColumn } from "./model"
+import type { Assignee, WorkItem } from "../work-item/model"
 
-export const INITIAL_KANBAN_COLUMNS: KanbanColumn[] = [
+type KanbanSeedCard = Omit<
+  Pick<
+    WorkItem,
+    | "id"
+    | "title"
+    | "description"
+    | "priority"
+    | "dueDate"
+    | "labels"
+    | "checklist"
+  >,
+  "dueDate"
+> & {
+  assignee: Assignee
+  dueDate: string
+}
+
+type KanbanSeedColumn = {
+  id: WorkItem["status"]
+  title: string
+  cards: KanbanSeedCard[]
+}
+
+export const INITIAL_KANBAN_COLUMNS: KanbanSeedColumn[] = [
   {
     id: "backlog",
     title: "Backlog",

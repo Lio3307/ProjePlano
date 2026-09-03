@@ -3,6 +3,7 @@ import {
   isValidWorkItemDateRange,
   isWorkItemStatus,
   wouldCreateDependencyCycle,
+  type EditableWorkItemFields,
   type WorkItem,
   type WorkItemStatus,
 } from "../work-item/model.ts"
@@ -81,6 +82,60 @@ export function updateWorkItemState(
       [workItemId]: candidate,
     },
   }
+}
+
+export function saveWorkItemState(
+  state: ProjectWorkspaceState,
+  workItemId: string,
+  fields: EditableWorkItemFields
+) {
+  const current = state.workItemsById[workItemId]
+
+  if (!current) {
+    return state
+  }
+
+  const candidate = structuredClone({ ...current, ...fields })
+
+  if (
+    haveSameWorkItemValue(current, candidate) ||
+    !isValidWorkItem(candidate) ||
+    !hasValidReferences(state, candidate)
+  ) {
+    return state
+  }
+
+  if (current.status === candidate.status) {
+    return {
+      ...state,
+      workItemsById: {
+        ...state.workItemsById,
+        [workItemId]: candidate,
+      },
+    }
+  }
+
+  const sourceItems = getOrderedStatusItems(
+    state.workItemsById,
+    current.projectId,
+    current.status
+  ).filter((workItem) => workItem.id !== current.id)
+  const targetItems = getOrderedStatusItems(
+    state.workItemsById,
+    current.projectId,
+    candidate.status
+  )
+  const movedCandidate = { ...candidate, position: targetItems.length }
+  const nextWorkItems = { ...state.workItemsById }
+
+  writeOrderedItems(nextWorkItems, sourceItems, current.status)
+  writeOrderedItems(
+    nextWorkItems,
+    [...targetItems, movedCandidate],
+    candidate.status
+  )
+
+  return { ...state, workItemsById: nextWorkItems }
 }
 
 export function moveWorkItemState(

@@ -114,6 +114,7 @@ test("returns pinned Documents in project order", () => {
     type: "document",
     templateId: null,
     isPinned: true,
+    content: "<h1>Pinned</h1>",
   }
   const summary = buildProjectOverviewSummary({
     today: "2026-09-02",
@@ -127,6 +128,7 @@ test("returns pinned Documents in project order", () => {
         type: "document",
         templateId: null,
         isPinned: false,
+        content: "<h1>Unpinned</h1>",
       },
       pinned,
       {

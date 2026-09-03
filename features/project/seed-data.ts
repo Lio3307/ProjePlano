@@ -9,6 +9,7 @@ import type {
 } from "../work-item/model"
 import { PROJECTS } from "./mock-data.ts"
 import type {
+  ProjectDocumentResource,
   ProjectRecord,
   ProjectResource,
   ProjectViewConfig,
@@ -25,15 +26,13 @@ export function createProjectSeedState(): ProjectWorkspaceState {
 
   for (const project of PROJECTS) {
     const view = createLegacyProjectView(project)
-    const resource = createLegacyProjectResource(project)
+    const projectResources = createLegacyProjectResources(project)
 
     if (view) {
       projectViews.push(view)
     }
 
-    if (resource) {
-      resources.push(resource)
-    }
+    resources.push(...projectResources)
 
     projectRecords.push({
       id: project.id,
@@ -43,7 +42,7 @@ export function createProjectSeedState(): ProjectWorkspaceState {
       templateId: null,
       status: "active",
       viewIds: view ? [view.id] : [],
-      resourceIds: resource ? [resource.id] : [],
+      resourceIds: projectResources.map((resource) => resource.id),
       milestoneIds: [],
     })
 
@@ -70,18 +69,60 @@ function createLegacyProjectView(project: Project) {
   return createProjectViewConfig(project.id, viewType)
 }
 
-function createLegacyProjectResource(project: Project) {
+function createLegacyProjectResources(
+  project: Project
+): ProjectDocumentResource[] {
   if (project.type !== "document") {
-    return null
+    return []
   }
 
+  if (project.id === "1") {
+    return [
+      createDocumentResource(
+        "resource-1-document",
+        project.id,
+        "API Design",
+        "<h1>API Design</h1><p>Capture endpoints, payloads, and response contracts.</p>"
+      ),
+      createDocumentResource(
+        "resource-1-endpoint-guidelines",
+        project.id,
+        "Endpoint guidelines",
+        "<h1>Endpoint guidelines</h1><p>Keep routes predictable and errors consistent.</p>"
+      ),
+      createDocumentResource(
+        "resource-1-decision-log",
+        project.id,
+        "Decision log",
+        "<h1>Decision log</h1><p>Record technical decisions and their trade-offs.</p>"
+      ),
+    ]
+  }
+
+  return [
+    createDocumentResource(
+      `resource-${project.id}-document`,
+      project.id,
+      project.title,
+      `<h1>${project.title}</h1><p>Keep shared project knowledge in one place.</p>`
+    ),
+  ]
+}
+
+function createDocumentResource(
+  id: string,
+  projectId: string,
+  title: string,
+  content: string
+): ProjectDocumentResource {
   return {
-    id: `resource-${project.id}-document`,
-    projectId: project.id,
-    title: project.title,
-    type: "document" as const,
+    id,
+    projectId,
+    title,
+    type: "document",
     templateId: null,
     isPinned: false,
+    content,
   }
 }
 

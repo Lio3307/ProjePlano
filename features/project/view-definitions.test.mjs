@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
+  PROJECT_VIEW_DEFINITIONS,
   SUPPORTED_PROJECT_VIEW_TYPES,
   createProjectViewConfig,
   isSupportedProjectViewType,
@@ -18,6 +19,14 @@ test("exposes only Phase 2 work view types", () => {
   assert.equal(isSupportedProjectViewType("calendar"), true)
   assert.equal(isSupportedProjectViewType("timeline"), false)
   assert.equal(isSupportedProjectViewType("canvas"), false)
+
+  assert.deepEqual(PROJECT_VIEW_DEFINITIONS.table.visibleFieldIds, [
+    "name",
+    "status",
+    "priority",
+    "due",
+    "attachments",
+  ])
 })
 
 test("creates fresh deterministic view records", () => {
@@ -31,6 +40,7 @@ test("creates fresh deterministic view records", () => {
     type: "board",
     visibleFieldIds: [
       "title",
+      "type",
       "priority",
       "assignee",
       "dueDate",
