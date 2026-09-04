@@ -1,5 +1,6 @@
 import { INITIAL_CALENDAR_TASKS } from "../calendar/mock-data.ts"
 import { INITIAL_KANBAN_COLUMNS } from "../kanban/mock-data.ts"
+import { WORKSPACE_MEMBERS } from "../member/mock-data.ts"
 import { INITIAL_ROWS } from "../table/mock-data.ts"
 import type { Row } from "../table/model"
 import type {
@@ -18,7 +19,17 @@ import type {
 import type { Project } from "./types"
 import { createProjectViewConfig } from "./view-definitions.ts"
 
+const KANBAN_DEPENDENCIES: Readonly<Record<string, readonly string[]>> = {
+  "workspace-filters": ["audit-onboarding"],
+}
+
+const CALENDAR_DEPENDENCIES: Readonly<Record<string, readonly string[]>> = {
+  "regression-pass": ["release-notes"],
+  "readiness-review": ["regression-pass"],
+}
+
 export function createProjectSeedState(): ProjectWorkspaceState {
+  const members = WORKSPACE_MEMBERS.map((member) => ({ ...member }))
   const projectRecords: ProjectRecord[] = []
   const projectViews: ProjectViewConfig[] = []
   const resources: ProjectResource[] = []
@@ -50,6 +61,8 @@ export function createProjectSeedState(): ProjectWorkspaceState {
   }
 
   return {
+    memberIdsByWorkspaceId: groupMemberIdsByWorkspace(members),
+    membersById: indexById(members),
     projectIdsByWorkspaceId: groupProjectIdsByWorkspace(PROJECTS),
     projectsById: indexById(projectRecords),
     projectViewsById: indexById(projectViews),
@@ -156,7 +169,7 @@ function createKanbanWorkItems(projectId: string) {
         type: "feature" as const,
         status,
         priority: card.priority,
-        assignee: { ...card.assignee },
+        assigneeId: card.assigneeId,
         startDate: null,
         dueDate: card.dueDate,
         estimate: null,
@@ -167,7 +180,10 @@ function createKanbanWorkItems(projectId: string) {
           id: `${workItemId}-${checklistItem.id}`,
         })),
         milestoneId: null,
-        dependencyIds: [],
+        dependencyIds: createSeedDependencyIds(
+          projectId,
+          KANBAN_DEPENDENCIES[card.id]
+        ),
         linkedResourceIds: [],
         customFields: {},
       }
@@ -186,7 +202,7 @@ function createCalendarWorkItems(projectId: string) {
     type: "feature",
     status: task.status,
     priority: task.priority,
-    assignee: { ...task.assignee },
+    assigneeId: task.assigneeId,
     startDate: null,
     dueDate: task.dueDate,
     estimate: null,
@@ -197,7 +213,10 @@ function createCalendarWorkItems(projectId: string) {
       id: `work-item-${projectId}-${task.id}-${checklistItem.id}`,
     })),
     milestoneId: null,
-    dependencyIds: [],
+    dependencyIds: createSeedDependencyIds(
+      projectId,
+      CALENDAR_DEPENDENCIES[task.id]
+    ),
     linkedResourceIds: [],
     customFields: {},
   }))
@@ -218,7 +237,7 @@ function createTableWorkItems(projectId: string) {
       type: "chore",
       status: getTableStatus(getStringCell(row, "status")),
       priority: getTablePriority(getStringCell(row, "priority")),
-      assignee: null,
+      assigneeId: null,
       startDate: null,
       dueDate: dueDate || null,
       estimate: null,
@@ -248,6 +267,15 @@ function normalizeStatusPositions(workItems: WorkItem[]) {
 
     return { ...workItem, position }
   })
+}
+
+function createSeedDependencyIds(
+  projectId: string,
+  dependencyIds: readonly string[] | undefined
+) {
+  return (dependencyIds ?? []).map(
+    (dependencyId) => `work-item-${projectId}-${dependencyId}`
+  )
 }
 
 function getKanbanStatus(columnId: string): WorkItemStatus {
@@ -302,6 +330,19 @@ function groupProjectIdsByWorkspace(projects: Project[]) {
   for (const project of projects) {
     const projectIds = grouped[project.workspaceId] ?? []
     grouped[project.workspaceId] = [...projectIds, project.id]
+  }
+
+  return grouped
+}
+
+function groupMemberIdsByWorkspace(
+  members: ReadonlyArray<{ id: string; workspaceId: string }>
+) {
+  const grouped: Record<string, string[]> = {}
+
+  for (const member of members) {
+    const memberIds = grouped[member.workspaceId] ?? []
+    grouped[member.workspaceId] = [...memberIds, member.id]
   }
 
   return grouped

@@ -1,4 +1,5 @@
 import type { WorkItem } from "../work-item/model"
+import type { WorkspaceMember } from "../member/model"
 
 export type ProjectStatus = "planned" | "active" | "paused" | "completed"
 
@@ -57,6 +58,8 @@ export type Milestone = {
 }
 
 export type ProjectWorkspaceState = {
+  memberIdsByWorkspaceId: Record<string, string[]>
+  membersById: Record<string, WorkspaceMember>
   projectIdsByWorkspaceId: Record<string, string[]>
   projectsById: Record<string, ProjectRecord>
   projectViewsById: Record<string, ProjectViewConfig>

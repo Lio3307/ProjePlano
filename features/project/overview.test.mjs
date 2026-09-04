@@ -15,7 +15,7 @@ function createWorkItem(id, overrides = {}) {
     type: "feature",
     status: "backlog",
     priority: "medium",
-    assignee: null,
+    assigneeId: null,
     startDate: null,
     dueDate: null,
     estimate: null,

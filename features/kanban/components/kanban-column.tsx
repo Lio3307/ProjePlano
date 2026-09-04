@@ -2,6 +2,7 @@
 
 import { useDroppable } from "@dnd-kit/react"
 
+import type { WorkspaceMember } from "@/features/member/model"
 import { cn } from "@/lib/utils"
 import {
   getKanbanColumnDropId,
@@ -11,6 +12,8 @@ import { KanbanCard } from "./kanban-card"
 
 interface KanbanColumnProps {
   column: KanbanColumnRecord
+  membersById: Readonly<Record<string, WorkspaceMember>>
+  blockingCountsByWorkItemId: Readonly<Record<string, number>>
   onOpenWorkItem: (
     workItemId: string,
     trigger: HTMLElement
@@ -19,6 +22,8 @@ interface KanbanColumnProps {
 
 export function KanbanColumn({
   column,
+  membersById,
+  blockingCountsByWorkItemId,
   onOpenWorkItem,
 }: KanbanColumnProps) {
   const { ref, isDropTarget } = useDroppable({
@@ -51,6 +56,12 @@ export function KanbanColumn({
             <KanbanCard
               key={workItem.id}
               workItem={workItem}
+              assignee={
+                workItem.assigneeId
+                  ? (membersById[workItem.assigneeId] ?? null)
+                  : null
+              }
+              blockingCount={blockingCountsByWorkItemId[workItem.id] ?? 0}
               onOpen={onOpenWorkItem}
             />
           ))

@@ -12,6 +12,9 @@ import {
   selectSupportedProjectViews,
   selectProjectViews,
   selectProjectWorkItems,
+  selectWorkspaceMembers,
+  selectWorkspaceMembersById,
+  selectWorkspaceWorkItems,
   selectWorkItemsByStatus,
 } from "./selectors.ts"
 
@@ -25,6 +28,37 @@ test("selects workspace projects in their explicit order", () => {
     ["1", "2", "3", "4", "5", "6"]
   )
   assert.equal(selectProjectById(state, "2")?.title, "Sprint Board")
+})
+
+test("selects ordered members only from their workspace", () => {
+  const state = createProjectSeedState()
+  const members = selectWorkspaceMembers(state, "project-alpha")
+  const membersById = selectWorkspaceMembersById(
+    state,
+    "project-alpha"
+  )
+
+  assert.equal(members[0].name, "Aurelio")
+  assert.equal(members.some((member) => member.name === "Maya Chen"), true)
+  assert.equal(members.some((member) => member.name === "Sari"), false)
+  assert.deepEqual(Object.keys(membersById), members.map((member) => member.id))
+  assert.deepEqual(selectWorkspaceMembers(state, "missing"), [])
+})
+
+test("selects work items through their owning workspace", () => {
+  const state = createProjectSeedState()
+  const workItems = selectWorkspaceWorkItems(state, "project-alpha")
+
+  assert.equal(workItems.length > 0, true)
+  assert.equal(
+    workItems.every(
+      (workItem) =>
+        state.projectsById[workItem.projectId].workspaceId ===
+        "project-alpha"
+    ),
+    true
+  )
+  assert.deepEqual(selectWorkspaceWorkItems(state, "missing"), [])
 })
 
 test("resolves ordered views, resources, and milestones by project", () => {

@@ -17,7 +17,7 @@ function createWorkItem(overrides = {}) {
     type: "feature",
     status: "todo",
     priority: "medium",
-    assignee: { name: "Maya Chen", initials: "MC" },
+    assigneeId: "member-project-alpha-maya-chen",
     startDate: "2026-09-02",
     dueDate: "2026-09-08",
     estimate: 3,
@@ -58,7 +58,7 @@ test("validates real date-only values without timezone conversion", () => {
 test("accepts a complete shared work item", () => {
   assert.equal(isValidWorkItem(createWorkItem()), true)
   assert.equal(
-    isValidWorkItem(createWorkItem({ assignee: null, estimate: null })),
+    isValidWorkItem(createWorkItem({ assigneeId: null, estimate: null })),
     true
   )
 })
@@ -78,6 +78,14 @@ test("rejects invalid identity, scheduling, estimate, and position fields", () =
   assert.equal(isValidWorkItem(createWorkItem({ estimate: -1 })), false)
   assert.equal(isValidWorkItem(createWorkItem({ estimate: 1.5 })), false)
   assert.equal(isValidWorkItem(createWorkItem({ position: 1.5 })), false)
+  assert.equal(
+    isValidWorkItem(createWorkItem({ assigneeId: " member-a" })),
+    false
+  )
+  assert.equal(
+    isValidWorkItem(createWorkItem({ assigneeId: " " })),
+    false
+  )
 })
 
 test("rejects unnormalized or duplicate labels", () => {

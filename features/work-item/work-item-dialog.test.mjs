@@ -14,6 +14,30 @@ const formSourceUrl = new URL(
   "./components/work-item-form.tsx",
   import.meta.url
 )
+const dependencyFieldSourceUrl = new URL(
+  "./components/work-item-dependencies-field.tsx",
+  import.meta.url
+)
+const assigneeFieldSourceUrl = new URL(
+  "./components/work-item-assignee-field.tsx",
+  import.meta.url
+)
+const blockedBadgeSourceUrl = new URL(
+  "./components/work-item-blocked-badge.tsx",
+  import.meta.url
+)
+const kanbanCardSourceUrl = new URL(
+  "../kanban/components/kanban-card.tsx",
+  import.meta.url
+)
+const calendarCardSourceUrl = new URL(
+  "../calendar/components/calendar-task-card.tsx",
+  import.meta.url
+)
+const calendarUnscheduledSourceUrl = new URL(
+  "../calendar/components/calendar-unscheduled.tsx",
+  import.meta.url
+)
 
 test("keeps project-store ownership outside the shared dialog", async () => {
   const source = await readFile(dialogSourceUrl, "utf8")
@@ -48,6 +72,23 @@ test("uses native accessible task controls", async () => {
   assert.match(source, /type="checkbox"/)
 })
 
+test("uses a controlled workspace-member assignee picker", async () => {
+  const [dialogSource, formSource, assigneeSource] =
+    await Promise.all([
+      readFile(dialogSourceUrl, "utf8"),
+      readFile(formSourceUrl, "utf8"),
+      readFile(assigneeFieldSourceUrl, "utf8"),
+    ])
+
+  assert.match(dialogSource, /workspaceMembers/)
+  assert.match(formSource, /<WorkItemAssigneeField/)
+  assert.match(assigneeSource, /DropdownMenuRadioGroup/)
+  assert.match(assigneeSource, /DropdownMenuRadioItem/)
+  assert.match(assigneeSource, /Unassigned/)
+  assert.match(assigneeSource, /member\.status === "active"/)
+  assert.doesNotMatch(assigneeSource, /useProjectStore|project\/store/)
+})
+
 test("creates checklist IDs only from the add handler", async () => {
   const source = await readFile(formSourceUrl, "utf8")
 
@@ -57,4 +98,47 @@ test("creates checklist IDs only from the add handler", async () => {
   )
   assert.equal(source.match(/crypto\.randomUUID\(\)/g)?.length, 1)
   assert.doesNotMatch(source, /Date\.now|Math\.random/)
+})
+
+test("uses a controlled accessible dependency selector", async () => {
+  const [dialogSource, formSource, dependencySource] =
+    await Promise.all([
+      readFile(dialogSourceUrl, "utf8"),
+      readFile(formSourceUrl, "utf8"),
+      readFile(dependencyFieldSourceUrl, "utf8"),
+    ])
+
+  assert.doesNotMatch(dialogSource, /useProjectStore|project\/store/)
+  assert.match(dialogSource, /projectWorkItems/)
+  assert.match(formSource, /<WorkItemDependenciesField/)
+  assert.match(dependencySource, /DropdownMenuCheckboxItem/)
+  assert.match(dependencySource, /onCheckedChange/)
+  assert.match(dependencySource, /closeOnClick=\{false\}/)
+  assert.match(dependencySource, /Creates a cycle/)
+  assert.match(dependencySource, /Remove dependency/)
+  assert.doesNotMatch(dependencySource, /overflow-y-auto|max-h-/)
+})
+
+test("shares one blocker indicator across Board and Calendar cards", async () => {
+  const [
+    blockedBadgeSource,
+    kanbanCardSource,
+    calendarCardSource,
+    calendarUnscheduledSource,
+  ] = await Promise.all([
+    readFile(blockedBadgeSourceUrl, "utf8"),
+    readFile(kanbanCardSourceUrl, "utf8"),
+    readFile(calendarCardSourceUrl, "utf8"),
+    readFile(calendarUnscheduledSourceUrl, "utf8"),
+  ])
+
+  assert.match(blockedBadgeSource, /Blocked:/)
+  assert.match(blockedBadgeSource, /if \(count === 0\)/)
+  assert.match(kanbanCardSource, /WorkItemBlockedBadge/)
+  assert.match(calendarCardSource, /WorkItemBlockedBadge/)
+  assert.match(calendarUnscheduledSource, /WorkItemBlockedBadge/)
+  assert.doesNotMatch(
+    blockedBadgeSource + kanbanCardSource + calendarCardSource,
+    /useProjectStore/
+  )
 })

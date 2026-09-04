@@ -31,7 +31,7 @@ function createWorkItem(id, dueDate) {
     type: "feature",
     status: "todo",
     priority: "medium",
-    assignee: { name: "Test User", initials: "TU" },
+    assigneeId: "member-test-user",
     startDate: null,
     dueDate,
     estimate: null,
@@ -159,8 +159,7 @@ test("provides complete Calendar task details", () => {
     assert.equal(isValidCalendarIsoDate(task.dueDate), true)
     assert.ok(task.status)
     assert.ok(task.priority)
-    assert.ok(task.assignee.name)
-    assert.ok(task.assignee.initials)
+    assert.ok(task.assigneeId)
     assert.ok(task.labels.length > 0)
     assert.ok(task.checklist.length > 0)
   }

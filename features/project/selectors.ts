@@ -2,6 +2,7 @@ import {
   WORK_ITEM_STATUSES,
   type WorkItemStatus,
 } from "../work-item/model.ts"
+import type { WorkspaceMember } from "../member/model.ts"
 import type {
   ProjectDocumentResource,
   ProjectResource,
@@ -40,6 +41,41 @@ export function selectProjectsByWorkspaceId(
     const project = state.projectsById[projectId]
     return project && project.workspaceId === workspaceId ? [project] : []
   })
+}
+
+export function selectWorkspaceMembers(
+  state: ProjectWorkspaceState,
+  workspaceId: string
+) {
+  const memberIds = state.memberIdsByWorkspaceId[workspaceId] ?? []
+
+  return memberIds.flatMap((memberId) => {
+    const member = state.membersById[memberId]
+
+    return member?.workspaceId === workspaceId ? [member] : []
+  })
+}
+
+export function selectWorkspaceMembersById(
+  state: ProjectWorkspaceState,
+  workspaceId: string
+) {
+  const membersById: Record<string, WorkspaceMember> = {}
+
+  for (const member of selectWorkspaceMembers(state, workspaceId)) {
+    membersById[member.id] = member
+  }
+
+  return membersById
+}
+
+export function selectWorkspaceWorkItems(
+  state: ProjectWorkspaceState,
+  workspaceId: string
+) {
+  return selectProjectsByWorkspaceId(state, workspaceId).flatMap(
+    (project) => selectProjectWorkItems(state, project.id)
+  )
 }
 
 export function selectProjectViews(

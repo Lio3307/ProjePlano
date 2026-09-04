@@ -4,6 +4,8 @@ import { useDraggable } from "@dnd-kit/react"
 import { GripVertical } from "lucide-react"
 
 import { Card } from "@/components/ui/card"
+import type { WorkspaceMember } from "@/features/member/model"
+import { WorkItemBlockedBadge } from "@/features/work-item/components/work-item-blocked-badge"
 import {
   WorkItemAssignee,
   WorkItemPriorityBadge,
@@ -16,11 +18,15 @@ import { getCalendarTaskDragId } from "../model"
 
 interface CalendarTaskCardProps {
   workItem: WorkItem
+  assignee: WorkspaceMember | null
+  blockingCount: number
   onOpen: (workItemId: string, trigger: HTMLElement) => void
 }
 
 export function CalendarTaskCard({
   workItem,
+  assignee,
+  blockingCount,
   onOpen,
 }: CalendarTaskCardProps) {
   const { ref, handleRef, isDragging } = useDraggable({
@@ -53,9 +59,10 @@ export function CalendarTaskCard({
             <WorkItemStatusBadge status={workItem.status} />
             <WorkItemTypeBadge type={workItem.type} />
             <WorkItemPriorityBadge priority={workItem.priority} />
+            <WorkItemBlockedBadge count={blockingCount} />
           </div>
-          {workItem.assignee ? (
-            <WorkItemAssignee assignee={workItem.assignee} />
+          {assignee ? (
+            <WorkItemAssignee assignee={assignee} />
           ) : null}
         </button>
         <button

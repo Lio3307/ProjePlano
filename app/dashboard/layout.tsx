@@ -1,18 +1,13 @@
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { ProjectStoreProvider } from "@/features/project/store-provider"
-import { getWorkspaceById } from "@/features/workspace/mock-data"
+import { WORKSPACES } from "@/features/workspace/mock-data"
 
-const PRIMARY_WORKSPACE_ID = "project-alpha"
-const primaryWorkspace = getWorkspaceById(PRIMARY_WORKSPACE_ID)
-
-const sidebarWorkspace = primaryWorkspace
-  ? {
-      id: primaryWorkspace.id,
-      title: primaryWorkspace.title,
-      url: "/dashboard/workspaces/" + primaryWorkspace.id,
-    }
-  : null
+const sidebarWorkspaces = WORKSPACES.map((workspace) => ({
+  id: workspace.id,
+  title: workspace.title,
+  url: "/dashboard/workspaces/" + workspace.id,
+}))
 
 export default function DashboardLayout({
   children,
@@ -22,7 +17,7 @@ export default function DashboardLayout({
   return (
     <ProjectStoreProvider>
       <SidebarProvider>
-        <AppSidebar workspace={sidebarWorkspace} />
+        <AppSidebar workspaces={sidebarWorkspaces} />
         <main className="flex min-h-svh min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center border-b bg-background px-3">
             <SidebarTrigger />

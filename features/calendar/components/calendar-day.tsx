@@ -2,6 +2,7 @@
 
 import { useDroppable } from "@dnd-kit/react"
 
+import type { WorkspaceMember } from "@/features/member/model"
 import { cn } from "@/lib/utils"
 import {
   getCalendarDateLabel,
@@ -16,12 +17,16 @@ import { CalendarTaskCard } from "./calendar-task-card"
 interface CalendarDayProps {
   day: CalendarDayRecord
   tasks: ScheduledWorkItem[]
+  membersById: Readonly<Record<string, WorkspaceMember>>
+  blockingCountsByWorkItemId: Readonly<Record<string, number>>
   onOpenWorkItem: (workItemId: string, trigger: HTMLElement) => void
 }
 
 export function CalendarDay({
   day,
   tasks,
+  membersById,
+  blockingCountsByWorkItemId,
   onOpenWorkItem,
 }: CalendarDayProps) {
   const { ref, isDropTarget } = useDroppable({
@@ -59,6 +64,12 @@ export function CalendarDay({
           <CalendarTaskCard
             key={task.id}
             workItem={task}
+            assignee={
+              task.assigneeId
+                ? (membersById[task.assigneeId] ?? null)
+                : null
+            }
+            blockingCount={blockingCountsByWorkItemId[task.id] ?? 0}
             onOpen={onOpenWorkItem}
           />
         ))}

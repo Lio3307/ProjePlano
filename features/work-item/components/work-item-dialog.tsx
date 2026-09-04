@@ -3,6 +3,7 @@
 import { useState, type ComponentProps, type FormEvent } from "react"
 
 import { Button } from "@/components/ui/button"
+import type { WorkspaceMember } from "@/features/member/model"
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,9 @@ type DialogFinalFocus = ComponentProps<
 interface WorkItemDialogProps {
   mode: "create" | "edit"
   open: boolean
+  projectId: string
+  projectWorkItems: readonly WorkItem[]
+  workspaceMembers: readonly WorkspaceMember[]
   workItem: WorkItem | null
   finalFocus: DialogFinalFocus
   onOpenChange: (open: boolean) => void
@@ -41,6 +45,9 @@ interface WorkItemDialogProps {
 export function WorkItemDialog({
   mode,
   open,
+  projectId,
+  projectWorkItems,
+  workspaceMembers,
   workItem,
   finalFocus,
   onOpenChange,
@@ -60,7 +67,7 @@ export function WorkItemDialog({
 
     if (!fields) {
       setError(
-        "Check the title, date, estimate, labels, and checklist values."
+        "Check the title, assignee, date, estimate, labels, and checklist values."
       )
       return
     }
@@ -127,6 +134,10 @@ export function WorkItemDialog({
             <div className="space-y-5 px-6 py-5">
               <WorkItemForm
                 value={draft}
+                projectId={projectId}
+                workItemId={workItem?.id ?? null}
+                projectWorkItems={projectWorkItems}
+                workspaceMembers={workspaceMembers}
                 onChange={(value) => {
                   setDraft(value)
                   setError(null)

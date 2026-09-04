@@ -13,11 +13,12 @@ export type WorkItemFormValue = {
   type: WorkItem["type"]
   status: WorkItem["status"]
   priority: WorkItem["priority"]
-  assigneeName: string
+  assigneeId: string
   dueDate: string
   estimate: string
   labels: string
   checklist: WorkItem["checklist"]
+  dependencyIds: string[]
 }
 
 export function createWorkItemFormValue(
@@ -30,11 +31,12 @@ export function createWorkItemFormValue(
       type: "feature",
       status: "todo",
       priority: "medium",
-      assigneeName: "",
+      assigneeId: "",
       dueDate: "",
       estimate: "",
       labels: "",
       checklist: [],
+      dependencyIds: [],
     }
   }
 
@@ -44,7 +46,7 @@ export function createWorkItemFormValue(
     type: workItem.type,
     status: workItem.status,
     priority: workItem.priority,
-    assigneeName: workItem.assignee?.name ?? "",
+    assigneeId: workItem.assigneeId ?? "",
     dueDate: workItem.dueDate ?? "",
     estimate:
       workItem.estimate === null ? "" : String(workItem.estimate),
@@ -52,6 +54,7 @@ export function createWorkItemFormValue(
     checklist: workItem.checklist.map((checklistItem) => ({
       ...checklistItem,
     })),
+    dependencyIds: [...workItem.dependencyIds],
   }
 }
 
@@ -60,7 +63,7 @@ export function normalizeWorkItemFormValue(
 ): EditableWorkItemFields | null {
   const title = value.title.trim()
   const description = value.description.trim()
-  const assigneeName = value.assigneeName.trim().replace(/\s+/g, " ")
+  const assigneeId = value.assigneeId.trim() || null
   const dueDate = value.dueDate.trim() || null
   const estimateText = value.estimate.trim()
   const estimate = estimateText === "" ? null : Number(estimateText)
@@ -70,6 +73,9 @@ export function normalizeWorkItemFormValue(
     completed: checklistItem.completed,
   }))
   const checklistIds = checklist.map((checklistItem) => checklistItem.id)
+  const dependencyIds = value.dependencyIds.map((dependencyId) =>
+    dependencyId.trim()
+  )
 
   if (
     !title ||
@@ -85,7 +91,9 @@ export function normalizeWorkItemFormValue(
         !checklistItem.label ||
         typeof checklistItem.completed !== "boolean"
     ) ||
-    new Set(checklistIds).size !== checklistIds.length
+    new Set(checklistIds).size !== checklistIds.length ||
+    dependencyIds.some((dependencyId) => !dependencyId) ||
+    new Set(dependencyIds).size !== dependencyIds.length
   ) {
     return null
   }
@@ -104,16 +112,12 @@ export function normalizeWorkItemFormValue(
     type: value.type,
     status: value.status,
     priority: value.priority,
-    assignee: assigneeName
-      ? {
-          name: assigneeName,
-          initials: getAssigneeInitials(assigneeName),
-        }
-      : null,
+    assigneeId,
     dueDate,
     estimate,
     labels,
     checklist,
+    dependencyIds,
   }
 }
 
@@ -126,13 +130,14 @@ export function getEditableWorkItemFields(
     type: workItem.type,
     status: workItem.status,
     priority: workItem.priority,
-    assignee: workItem.assignee ? { ...workItem.assignee } : null,
+    assigneeId: workItem.assigneeId,
     dueDate: workItem.dueDate,
     estimate: workItem.estimate,
     labels: [...workItem.labels],
     checklist: workItem.checklist.map((checklistItem) => ({
       ...checklistItem,
     })),
+    dependencyIds: [...workItem.dependencyIds],
   }
 }
 
@@ -141,14 +146,4 @@ export function haveSameEditableWorkItemFields(
   right: EditableWorkItemFields
 ) {
   return JSON.stringify(left) === JSON.stringify(right)
-}
-
-export function getAssigneeInitials(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word.charAt(0).toUpperCase())
-    .join("")
 }

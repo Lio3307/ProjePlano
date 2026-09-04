@@ -2,10 +2,12 @@
 
 import { DragDropProvider } from "@dnd-kit/react"
 
+import type { WorkspaceMember } from "@/features/member/model"
 import type {
   WorkItem,
   WorkItemStatus,
 } from "@/features/work-item/model"
+import { getBlockingDependencyCounts } from "@/features/work-item/dependencies"
 import {
   buildKanbanColumns,
   getKanbanDropDestination,
@@ -15,6 +17,7 @@ import { KanbanBoard } from "./kanban-board"
 
 interface KanbanViewProps {
   workItems: readonly WorkItem[]
+  membersById: Readonly<Record<string, WorkspaceMember>>
   onOpenWorkItem: (
     workItemId: string,
     trigger: HTMLElement
@@ -28,10 +31,13 @@ interface KanbanViewProps {
 
 export function KanbanView({
   workItems,
+  membersById,
   onOpenWorkItem,
   onMoveWorkItem,
 }: KanbanViewProps) {
   const columns = buildKanbanColumns(workItems)
+  const blockingCountsByWorkItemId =
+    getBlockingDependencyCounts(workItems)
 
   return (
     <DragDropProvider
@@ -61,6 +67,8 @@ export function KanbanView({
     >
       <KanbanBoard
         columns={columns}
+        membersById={membersById}
+        blockingCountsByWorkItemId={blockingCountsByWorkItemId}
         onOpenWorkItem={onOpenWorkItem}
       />
     </DragDropProvider>

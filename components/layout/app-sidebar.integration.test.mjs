@@ -7,6 +7,7 @@ const BASE_URL =
 const VALID_SIDEBAR_HREFS = [
   "/dashboard",
   "/dashboard/workspaces/project-alpha",
+  "/dashboard/workspaces/project-alpha/members",
   "/dashboard/workspaces/project-alpha/projects/1",
   "/dashboard/workspaces/project-alpha/projects/2",
   "/dashboard/workspaces/project-alpha/projects/3",
@@ -28,6 +29,10 @@ const ACTIVE_ROUTES = [
   {
     pathname: "/dashboard/workspaces/project-alpha",
     href: "/dashboard/workspaces/project-alpha",
+  },
+  {
+    pathname: "/dashboard/workspaces/project-alpha/members",
+    href: "/dashboard/workspaces/project-alpha/members",
   },
   {
     pathname: "/dashboard/workspaces/project-alpha/projects/6",

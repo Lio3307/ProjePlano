@@ -20,7 +20,7 @@ function createWorkItem(overrides = {}) {
     type: "feature",
     status: "todo",
     priority: "medium",
-    assignee: null,
+    assigneeId: null,
     startDate: null,
     dueDate: "2026-09-20",
     estimate: 3,
@@ -52,7 +52,7 @@ function getEditableFields(workItem, overrides = {}) {
     type: workItem.type,
     status: workItem.status,
     priority: workItem.priority,
-    assignee: workItem.assignee ? { ...workItem.assignee } : null,
+    assigneeId: workItem.assigneeId,
     dueDate: workItem.dueDate,
     estimate: workItem.estimate,
     labels: [...workItem.labels],
@@ -180,6 +180,44 @@ test("rejects duplicate IDs, unknown projects, invalid dates, and foreign resour
   )
 })
 
+test("rejects missing and foreign-workspace assignee references", () => {
+  const state = createProjectSeedState()
+  const itemId = "work-item-2-audit-onboarding"
+  const current = state.workItemsById[itemId]
+  const foreignMemberId = "member-project-beta-sari"
+
+  assert.equal(
+    createWorkItemState(
+      state,
+      createWorkItem({ assigneeId: "missing-member" })
+    ),
+    state
+  )
+  assert.equal(
+    createWorkItemState(
+      state,
+      createWorkItem({ assigneeId: foreignMemberId })
+    ),
+    state
+  )
+  assert.equal(
+    updateWorkItemState(state, itemId, { assigneeId: "missing-member" }),
+    state
+  )
+  assert.equal(
+    updateWorkItemState(state, itemId, { assigneeId: foreignMemberId }),
+    state
+  )
+  assert.equal(
+    saveWorkItemState(
+      state,
+      itemId,
+      getEditableFields(current, { assigneeId: foreignMemberId })
+    ),
+    state
+  )
+})
+
 test("updates details but rejects a proposed dependency cycle", () => {
   const state = createProjectSeedState()
   const firstId = "work-item-2-audit-onboarding"
@@ -217,7 +255,7 @@ test("saves every dialog field without moving its position", () => {
       title: "Workspace filters ready",
       type: "bug",
       priority: "urgent",
-      assignee: { name: "Ada Lovelace", initials: "AL" },
+      assigneeId: "member-project-alpha-hadi-pratama",
       dueDate: "2026-09-20",
       estimate: 5,
       labels: ["Frontend", "Quality"],

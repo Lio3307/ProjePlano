@@ -20,11 +20,6 @@ export type WorkItemType = (typeof WORK_ITEM_TYPES)[number]
 export type WorkItemStatus = (typeof WORK_ITEM_STATUSES)[number]
 export type WorkItemPriority = (typeof WORK_ITEM_PRIORITIES)[number]
 
-export type Assignee = {
-  name: string
-  initials: string
-}
-
 export type ChecklistItem = {
   id: string
   label: string
@@ -55,7 +50,7 @@ export type WorkItem = {
   type: WorkItemType
   status: WorkItemStatus
   priority: WorkItemPriority
-  assignee: Assignee | null
+  assigneeId: string | null
   startDate: string | null
   dueDate: string | null
   estimate: number | null
@@ -75,11 +70,12 @@ export type EditableWorkItemFields = Pick<
   | "type"
   | "status"
   | "priority"
-  | "assignee"
+  | "assigneeId"
   | "dueDate"
   | "estimate"
   | "labels"
   | "checklist"
+  | "dependencyIds"
 >
 
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/
@@ -135,10 +131,10 @@ export function isValidWorkItem(item: WorkItem) {
   const priorityIsValid = WORK_ITEM_PRIORITIES.some(
     (priority) => priority === item.priority
   )
-  const assigneeIsValid =
-    item.assignee === null ||
-    (item.assignee.name.trim().length > 0 &&
-      item.assignee.initials.trim().length > 0)
+  const assigneeIdIsValid =
+    item.assigneeId === null ||
+    (item.assigneeId.length > 0 &&
+      item.assigneeId.trim() === item.assigneeId)
   const estimateIsValid =
     item.estimate === null ||
     (Number.isInteger(item.estimate) && item.estimate >= 0)
@@ -174,7 +170,7 @@ export function isValidWorkItem(item: WorkItem) {
     typeIsValid &&
     statusIsValid &&
     priorityIsValid &&
-    assigneeIsValid &&
+    assigneeIdIsValid &&
     estimateIsValid &&
     Number.isInteger(item.position) &&
     item.position >= 0 &&

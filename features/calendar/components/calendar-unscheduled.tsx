@@ -1,18 +1,24 @@
+import type { WorkspaceMember } from "@/features/member/model"
 import {
   WorkItemAssignee,
   WorkItemPriorityBadge,
   WorkItemStatusBadge,
   WorkItemTypeBadge,
 } from "@/features/work-item/components/work-item-meta"
+import { WorkItemBlockedBadge } from "@/features/work-item/components/work-item-blocked-badge"
 import type { WorkItem } from "@/features/work-item/model"
 
 interface CalendarUnscheduledProps {
   workItems: readonly WorkItem[]
+  membersById: Readonly<Record<string, WorkspaceMember>>
+  blockingCountsByWorkItemId: Readonly<Record<string, number>>
   onOpenWorkItem: (workItemId: string, trigger: HTMLElement) => void
 }
 
 export function CalendarUnscheduled({
   workItems,
+  membersById,
+  blockingCountsByWorkItemId,
   onOpenWorkItem,
 }: CalendarUnscheduledProps) {
   return (
@@ -51,7 +57,16 @@ export function CalendarUnscheduled({
                 <WorkItemStatusBadge status={workItem.status} />
                 <WorkItemTypeBadge type={workItem.type} />
                 <WorkItemPriorityBadge priority={workItem.priority} />
-                <WorkItemAssignee assignee={workItem.assignee} />
+                <WorkItemBlockedBadge
+                  count={blockingCountsByWorkItemId[workItem.id] ?? 0}
+                />
+                <WorkItemAssignee
+                  assignee={
+                    workItem.assigneeId
+                      ? (membersById[workItem.assigneeId] ?? null)
+                      : null
+                  }
+                />
               </button>
             </li>
           ))}

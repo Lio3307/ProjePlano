@@ -1,4 +1,5 @@
-import type { Assignee, WorkItem } from "../work-item/model"
+import { WORKSPACE_MEMBER_IDS } from "../member/mock-data.ts"
+import type { WorkItem } from "../work-item/model"
 
 type KanbanSeedCard = Omit<
   Pick<
@@ -7,13 +8,13 @@ type KanbanSeedCard = Omit<
     | "title"
     | "description"
     | "priority"
+    | "assigneeId"
     | "dueDate"
     | "labels"
     | "checklist"
   >,
   "dueDate"
 > & {
-  assignee: Assignee
   dueDate: string
 }
 
@@ -34,7 +35,7 @@ export const INITIAL_KANBAN_COLUMNS: KanbanSeedColumn[] = [
         description:
           "Review the first-run workspace experience and document friction points before the next design pass.",
         priority: "medium",
-        assignee: { name: "Maya Chen", initials: "MC" },
+        assigneeId: WORKSPACE_MEMBER_IDS.mayaChen,
         dueDate: "2026-09-08",
         labels: ["Research", "UX"],
         checklist: [
@@ -61,7 +62,7 @@ export const INITIAL_KANBAN_COLUMNS: KanbanSeedColumn[] = [
         description:
           "Create a consistent error shape for project and workspace requests before backend integration begins.",
         priority: "high",
-        assignee: { name: "Hadi Pratama", initials: "HP" },
+        assigneeId: WORKSPACE_MEMBER_IDS.hadiPratama,
         dueDate: "2026-09-10",
         labels: ["Backend", "API"],
         checklist: [
@@ -89,7 +90,7 @@ export const INITIAL_KANBAN_COLUMNS: KanbanSeedColumn[] = [
         description:
           "Add clear filters for workspace status and ownership while preserving the current card layout.",
         priority: "medium",
-        assignee: { name: "Nadia Putri", initials: "NP" },
+        assigneeId: WORKSPACE_MEMBER_IDS.nadiaPutri,
         dueDate: "2026-09-12",
         labels: ["Frontend"],
         checklist: [
@@ -116,7 +117,7 @@ export const INITIAL_KANBAN_COLUMNS: KanbanSeedColumn[] = [
         description:
           "Document the required lint, build, route, and browser checks for a dashboard release.",
         priority: "low",
-        assignee: { name: "Rafi Akbar", initials: "RA" },
+        assigneeId: WORKSPACE_MEMBER_IDS.rafiAkbar,
         dueDate: "2026-09-15",
         labels: ["Docs", "Quality"],
         checklist: [
@@ -144,7 +145,7 @@ export const INITIAL_KANBAN_COLUMNS: KanbanSeedColumn[] = [
         description:
           "Make task movement, drop feedback, and card details feel predictable across pointer and keyboard input.",
         priority: "high",
-        assignee: { name: "Dina Mahesa", initials: "DM" },
+        assigneeId: WORKSPACE_MEMBER_IDS.dinaMahesa,
         dueDate: "2026-09-06",
         labels: ["Frontend", "UX"],
         checklist: [
@@ -177,7 +178,7 @@ export const INITIAL_KANBAN_COLUMNS: KanbanSeedColumn[] = [
         description:
           "Check the planned owner, editor, and viewer states for gaps before authentication work starts.",
         priority: "medium",
-        assignee: { name: "Sinta Lestari", initials: "SL" },
+        assigneeId: WORKSPACE_MEMBER_IDS.sintaLestari,
         dueDate: "2026-09-05",
         labels: ["Product", "Security"],
         checklist: [
@@ -215,7 +216,7 @@ export const INITIAL_KANBAN_COLUMNS: KanbanSeedColumn[] = [
         description:
           "Publish the supported rich-text shortcuts and slash commands for the current document mockup.",
         priority: "low",
-        assignee: { name: "Bima Santoso", initials: "BS" },
+        assigneeId: WORKSPACE_MEMBER_IDS.bimaSantoso,
         dueDate: "2026-09-02",
         labels: ["Docs"],
         checklist: [

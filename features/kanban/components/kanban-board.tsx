@@ -1,8 +1,11 @@
+import type { WorkspaceMember } from "@/features/member/model"
 import type { KanbanColumnRecord } from "../model"
 import { KanbanColumn } from "./kanban-column"
 
 interface KanbanBoardProps {
   columns: KanbanColumnRecord[]
+  membersById: Readonly<Record<string, WorkspaceMember>>
+  blockingCountsByWorkItemId: Readonly<Record<string, number>>
   onOpenWorkItem: (
     workItemId: string,
     trigger: HTMLElement
@@ -11,6 +14,8 @@ interface KanbanBoardProps {
 
 export function KanbanBoard({
   columns,
+  membersById,
+  blockingCountsByWorkItemId,
   onOpenWorkItem,
 }: KanbanBoardProps) {
   return (
@@ -23,6 +28,8 @@ export function KanbanBoard({
           <KanbanColumn
             key={column.status}
             column={column}
+            membersById={membersById}
+            blockingCountsByWorkItemId={blockingCountsByWorkItemId}
             onOpenWorkItem={onOpenWorkItem}
           />
         ))}

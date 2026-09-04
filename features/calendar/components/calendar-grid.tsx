@@ -1,3 +1,4 @@
+import type { WorkspaceMember } from "@/features/member/model"
 import {
   buildCalendarDays,
   type CalendarMonth,
@@ -18,6 +19,8 @@ const WEEKDAYS = [
 interface CalendarGridProps {
   activeMonth: CalendarMonth
   tasks: ScheduledWorkItem[]
+  membersById: Readonly<Record<string, WorkspaceMember>>
+  blockingCountsByWorkItemId: Readonly<Record<string, number>>
   todayIsoDate: string
   onOpenWorkItem: (workItemId: string, trigger: HTMLElement) => void
 }
@@ -25,6 +28,8 @@ interface CalendarGridProps {
 export function CalendarGrid({
   activeMonth,
   tasks,
+  membersById,
+  blockingCountsByWorkItemId,
   todayIsoDate,
   onOpenWorkItem,
 }: CalendarGridProps) {
@@ -53,6 +58,8 @@ export function CalendarGrid({
               key={day.isoDate}
               day={day}
               tasks={tasksByDate.get(day.isoDate) ?? []}
+              membersById={membersById}
+              blockingCountsByWorkItemId={blockingCountsByWorkItemId}
               onOpenWorkItem={onOpenWorkItem}
             />
           ))}

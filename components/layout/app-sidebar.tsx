@@ -3,6 +3,7 @@
 import {
   FolderKanban,
   LayoutDashboard,
+  UsersRound,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import Link from "next/link"
@@ -24,18 +25,24 @@ import {
 import { selectProjectsByWorkspaceId } from "@/features/project/selectors"
 import { useProjectStore } from "@/features/project/store-provider"
 
-interface SidebarWorkspace {
+export interface SidebarWorkspace {
   id: string
   title: string
   url: string
 }
 
 interface AppSidebarProps {
-  workspace: SidebarWorkspace | null
+  workspaces: readonly SidebarWorkspace[]
 }
 
-export function AppSidebar({ workspace }: AppSidebarProps) {
+export function AppSidebar({ workspaces }: AppSidebarProps) {
   const pathname = usePathname()
+  const pathnameWorkspaceId = getPathnameWorkspaceId(pathname)
+  const workspace = pathnameWorkspaceId
+    ? workspaces.find(
+        (candidate) => candidate.id === pathnameWorkspaceId
+      ) ?? null
+    : workspaces[0] ?? null
   const workspaceId = workspace?.id ?? ""
   const projects = useProjectStore(
     useShallow((state) =>
@@ -97,6 +104,12 @@ export function AppSidebar({ workspace }: AppSidebarProps) {
                   icon={FolderKanban}
                   isActive={pathname === workspace.url}
                 />
+                <SidebarNavigationItem
+                  title="Members"
+                  url={workspace.url + "/members"}
+                  icon={UsersRound}
+                  isActive={pathname === workspace.url + "/members"}
+                />
                 {projects.map((project) => {
                   const url =
                     "/dashboard/workspaces/" +
@@ -123,6 +136,12 @@ export function AppSidebar({ workspace }: AppSidebarProps) {
       <SidebarRail />
     </Sidebar>
   )
+}
+
+function getPathnameWorkspaceId(pathname: string) {
+  const match = /^\/dashboard\/workspaces\/([^/]+)(?:\/|$)/.exec(pathname)
+
+  return match?.[1] ?? null
 }
 
 function SidebarNavigationItem({

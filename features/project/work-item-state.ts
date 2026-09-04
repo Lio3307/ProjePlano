@@ -255,6 +255,15 @@ function hasValidReferences(
   state: ProjectWorkspaceState,
   workItem: WorkItem
 ) {
+  if (workItem.assigneeId !== null) {
+    const member = state.membersById[workItem.assigneeId]
+    const project = state.projectsById[workItem.projectId]
+
+    if (!member || !project || member.workspaceId !== project.workspaceId) {
+      return false
+    }
+  }
+
   if (workItem.milestoneId !== null) {
     const milestone = state.milestonesById[workItem.milestoneId]
 

@@ -13,7 +13,12 @@ import type {
   EditableWorkItemFields,
   WorkItem,
 } from "@/features/work-item/model"
-import { selectProjectWorkItems } from "../selectors"
+import {
+  selectProjectById,
+  selectProjectWorkItems,
+  selectWorkspaceMembers,
+  selectWorkspaceMembersById,
+} from "../selectors"
 import { useProjectStore } from "../store-provider"
 import type { SupportedProjectViewType } from "../view-definitions"
 
@@ -61,8 +66,22 @@ function SharedWorkItemView({
   viewType,
   today,
 }: SharedWorkItemViewProps) {
+  const project = useProjectStore((state) =>
+    selectProjectById(state, projectId)
+  )
+  const workspaceId = project?.workspaceId ?? ""
   const workItems = useProjectStore(
     useShallow((state) => selectProjectWorkItems(state, projectId))
+  )
+  const workspaceMembers = useProjectStore(
+    useShallow((state) =>
+      selectWorkspaceMembers(state, workspaceId)
+    )
+  )
+  const membersById = useProjectStore(
+    useShallow((state) =>
+      selectWorkspaceMembersById(state, workspaceId)
+    )
   )
   const {
     createWorkItem,
@@ -119,7 +138,6 @@ function SharedWorkItemView({
       startDate: null,
       position,
       milestoneId: null,
-      dependencyIds: [],
       linkedResourceIds: [],
       customFields: {},
     })
@@ -182,6 +200,7 @@ function SharedWorkItemView({
       {viewType === "board" ? (
         <KanbanView
           workItems={workItems}
+          membersById={membersById}
           onOpenWorkItem={openEditDialog}
           onMoveWorkItem={(workItemId, status, index) => {
             moveWorkItem(workItemId, status, index)
@@ -190,6 +209,7 @@ function SharedWorkItemView({
       ) : (
         <CalendarView
           workItems={workItems}
+          membersById={membersById}
           todayIsoDate={today}
           onOpenWorkItem={openEditDialog}
           onMoveWorkItemDate={moveWorkItemDate}
@@ -201,6 +221,9 @@ function SharedWorkItemView({
           key={dialogSession.key}
           mode={dialogSession.mode}
           open
+          projectId={projectId}
+          projectWorkItems={workItems}
+          workspaceMembers={workspaceMembers}
           workItem={
             dialogSession.mode === "edit"
               ? dialogSession.workItem

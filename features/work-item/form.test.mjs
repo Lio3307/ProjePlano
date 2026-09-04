@@ -3,7 +3,6 @@ import test from "node:test"
 
 import {
   createWorkItemFormValue,
-  getAssigneeInitials,
   getEditableWorkItemFields,
   haveSameEditableWorkItemFields,
   normalizeWorkItemFormValue,
@@ -18,7 +17,7 @@ function createWorkItem(overrides = {}) {
     type: "feature",
     status: "todo",
     priority: "medium",
-    assignee: { name: "Maya Chen", initials: "MC" },
+    assigneeId: "member-project-alpha-maya-chen",
     startDate: null,
     dueDate: "2026-09-18",
     estimate: 3,
@@ -28,7 +27,7 @@ function createWorkItem(overrides = {}) {
       { id: "check-a", label: "Verify contract", completed: false },
     ],
     milestoneId: null,
-    dependencyIds: [],
+    dependencyIds: ["item-b"],
     linkedResourceIds: [],
     customFields: {},
     ...overrides,
@@ -48,15 +47,21 @@ test("creates independent defaults", () => {
   assert.equal(first.type, "feature")
   assert.equal(first.status, "todo")
   assert.equal(first.priority, "medium")
+  assert.equal(first.assigneeId, "")
   assert.deepEqual(second.checklist, [])
+  assert.deepEqual(second.dependencyIds, [])
 })
 
 test("maps an existing work item to form strings", () => {
   const existing = createWorkItemFormValue(createWorkItem())
 
-  assert.equal(existing.assigneeName, "Maya Chen")
+  assert.equal(
+    existing.assigneeId,
+    "member-project-alpha-maya-chen"
+  )
   assert.equal(existing.estimate, "3")
   assert.equal(existing.labels, "Frontend, UX")
+  assert.deepEqual(existing.dependencyIds, ["item-b"])
 })
 
 test("normalizes all editable values in one conversion", () => {
@@ -66,13 +71,14 @@ test("normalizes all editable values in one conversion", () => {
     type: "bug",
     status: "review",
     priority: "urgent",
-    assigneeName: "  ada   lovelace  ",
+    assigneeId: "member-project-alpha-maya-chen",
     dueDate: "2026-09-21",
     estimate: "5",
     labels: "Frontend, Quality, Frontend,  ",
     checklist: [
       { id: " check-a ", label: "  Run build  ", completed: true },
     ],
+    dependencyIds: ["item-b"],
   })
 
   assert.deepEqual(result, {
@@ -81,13 +87,14 @@ test("normalizes all editable values in one conversion", () => {
     type: "bug",
     status: "review",
     priority: "urgent",
-    assignee: { name: "ada lovelace", initials: "AL" },
+    assigneeId: "member-project-alpha-maya-chen",
     dueDate: "2026-09-21",
     estimate: 5,
     labels: ["Frontend", "Quality"],
     checklist: [
       { id: "check-a", label: "Run build", completed: true },
     ],
+    dependencyIds: ["item-b"],
   })
 })
 
@@ -100,11 +107,12 @@ test("maps blank optional fields to null", () => {
     type: "feature",
     status: "todo",
     priority: "medium",
-    assignee: null,
+    assigneeId: null,
     dueDate: null,
     estimate: null,
     labels: [],
     checklist: [],
+    dependencyIds: [],
   })
 })
 
@@ -161,10 +169,25 @@ test("rejects blank and duplicate checklist items", () => {
   )
 })
 
-test("derives at most two uppercase initials", () => {
-  assert.equal(getAssigneeInitials("maya"), "M")
-  assert.equal(getAssigneeInitials("  maya   chen putri "), "MC")
-  assert.equal(getAssigneeInitials(" "), "")
+test("rejects blank and duplicate dependency IDs", () => {
+  const base = createWorkItemFormValue(null)
+
+  assert.equal(
+    normalizeWorkItemFormValue({
+      ...base,
+      title: "Task",
+      dependencyIds: [" "],
+    }),
+    null
+  )
+  assert.equal(
+    normalizeWorkItemFormValue({
+      ...base,
+      title: "Task",
+      dependencyIds: ["item-b", "item-b"],
+    }),
+    null
+  )
 })
 
 test("extracts detached editable fields", () => {
@@ -172,8 +195,10 @@ test("extracts detached editable fields", () => {
   const fields = getEditableWorkItemFields(item)
 
   fields.labels.push("Outside")
+  fields.dependencyIds.push("outside")
 
   assert.deepEqual(item.labels, ["Frontend", "UX"])
+  assert.deepEqual(item.dependencyIds, ["item-b"])
 })
 
 test("compares editable field values", () => {

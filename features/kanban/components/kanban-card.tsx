@@ -4,6 +4,8 @@ import { useDraggable, useDroppable } from "@dnd-kit/react"
 import { CalendarDays, CheckSquare, GripVertical } from "lucide-react"
 
 import { Card } from "@/components/ui/card"
+import type { WorkspaceMember } from "@/features/member/model"
+import { WorkItemBlockedBadge } from "@/features/work-item/components/work-item-blocked-badge"
 import {
   WorkItemAssignee,
   WorkItemLabelList,
@@ -18,10 +20,17 @@ import { getKanbanWorkItemDragId } from "../model"
 
 interface KanbanCardProps {
   workItem: WorkItem
+  assignee: WorkspaceMember | null
+  blockingCount: number
   onOpen: (workItemId: string, trigger: HTMLElement) => void
 }
 
-export function KanbanCard({ workItem, onOpen }: KanbanCardProps) {
+export function KanbanCard({
+  workItem,
+  assignee,
+  blockingCount,
+  onOpen,
+}: KanbanCardProps) {
   const dragId = getKanbanWorkItemDragId(workItem.id)
   const {
     ref: dragRef,
@@ -78,6 +87,7 @@ export function KanbanCard({ workItem, onOpen }: KanbanCardProps) {
             <div className="flex flex-wrap gap-1.5">
               <WorkItemTypeBadge type={workItem.type} />
               <WorkItemPriorityBadge priority={workItem.priority} />
+              <WorkItemBlockedBadge count={blockingCount} />
             </div>
 
             <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
@@ -99,9 +109,9 @@ export function KanbanCard({ workItem, onOpen }: KanbanCardProps) {
                   {progress.completed}/{progress.total}
                 </span>
               ) : null}
-              {workItem.assignee ? (
+              {assignee ? (
                 <span className="ml-auto">
-                  <WorkItemAssignee assignee={workItem.assignee} />
+                  <WorkItemAssignee assignee={assignee} />
                 </span>
               ) : null}
             </div>

@@ -1,9 +1,9 @@
 import type { ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
+import type { WorkspaceMember } from "@/features/member/model"
 import {
   isValidWorkItemDate,
-  type Assignee,
   type WorkItem,
 } from "../model"
 
@@ -149,7 +149,7 @@ export function WorkItemAssignee({
   assignee,
   showName = false,
 }: {
-  assignee: Assignee | null
+  assignee: WorkspaceMember | null
   showName?: boolean
 }) {
   if (!assignee) {

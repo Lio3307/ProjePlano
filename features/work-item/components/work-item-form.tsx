@@ -6,12 +6,16 @@ import { Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import type { WorkspaceMember } from "@/features/member/model"
 import type { WorkItemFormValue } from "../form"
 import {
   WORK_ITEM_PRIORITIES,
   WORK_ITEM_STATUSES,
   WORK_ITEM_TYPES,
+  type WorkItem,
 } from "../model"
+import { WorkItemDependenciesField } from "./work-item-dependencies-field"
+import { WorkItemAssigneeField } from "./work-item-assignee-field"
 import {
   WORK_ITEM_PRIORITY_LABELS,
   WORK_ITEM_STATUS_LABELS,
@@ -20,6 +24,10 @@ import {
 
 interface WorkItemFormProps {
   value: WorkItemFormValue
+  projectId: string
+  workItemId: string | null
+  projectWorkItems: readonly WorkItem[]
+  workspaceMembers: readonly WorkspaceMember[]
   disabled?: boolean
   onChange: (value: WorkItemFormValue) => void
 }
@@ -29,6 +37,10 @@ const CONTROL_CLASS =
 
 export function WorkItemForm({
   value,
+  projectId,
+  workItemId,
+  projectWorkItems,
+  workspaceMembers,
   disabled,
   onChange,
 }: WorkItemFormProps) {
@@ -172,17 +184,12 @@ export function WorkItemForm({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <label className="grid gap-1.5 text-xs font-medium">
-          Assignee
-          <Input
-            value={value.assigneeName}
-            disabled={disabled}
-            placeholder="Name"
-            onChange={(event) =>
-              setField("assigneeName", event.target.value)
-            }
-          />
-        </label>
+        <WorkItemAssigneeField
+          members={workspaceMembers}
+          value={value.assigneeId}
+          disabled={disabled}
+          onChange={(assigneeId) => setField("assigneeId", assigneeId)}
+        />
 
         <label className="grid gap-1.5 text-xs font-medium">
           Due date
@@ -221,6 +228,17 @@ export function WorkItemForm({
           Separate labels with commas.
         </span>
       </label>
+
+      <WorkItemDependenciesField
+        projectId={projectId}
+        workItemId={workItemId}
+        workItems={projectWorkItems}
+        value={value.dependencyIds}
+        disabled={disabled}
+        onChange={(dependencyIds) =>
+          setField("dependencyIds", dependencyIds)
+        }
+      />
 
       <fieldset className="space-y-3" disabled={disabled}>
         <legend className="text-xs font-medium">Checklist</legend>

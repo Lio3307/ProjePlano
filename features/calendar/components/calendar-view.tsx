@@ -3,7 +3,9 @@
 import { useState } from "react"
 import { DragDropProvider } from "@dnd-kit/react"
 
+import type { WorkspaceMember } from "@/features/member/model"
 import type { WorkItem } from "@/features/work-item/model"
+import { getBlockingDependencyCounts } from "@/features/work-item/dependencies"
 import {
   getCalendarMonthFromIsoDate,
   getCalendarMonthLabel,
@@ -20,6 +22,7 @@ import { CalendarUnscheduled } from "./calendar-unscheduled"
 
 interface CalendarViewProps {
   workItems: readonly WorkItem[]
+  membersById: Readonly<Record<string, WorkspaceMember>>
   todayIsoDate: string
   onOpenWorkItem: (workItemId: string, trigger: HTMLElement) => void
   onMoveWorkItemDate: (workItemId: string, dueDate: string) => void
@@ -27,6 +30,7 @@ interface CalendarViewProps {
 
 export function CalendarView({
   workItems,
+  membersById,
   todayIsoDate,
   onOpenWorkItem,
   onMoveWorkItemDate,
@@ -40,6 +44,8 @@ export function CalendarView({
   )
   const { scheduled, unscheduled } =
     partitionCalendarWorkItems(workItems)
+  const blockingCountsByWorkItemId =
+    getBlockingDependencyCounts(workItems)
 
   return (
     <div className="min-w-0 space-y-4">
@@ -62,6 +68,8 @@ export function CalendarView({
 
       <CalendarUnscheduled
         workItems={unscheduled}
+        membersById={membersById}
+        blockingCountsByWorkItemId={blockingCountsByWorkItemId}
         onOpenWorkItem={onOpenWorkItem}
       />
 
@@ -96,6 +104,8 @@ export function CalendarView({
         <CalendarGrid
           activeMonth={activeMonth}
           tasks={scheduled}
+          membersById={membersById}
+          blockingCountsByWorkItemId={blockingCountsByWorkItemId}
           todayIsoDate={todayIsoDate}
           onOpenWorkItem={onOpenWorkItem}
         />
