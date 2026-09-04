@@ -7,26 +7,34 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import type { WorkspaceMember } from "@/features/member/model"
+import type { BoardLabel } from "@/features/project/board"
 import type { WorkItemFormValue } from "../form"
 import {
   WORK_ITEM_PRIORITIES,
-  WORK_ITEM_STATUSES,
   WORK_ITEM_TYPES,
   type WorkItem,
 } from "../model"
+import type { WorkItemStagesByBoardId } from "../dependencies"
 import { WorkItemDependenciesField } from "./work-item-dependencies-field"
+import {
+  WorkItemDocumentsField,
+  type WorkItemDocumentOption,
+} from "./work-item-documents-field"
+import { WorkItemLabelsField } from "./work-item-labels-field"
 import { WorkItemAssigneeField } from "./work-item-assignee-field"
 import {
   WORK_ITEM_PRIORITY_LABELS,
-  WORK_ITEM_STATUS_LABELS,
   WORK_ITEM_TYPE_LABELS,
 } from "./work-item-meta"
 
 interface WorkItemFormProps {
   value: WorkItemFormValue
   projectId: string
+  boardLabels: readonly BoardLabel[]
+  documents: readonly WorkItemDocumentOption[]
   workItemId: string | null
   projectWorkItems: readonly WorkItem[]
+  stagesByBoardId: WorkItemStagesByBoardId
   workspaceMembers: readonly WorkspaceMember[]
   disabled?: boolean
   onChange: (value: WorkItemFormValue) => void
@@ -38,8 +46,11 @@ const CONTROL_CLASS =
 export function WorkItemForm({
   value,
   projectId,
+  boardLabels,
+  documents,
   workItemId,
   projectWorkItems,
+  stagesByBoardId,
   workspaceMembers,
   disabled,
   onChange,
@@ -109,7 +120,7 @@ export function WorkItemForm({
         />
       </label>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-1.5 text-xs font-medium">
           Type
           <select
@@ -129,30 +140,6 @@ export function WorkItemForm({
             {WORK_ITEM_TYPES.map((type) => (
               <option key={type} value={type}>
                 {WORK_ITEM_TYPE_LABELS[type]}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="grid gap-1.5 text-xs font-medium">
-          Status
-          <select
-            className={CONTROL_CLASS}
-            value={value.status}
-            disabled={disabled}
-            onChange={(event) => {
-              const status = WORK_ITEM_STATUSES.find(
-                (candidate) => candidate === event.target.value
-              )
-
-              if (status) {
-                setField("status", status)
-              }
-            }}
-          >
-            {WORK_ITEM_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {WORK_ITEM_STATUS_LABELS[status]}
               </option>
             ))}
           </select>
@@ -183,23 +170,13 @@ export function WorkItemForm({
         </label>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <WorkItemAssigneeField
           members={workspaceMembers}
           value={value.assigneeId}
           disabled={disabled}
           onChange={(assigneeId) => setField("assigneeId", assigneeId)}
         />
-
-        <label className="grid gap-1.5 text-xs font-medium">
-          Due date
-          <Input
-            type="date"
-            value={value.dueDate}
-            disabled={disabled}
-            onChange={(event) => setField("dueDate", event.target.value)}
-          />
-        </label>
 
         <label className="grid gap-1.5 text-xs font-medium">
           Estimate
@@ -216,27 +193,56 @@ export function WorkItemForm({
         </label>
       </div>
 
-      <label className="grid gap-1.5 text-xs font-medium">
-        Labels
-        <Input
-          value={value.labels}
-          disabled={disabled}
-          placeholder="Frontend, API"
-          onChange={(event) => setField("labels", event.target.value)}
-        />
-        <span className="font-normal text-muted-foreground">
-          Separate labels with commas.
-        </span>
-      </label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="grid gap-1.5 text-xs font-medium">
+          Start date
+          <Input
+            type="date"
+            value={value.startDate}
+            disabled={disabled}
+            onChange={(event) =>
+              setField("startDate", event.target.value)
+            }
+          />
+        </label>
+
+        <label className="grid gap-1.5 text-xs font-medium">
+          Due date
+          <Input
+            type="date"
+            value={value.dueDate}
+            disabled={disabled}
+            min={value.startDate || undefined}
+            onChange={(event) => setField("dueDate", event.target.value)}
+          />
+        </label>
+      </div>
+
+      <WorkItemLabelsField
+        labels={boardLabels}
+        value={value.labelIds}
+        disabled={disabled}
+        onChange={(labelIds) => setField("labelIds", labelIds)}
+      />
 
       <WorkItemDependenciesField
         projectId={projectId}
         workItemId={workItemId}
         workItems={projectWorkItems}
+        stagesByBoardId={stagesByBoardId}
         value={value.dependencyIds}
         disabled={disabled}
         onChange={(dependencyIds) =>
           setField("dependencyIds", dependencyIds)
+        }
+      />
+
+      <WorkItemDocumentsField
+        documents={documents}
+        linkedResourceIds={value.linkedResourceIds}
+        disabled={disabled}
+        onChange={(linkedResourceIds) =>
+          setField("linkedResourceIds", linkedResourceIds)
         }
       />
 

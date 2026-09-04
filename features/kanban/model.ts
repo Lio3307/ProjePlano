@@ -1,41 +1,27 @@
-import {
-  WORK_ITEM_STATUSES,
-  isWorkItemStatus,
-  type WorkItem,
-  type WorkItemStatus,
-} from "../work-item/model.ts"
-
-const COLUMN_TITLES: Record<WorkItemStatus, string> = {
-  backlog: "Backlog",
-  todo: "To Do",
-  "in-progress": "In Progress",
-  review: "Review",
-  testing: "Testing",
-  done: "Done",
-}
+import type { TaskBoard } from "../project/task-board.ts"
+import type { WorkItem } from "../work-item/model.ts"
 
 const ITEM_PREFIX = "kanban-item:"
-const COLUMN_PREFIX = "kanban-column:"
+const BOARD_PREFIX = "kanban-board:"
 
-export type KanbanColumnRecord = {
-  status: WorkItemStatus
-  title: string
+export type KanbanBoardRecord = {
+  board: TaskBoard
   workItems: WorkItem[]
 }
 
 export type KanbanDropDestination = {
-  status: WorkItemStatus
+  boardId: string
   index: number
 }
 
-export function buildKanbanColumns(
+export function buildKanbanBoards(
+  boards: readonly TaskBoard[],
   workItems: readonly WorkItem[]
-): KanbanColumnRecord[] {
-  return WORK_ITEM_STATUSES.map((status) => ({
-    status,
-    title: COLUMN_TITLES[status],
+): KanbanBoardRecord[] {
+  return boards.map((board) => ({
+    board,
     workItems: workItems
-      .filter((workItem) => workItem.status === status)
+      .filter((workItem) => workItem.boardId === board.id)
       .sort(
         (left, right) =>
           left.position - right.position ||
@@ -48,8 +34,8 @@ export function getKanbanWorkItemDragId(workItemId: string) {
   return ITEM_PREFIX + workItemId
 }
 
-export function getKanbanColumnDropId(status: WorkItemStatus) {
-  return COLUMN_PREFIX + status
+export function getKanbanBoardDropId(boardId: string) {
+  return BOARD_PREFIX + boardId
 }
 
 export function parseKanbanWorkItemDragId(value: string | number) {
@@ -65,19 +51,19 @@ export function parseKanbanWorkItemDragId(value: string | number) {
 }
 
 export function getKanbanDropDestination(
-  columns: readonly KanbanColumnRecord[],
+  boards: readonly KanbanBoardRecord[],
   targetId: string | number
 ): KanbanDropDestination | null {
   const normalized = String(targetId)
 
-  if (normalized.startsWith(COLUMN_PREFIX)) {
-    const status = normalized.slice(COLUMN_PREFIX.length)
-    const column = isWorkItemStatus(status)
-      ? columns.find((candidate) => candidate.status === status)
-      : undefined
+  if (normalized.startsWith(BOARD_PREFIX)) {
+    const boardId = normalized.slice(BOARD_PREFIX.length)
+    const record = boards.find(
+      (candidate) => candidate.board.id === boardId
+    )
 
-    return column
-      ? { status: column.status, index: column.workItems.length }
+    return record
+      ? { boardId, index: record.workItems.length }
       : null
   }
 
@@ -87,13 +73,13 @@ export function getKanbanDropDestination(
     return null
   }
 
-  for (const column of columns) {
-    const index = column.workItems.findIndex(
+  for (const record of boards) {
+    const index = record.workItems.findIndex(
       (workItem) => workItem.id === workItemId
     )
 
     if (index >= 0) {
-      return { status: column.status, index }
+      return { boardId: record.board.id, index }
     }
   }
 

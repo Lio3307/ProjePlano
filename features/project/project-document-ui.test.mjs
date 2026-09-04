@@ -106,3 +106,44 @@ test("keys each editor and saves its own resource content", () => {
   assert.match(documentSource, /onSave\(resourceId, content\)/)
   assert.match(documentSource, /role="status"/)
 })
+
+test("renders controlled document backlinks to exact Board views", () => {
+  const workspace = readComponent("project-workspace.tsx")
+  const projectView = readComponent("project-view.tsx")
+  const documentView = new URL(
+    "../document/components/document-view.tsx",
+    import.meta.url
+  )
+  const documentSource = existsSync(documentView)
+    ? readFileSync(documentView, "utf8")
+    : ""
+  const scrollBodyIndex = documentSource.indexOf(
+    '<div className="flex-1 overflow-y-auto">'
+  )
+  const linkedWorkIndex = documentSource.indexOf("<section")
+  const richEditorIndex = documentSource.indexOf("<RichEditor")
+
+  assert.match(workspace, /selectDocumentLinkedWorkItems/)
+  assert.match(
+    workspace,
+    /getProjectViewHref\(\s*workspace\.id,\s*projectId,\s*"board",\s*\{\s*workViewId:\s*linkedWorkItem\.boardViewId\s*\}\s*\)/
+  )
+  assert.doesNotMatch(workspace, /\b(?:task|openTask)\s*:/)
+  assert.match(projectView, /linkedWorkItems=\{linkedWorkItems\}/)
+  assert.match(documentSource, /DocumentLinkedWorkLink/)
+  assert.match(documentSource, /Linked work/)
+  assert.match(documentSource, /linkedWorkItems\.length/)
+  assert.match(documentSource, /linkedWorkItem\.boardTitle/)
+  assert.match(documentSource, /linkedWorkItem\.workItemTitle/)
+  assert.match(documentSource, /<Link[^>]+href=\{linkedWorkItem\.href\}/)
+  assert.match(documentSource, /Not linked to any task/)
+  assert.equal(documentSource.match(/overflow-y-auto/g)?.length, 1)
+  assert.ok(scrollBodyIndex >= 0)
+  assert.ok(linkedWorkIndex > scrollBodyIndex)
+  assert.ok(richEditorIndex > linkedWorkIndex)
+  assert.match(
+    documentSource,
+    /<div className="flex-1 overflow-y-auto">\s*<section[\s\S]*?Linked work[\s\S]*?<\/section>\s*<div className="mx-auto w-full max-w-3xl px-6 py-2">\s*<RichEditor/
+  )
+  assert.match(documentSource, /onSave\(resourceId, content\)/)
+})

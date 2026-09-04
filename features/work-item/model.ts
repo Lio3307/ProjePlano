@@ -45,17 +45,17 @@ export type FieldValue =
 export type WorkItem = {
   id: string
   projectId: string
+  boardId: string
   title: string
   description: string
   type: WorkItemType
-  status: WorkItemStatus
   priority: WorkItemPriority
   assigneeId: string | null
   startDate: string | null
   dueDate: string | null
   estimate: number | null
   position: number
-  labels: string[]
+  labelIds: string[]
   checklist: ChecklistItem[]
   milestoneId: string | null
   dependencyIds: string[]
@@ -68,14 +68,15 @@ export type EditableWorkItemFields = Pick<
   | "title"
   | "description"
   | "type"
-  | "status"
   | "priority"
   | "assigneeId"
+  | "startDate"
   | "dueDate"
   | "estimate"
-  | "labels"
+  | "labelIds"
   | "checklist"
   | "dependencyIds"
+  | "linkedResourceIds"
 >
 
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/
@@ -125,9 +126,6 @@ export function isValidWorkItemDateRange(
 
 export function isValidWorkItem(item: WorkItem) {
   const typeIsValid = WORK_ITEM_TYPES.some((type) => type === item.type)
-  const statusIsValid = WORK_ITEM_STATUSES.some(
-    (status) => status === item.status
-  )
   const priorityIsValid = WORK_ITEM_PRIORITIES.some(
     (priority) => priority === item.priority
   )
@@ -138,15 +136,15 @@ export function isValidWorkItem(item: WorkItem) {
   const estimateIsValid =
     item.estimate === null ||
     (Number.isInteger(item.estimate) && item.estimate >= 0)
-  const labelsAreValid =
-    Array.isArray(item.labels) &&
-    item.labels.every(
-      (label) =>
-        typeof label === "string" &&
-        label.length > 0 &&
-        label.trim() === label
+  const labelIdsAreValid =
+    Array.isArray(item.labelIds) &&
+    item.labelIds.every(
+      (labelId) =>
+        typeof labelId === "string" &&
+        labelId.length > 0 &&
+        labelId.trim() === labelId
     ) &&
-    new Set(item.labels).size === item.labels.length
+    new Set(item.labelIds).size === item.labelIds.length
   const checklistIsValid =
     Array.isArray(item.checklist) &&
     item.checklist.every(
@@ -162,26 +160,40 @@ export function isValidWorkItem(item: WorkItem) {
     new Set(
       item.checklist.map((checklistItem) => checklistItem.id)
     ).size === item.checklist.length
+  const linkedResourceIdsAreValid =
+    Array.isArray(item.linkedResourceIds) &&
+    item.linkedResourceIds.every(
+      (resourceId) =>
+        typeof resourceId === "string" &&
+        resourceId.length > 0 &&
+        resourceId.trim() === resourceId
+    ) &&
+    new Set(item.linkedResourceIds).size ===
+      item.linkedResourceIds.length
 
   return (
-    item.id.trim().length > 0 &&
-    item.projectId.trim().length > 0 &&
+    isNormalizedIdentity(item.id) &&
+    isNormalizedIdentity(item.projectId) &&
+    isNormalizedIdentity(item.boardId) &&
     item.title.trim().length > 0 &&
     typeIsValid &&
-    statusIsValid &&
     priorityIsValid &&
     assigneeIdIsValid &&
     estimateIsValid &&
     Number.isInteger(item.position) &&
     item.position >= 0 &&
-    labelsAreValid &&
+    labelIdsAreValid &&
     checklistIsValid &&
     Array.isArray(item.dependencyIds) &&
-    Array.isArray(item.linkedResourceIds) &&
+    linkedResourceIdsAreValid &&
     item.customFields !== null &&
     typeof item.customFields === "object" &&
     isValidWorkItemDateRange(item.startDate, item.dueDate)
   )
+}
+
+function isNormalizedIdentity(value: string) {
+  return value.length > 0 && value.trim() === value
 }
 
 export function wouldCreateDependencyCycle(

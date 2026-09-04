@@ -1,4 +1,5 @@
 import type { WorkspaceMember } from "@/features/member/model"
+import type { WorkItemStagesByBoardId } from "@/features/work-item/dependencies"
 import {
   buildCalendarDays,
   type CalendarMonth,
@@ -19,6 +20,7 @@ const WEEKDAYS = [
 interface CalendarGridProps {
   activeMonth: CalendarMonth
   tasks: ScheduledWorkItem[]
+  stagesByBoardId: WorkItemStagesByBoardId
   membersById: Readonly<Record<string, WorkspaceMember>>
   blockingCountsByWorkItemId: Readonly<Record<string, number>>
   todayIsoDate: string
@@ -28,6 +30,7 @@ interface CalendarGridProps {
 export function CalendarGrid({
   activeMonth,
   tasks,
+  stagesByBoardId,
   membersById,
   blockingCountsByWorkItemId,
   todayIsoDate,
@@ -58,6 +61,7 @@ export function CalendarGrid({
               key={day.isoDate}
               day={day}
               tasks={tasksByDate.get(day.isoDate) ?? []}
+              stagesByBoardId={stagesByBoardId}
               membersById={membersById}
               blockingCountsByWorkItemId={blockingCountsByWorkItemId}
               onOpenWorkItem={onOpenWorkItem}

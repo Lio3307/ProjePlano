@@ -18,9 +18,14 @@ const ACTIVE_WORK_ITEM_STATUSES: readonly WorkItemStatus[] = [
 
 type ProjectOverviewInput = {
   today: string
-  workItems: readonly WorkItem[]
+  workItems: readonly ProjectOverviewWorkItem[]
   milestones: readonly Milestone[]
   resources: readonly ProjectResource[]
+}
+
+export type ProjectOverviewWorkItem = {
+  workItem: WorkItem
+  stage: WorkItemStatus
 }
 
 export type ProjectOverviewSummary = {
@@ -41,15 +46,15 @@ export function buildProjectOverviewSummary({
 }: ProjectOverviewInput): ProjectOverviewSummary {
   const totalWorkItems = workItems.length
   const completedWorkItems = workItems.filter(
-    (workItem) => workItem.status === "done"
+    ({ stage }) => stage === "done"
   ).length
-  const activeWorkItems = workItems.filter((workItem) =>
-    ACTIVE_WORK_ITEM_STATUSES.includes(workItem.status)
+  const activeWorkItems = workItems.filter(({ stage }) =>
+    ACTIVE_WORK_ITEM_STATUSES.includes(stage)
   ).length
   const overdueWorkItems = isValidWorkItemDate(today)
     ? workItems.filter(
-        (workItem) =>
-          workItem.status !== "done" &&
+        ({ workItem, stage }) =>
+          stage !== "done" &&
           workItem.dueDate !== null &&
           isValidWorkItemDate(workItem.dueDate) &&
           workItem.dueDate < today

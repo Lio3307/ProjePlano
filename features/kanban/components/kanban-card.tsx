@@ -1,10 +1,16 @@
 "use client"
 
 import { useDraggable, useDroppable } from "@dnd-kit/react"
-import { CalendarDays, CheckSquare, GripVertical } from "lucide-react"
+import {
+  CalendarDays,
+  CheckSquare,
+  FileText,
+  GripVertical,
+} from "lucide-react"
 
 import { Card } from "@/components/ui/card"
 import type { WorkspaceMember } from "@/features/member/model"
+import type { BoardLabel } from "@/features/project/board"
 import { WorkItemBlockedBadge } from "@/features/work-item/components/work-item-blocked-badge"
 import {
   WorkItemAssignee,
@@ -20,6 +26,7 @@ import { getKanbanWorkItemDragId } from "../model"
 
 interface KanbanCardProps {
   workItem: WorkItem
+  labels: readonly BoardLabel[]
   assignee: WorkspaceMember | null
   blockingCount: number
   onOpen: (workItemId: string, trigger: HTMLElement) => void
@@ -27,6 +34,7 @@ interface KanbanCardProps {
 
 export function KanbanCard({
   workItem,
+  labels,
   assignee,
   blockingCount,
   onOpen,
@@ -45,6 +53,11 @@ export function KanbanCard({
     collisionPriority: 1,
   })
   const progress = getWorkItemChecklistProgress(workItem.checklist)
+  const resolvedLabels = workItem.labelIds.flatMap((labelId) => {
+    const label = labels.find((candidate) => candidate.id === labelId)
+
+    return label ? [label] : []
+  })
 
   return (
     <div
@@ -65,20 +78,21 @@ export function KanbanCard({
         <div className="flex items-start">
           <button
             type="button"
+            data-work-item-open-trigger={workItem.id}
             className="min-w-0 flex-1 space-y-3 p-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
             aria-label={"Open details for " + workItem.title}
             onClick={(event) =>
               onOpen(workItem.id, event.currentTarget)
             }
           >
-            <WorkItemLabelList labels={workItem.labels} />
+            <WorkItemLabelList labels={resolvedLabels} />
 
             <div className="space-y-1">
-              <h3 className="text-sm leading-5 font-medium">
+              <h3 className="break-words text-sm leading-5 font-medium [overflow-wrap:anywhere]">
                 {workItem.title}
               </h3>
               {workItem.description ? (
-                <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
+                <p className="line-clamp-2 break-words text-xs leading-5 text-muted-foreground [overflow-wrap:anywhere]">
                   {workItem.description}
                 </p>
               ) : null}
@@ -97,7 +111,22 @@ export function KanbanCard({
                     className="size-3.5"
                     aria-hidden="true"
                   />
-                  {formatWorkItemDate(workItem.dueDate)}
+                  {workItem.startDate && workItem.dueDate ? (
+                    <>
+                      {formatWorkItemDate(workItem.startDate)}
+                      {" – "}
+                      {formatWorkItemDate(workItem.dueDate)}
+                    </>
+                  ) : (
+                    formatWorkItemDate(workItem.dueDate)
+                  )}
+                </span>
+              ) : null}
+              {workItem.linkedResourceIds.length > 0 ? (
+                <span className="inline-flex items-center gap-1">
+                  <FileText className="size-3.5" aria-hidden="true" />
+                  {workItem.linkedResourceIds.length}
+                  <span className="sr-only"> linked documents</span>
                 </span>
               ) : null}
               {progress.total > 0 ? (

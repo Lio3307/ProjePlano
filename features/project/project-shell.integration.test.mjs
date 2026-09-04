@@ -30,18 +30,28 @@ test("renders Overview as the default and invalid-view fallback", async () => {
   }
 })
 
-test("renders an owned work view from its exact instance query", async () => {
+test("renders an owned Board from its exact instance query", async () => {
   const html = await getHtml(
     "/dashboard/workspaces/project-alpha/projects/2?view=board&workView=view-2-board"
   )
+  const anchors = getAnchors(html)
 
   assert.equal(html.includes('data-project-selection="board"'), true)
   assert.equal(html.includes("Demo view data"), false)
   assert.equal(html.includes('data-project-work-view="board"'), true)
-  assert.equal(html.includes("New task"), true)
+  assert.match(html, /<h2\b[^>]*>\s*Board\s*<\/h2>/)
+  assert.equal(html.includes("Board settings"), true)
+  assert.equal(html.includes("Set labels"), true)
+  assert.equal(html.includes("Add board"), true)
+  assert.equal((html.match(/data-kanban-board=/g) ?? []).length, 6)
+  assert.equal((html.match(/Add task/g) ?? []).length, 6)
+  assert.equal(html.includes("data-new-work-item-trigger"), false)
+  assert.equal(html.includes("New task"), false)
   assert.equal(html.includes("Backlog"), true)
   assert.equal(
-    html.includes("?view=board&amp;workView=view-2-board"),
+    anchors.some((anchor) =>
+      anchor.includes("?view=board&amp;workView=view-2-board")
+    ),
     true
   )
 })
@@ -72,6 +82,9 @@ test("keeps an empty Work area available for a project without views", async () 
     true
   )
   assert.equal(html.includes("data-add-work-view-trigger"), true)
+  assert.equal(html.includes("Add board"), true)
+  assert.equal(html.includes("Add task"), false)
+  assert.equal(html.includes("New task"), false)
   assert.equal(html.includes("No work views yet"), true)
 })
 
@@ -100,6 +113,11 @@ test("renders an owned Document and an explicit missing-resource state", async (
     true
   )
   assert.equal(documentHtml.includes("data-document-switcher"), true)
+  assert.equal(documentHtml.includes("Linked work"), true)
+  assert.equal(
+    documentHtml.includes("Not linked to any task"),
+    true
+  )
   assert.equal(
     missingHtml.includes('data-project-selection="missing-resource"'),
     true

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
+import { BOARD_LABEL_COLORS } from "./board.ts"
 import {
   PROJECT_VIEW_DEFINITIONS,
   SUPPORTED_PROJECT_VIEW_TYPES,
@@ -47,13 +48,30 @@ test("creates fresh deterministic view records", () => {
       "labels",
       "checklist",
     ],
-    groupBy: "status",
+    groupBy: "board",
     filterIds: [],
+    boardIds: [],
+    labels: [],
   })
   assert.notStrictEqual(first, second)
   assert.notStrictEqual(first.visibleFieldIds, second.visibleFieldIds)
   assert.notStrictEqual(first.filterIds, second.filterIds)
+  assert.notStrictEqual(first.boardIds, second.boardIds)
+  assert.notStrictEqual(first.labels, second.labels)
 
   first.visibleFieldIds.push("changed")
   assert.equal(second.visibleFieldIds.includes("changed"), false)
+})
+
+test("exposes the fixed Board label palette", () => {
+  assert.deepEqual(BOARD_LABEL_COLORS, [
+    "gray",
+    "orange",
+    "yellow",
+    "green",
+    "blue",
+    "purple",
+    "pink",
+    "red",
+  ])
 })

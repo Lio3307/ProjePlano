@@ -11,17 +11,17 @@ function createWorkItem(overrides = {}) {
   return {
     id: "item-a",
     projectId: "project-a",
+    boardId: "board-a",
     title: "Build dependency UI",
     description: "Expose the existing dependency model.",
     type: "feature",
-    status: "todo",
     priority: "medium",
     assigneeId: null,
     startDate: null,
     dueDate: null,
     estimate: null,
     position: 0,
-    labels: [],
+    labelIds: [],
     checklist: [],
     milestoneId: null,
     dependencyIds: [],
@@ -31,40 +31,61 @@ function createWorkItem(overrides = {}) {
   }
 }
 
-test("returns only unfinished project-local blockers in dependency order", () => {
+test("returns unfinished project blockers across Boards in dependency order", () => {
   const item = createWorkItem({
-    dependencyIds: ["item-b", "item-c", "item-foreign", "missing"],
+    dependencyIds: [
+      "item-b",
+      "item-c",
+      "item-foreign",
+      "item-other-board",
+      "missing",
+    ],
   })
   const itemsById = {
     "item-a": item,
-    "item-b": createWorkItem({ id: "item-b", status: "review" }),
-    "item-c": createWorkItem({ id: "item-c", status: "done" }),
+    "item-b": createWorkItem({ id: "item-b" }),
+    "item-c": createWorkItem({ id: "item-c", boardId: "board-done" }),
     "item-foreign": createWorkItem({
       id: "item-foreign",
       projectId: "project-b",
     }),
+    "item-other-board": createWorkItem({
+      id: "item-other-board",
+      boardId: "board-b",
+    }),
+  }
+  const stagesByBoardId = {
+    "board-a": "todo",
+    "board-b": "review",
+    "board-done": "done",
   }
 
   assert.deepEqual(
-    getBlockingDependencies(item, itemsById).map(
+    getBlockingDependencies(item, itemsById, stagesByBoardId).map(
       (dependency) => dependency.id
     ),
-    ["item-b"]
+    ["item-b", "item-other-board"]
   )
 })
 
 test("builds a blocker count for every work item", () => {
   const items = [
     createWorkItem({ id: "item-a", dependencyIds: ["item-b"] }),
-    createWorkItem({ id: "item-b", status: "review" }),
-    createWorkItem({ id: "item-c", status: "done" }),
+    createWorkItem({ id: "item-b" }),
+    createWorkItem({ id: "item-c", boardId: "board-done" }),
   ]
 
-  assert.deepEqual(getBlockingDependencyCounts(items), {
+  assert.deepEqual(
+    getBlockingDependencyCounts(items, {
+      "board-a": "review",
+      "board-done": "done",
+    }),
+    {
     "item-a": 1,
     "item-b": 0,
     "item-c": 0,
-  })
+    }
+  )
 })
 
 test("accepts valid edit and create dependency selections", () => {
@@ -100,6 +121,10 @@ test("rejects invalid dependency references", () => {
     "item-foreign": createWorkItem({
       id: "item-foreign",
       projectId: "project-b",
+    }),
+    "item-other-board": createWorkItem({
+      id: "item-other-board",
+      boardId: "board-b",
     }),
   }
 

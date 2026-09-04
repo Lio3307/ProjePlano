@@ -1,3 +1,6 @@
+"use client"
+
+import { useRef } from "react"
 import { Plus } from "lucide-react"
 import Link from "next/link"
 
@@ -16,7 +19,6 @@ import {
 } from "../query-state"
 import {
   PROJECT_VIEW_DEFINITIONS,
-  SUPPORTED_PROJECT_VIEW_TYPES,
   type SupportedProjectView,
   type SupportedProjectViewType,
 } from "../view-definitions"
@@ -28,9 +30,17 @@ type ProjectNavigationProps = {
   selection: ProjectSelection
   workViews: readonly SupportedProjectView[]
   documents: readonly ProjectDocumentResource[]
-  onAddView: (type: SupportedProjectViewType) => void
+  onAddBoard: (trigger: HTMLElement) => void
+  onAddView: (type: GenericProjectViewType) => void
   onAddDocument: (trigger: HTMLButtonElement) => void
 }
+
+type GenericProjectViewType = Exclude<SupportedProjectViewType, "board">
+
+const GENERIC_PROJECT_VIEW_TYPES = [
+  "table",
+  "calendar",
+] as const satisfies readonly GenericProjectViewType[]
 
 export function ProjectNavigation({
   workspaceId,
@@ -38,9 +48,11 @@ export function ProjectNavigation({
   selection,
   workViews,
   documents,
+  onAddBoard,
   onAddView,
   onAddDocument,
 }: ProjectNavigationProps) {
+  const addViewTriggerRef = useRef<HTMLButtonElement | null>(null)
   const activeWorkViewId =
     selection.kind === "work" ? selection.view.id : null
   const activeDocument =
@@ -49,6 +61,7 @@ export function ProjectNavigation({
       : documents[0] ?? null
   const workIsActive =
     selection.kind === "work" || selection.kind === "empty-work"
+  const hasBoardView = workViews.some((view) => view.type === "board")
   const documentsAreActive =
     selection.kind === "document" ||
     selection.kind === "missing-resource"
@@ -130,6 +143,7 @@ export function ProjectNavigation({
               <DropdownMenuTrigger
                 render={
                   <Button
+                    ref={addViewTriggerRef}
                     type="button"
                     size="icon-sm"
                     variant="ghost"
@@ -142,7 +156,19 @@ export function ProjectNavigation({
                 <Plus aria-hidden="true" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
-                {SUPPORTED_PROJECT_VIEW_TYPES.map((type) => (
+                {!hasBoardView ? (
+                  <DropdownMenuItem
+                    data-add-board-menu-item
+                    onClick={(event) =>
+                      onAddBoard(
+                        addViewTriggerRef.current ?? event.currentTarget
+                      )
+                    }
+                  >
+                    {PROJECT_VIEW_DEFINITIONS.board.title}
+                  </DropdownMenuItem>
+                ) : null}
+                {GENERIC_PROJECT_VIEW_TYPES.map((type) => (
                   <DropdownMenuItem
                     key={type}
                     onClick={() => onAddView(type)}

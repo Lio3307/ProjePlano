@@ -7,7 +7,7 @@ import { useShallow } from "zustand/react/shallow"
 import { Button } from "@/components/ui/button"
 import {
   selectWorkspaceMembers,
-  selectWorkspaceWorkItems,
+  selectWorkspaceWorkItemAssignments,
 } from "@/features/project/selectors"
 import { useProjectStore } from "@/features/project/store-provider"
 import type { Workspace } from "@/features/workspace/types"
@@ -38,8 +38,10 @@ export function WorkspaceMembersView({
   const members = useProjectStore(
     useShallow((state) => selectWorkspaceMembers(state, workspace.id))
   )
-  const workItems = useProjectStore(
-    useShallow((state) => selectWorkspaceWorkItems(state, workspace.id))
+  const assignments = useProjectStore(
+    useShallow((state) =>
+      selectWorkspaceWorkItemAssignments(state, workspace.id)
+    )
   )
   const {
     createWorkspaceMember,
@@ -53,8 +55,8 @@ export function WorkspaceMembersView({
     }))
   )
   const summaries = useMemo(
-    () => buildWorkspaceMemberSummaries(members, workItems),
-    [members, workItems]
+    () => buildWorkspaceMemberSummaries(members, assignments),
+    [assignments, members]
   )
   const [memberDialog, setMemberDialog] =
     useState<MemberDialogSession | null>(null)

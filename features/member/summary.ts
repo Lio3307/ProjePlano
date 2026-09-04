@@ -2,7 +2,7 @@ import type { WorkspaceMember } from "./model.ts"
 
 export type WorkspaceMemberAssignment = {
   projectId: string
-  status: string
+  stage: string
   assigneeId: string | null
 }
 
@@ -25,7 +25,7 @@ export function buildWorkspaceMemberSummaries(
     return {
       member: { ...member },
       activeTaskCount: memberAssignments.filter(
-        (assignment) => assignment.status !== "done"
+        (assignment) => assignment.stage !== "done"
       ).length,
       projectCount: new Set(
         memberAssignments.map((assignment) => assignment.projectId)

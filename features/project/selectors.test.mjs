@@ -3,19 +3,24 @@ import test from "node:test"
 
 import { createProjectSeedState } from "./seed-data.ts"
 import {
+  selectDocumentLinkedWorkItems,
+  selectBoardWorkItems,
   selectProjectById,
+  selectProjectBoardView,
   selectProjectDocumentResources,
   selectProjectForWorkspace,
   selectProjectMilestones,
+  selectProjectResolvedWorkItems,
   selectProjectResources,
   selectProjectsByWorkspaceId,
   selectSupportedProjectViews,
   selectProjectViews,
   selectProjectWorkItems,
+  selectTaskBoard,
+  selectTaskBoards,
   selectWorkspaceMembers,
   selectWorkspaceMembersById,
-  selectWorkspaceWorkItems,
-  selectWorkItemsByStatus,
+  selectWorkspaceWorkItemAssignments,
 } from "./selectors.ts"
 
 test("selects workspace projects in their explicit order", () => {
@@ -47,18 +52,28 @@ test("selects ordered members only from their workspace", () => {
 
 test("selects work items through their owning workspace", () => {
   const state = createProjectSeedState()
-  const workItems = selectWorkspaceWorkItems(state, "project-alpha")
+  const assignments = selectWorkspaceWorkItemAssignments(
+    state,
+    "project-alpha"
+  )
 
-  assert.equal(workItems.length > 0, true)
+  assert.equal(assignments.length > 0, true)
   assert.equal(
-    workItems.every(
-      (workItem) =>
-        state.projectsById[workItem.projectId].workspaceId ===
+    assignments.every(
+      (assignment) =>
+        state.projectsById[assignment.projectId].workspaceId ===
         "project-alpha"
     ),
     true
   )
-  assert.deepEqual(selectWorkspaceWorkItems(state, "missing"), [])
+  assert.equal(
+    assignments.every((assignment) => assignment.stage.length > 0),
+    true
+  )
+  assert.deepEqual(
+    selectWorkspaceWorkItemAssignments(state, "missing"),
+    []
+  )
 })
 
 test("resolves ordered views, resources, and milestones by project", () => {
@@ -75,13 +90,23 @@ test("resolves ordered views, resources, and milestones by project", () => {
   assert.deepEqual(selectProjectMilestones(state, "2"), [])
 })
 
-test("sorts work items by workflow status and stored position", () => {
+test("sorts project aggregates by ordered Boards and Board positions", () => {
   const state = createProjectSeedState()
   const projectItems = selectProjectWorkItems(state, "2")
-  const todoItems = selectWorkItemsByStatus(state, "2", "todo")
+  const resolvedItems = selectProjectResolvedWorkItems(state, "2")
+  const boards = selectTaskBoards(state, "2", "view-2-board")
+  const todoItems = selectBoardWorkItems(
+    state,
+    "2",
+    "task-board-2-todo"
+  )
 
   assert.deepEqual(
-    projectItems.slice(0, 2).map((workItem) => workItem.status),
+    projectItems.slice(0, 2).map((workItem) => workItem.id),
+    ["work-item-2-audit-onboarding", "work-item-2-api-error-model"]
+  )
+  assert.deepEqual(
+    resolvedItems.slice(0, 2).map(({ stage }) => stage),
     ["backlog", "backlog"]
   )
   assert.deepEqual(
@@ -91,6 +116,79 @@ test("sorts work items by workflow status and stored position", () => {
   assert.deepEqual(
     todoItems.map((workItem) => workItem.position),
     [0, 1]
+  )
+  assert.deepEqual(
+    boards.map((board) => board.title),
+    ["Backlog", "To Do", "In Progress", "Review", "Testing", "Done"]
+  )
+  assert.equal(
+    selectProjectBoardView(state, "2", "view-2-board")?.type,
+    "board"
+  )
+  assert.equal(
+    selectTaskBoard(state, "2", "task-board-2-todo")?.stage,
+    "todo"
+  )
+})
+
+test("Board selectors cannot leak tasks from sibling Boards", () => {
+  const state = createProjectSeedState()
+
+  assert.deepEqual(
+    selectBoardWorkItems(
+      state,
+      "2",
+      "task-board-2-todo"
+    ).map((workItem) => workItem.id),
+    ["work-item-2-workspace-filters", "work-item-2-release-checklist"]
+  )
+  assert.deepEqual(
+    selectBoardWorkItems(state, "2", "task-board-2-backlog").map(
+      (workItem) => workItem.id
+    ),
+    ["work-item-2-audit-onboarding", "work-item-2-api-error-model"]
+  )
+  assert.equal(selectTaskBoard(state, "2", "view-3-table"), null)
+  assert.equal(selectTaskBoard(state, "4", "task-board-2-todo"), null)
+})
+
+test("project selectors ignore same-project Board map orphans", () => {
+  const state = createProjectSeedState()
+  const boardId = "task-board-2-orphan"
+  const workItemId = "work-item-2-orphan"
+  const withOrphans = {
+    ...state,
+    taskBoardsById: {
+      ...state.taskBoardsById,
+      [boardId]: {
+        ...state.taskBoardsById["task-board-2-todo"],
+        id: boardId,
+        title: "Unlisted Board",
+      },
+    },
+    workItemsById: {
+      ...state.workItemsById,
+      [workItemId]: {
+        ...state.workItemsById["work-item-2-audit-onboarding"],
+        id: workItemId,
+        boardId,
+        title: "Unlisted Board task",
+      },
+    },
+  }
+
+  assert.equal(selectTaskBoard(withOrphans, "2", boardId), null)
+  assert.equal(
+    selectProjectWorkItems(withOrphans, "2").some(
+      (workItem) => workItem.id === workItemId
+    ),
+    false
+  )
+  assert.equal(
+    selectProjectWorkItems(withOrphans, "2").some(
+      (workItem) => workItem.id === "work-item-2-audit-onboarding"
+    ),
+    true
   )
 })
 
@@ -159,5 +257,126 @@ test("selects only supported work views and document resources", () => {
   assert.deepEqual(
     selectProjectDocumentResources(crossProjectReference, "2"),
     []
+  )
+})
+
+test("selects ordered document backlinks across owned Boards", () => {
+  const state = createProjectSeedState()
+  const resourceId = "resource-2-document"
+  const primaryItemId = "work-item-2-audit-onboarding"
+  const siblingItemId = "work-item-2-workspace-filters"
+  const invalidItemId = "work-item-2-invalid-board"
+  const foreignItemId = "work-item-3-foreign-link"
+
+  state.projectsById["2"] = {
+    ...state.projectsById["2"],
+    resourceIds: [resourceId],
+  }
+  state.resourcesById[resourceId] = {
+    id: resourceId,
+    projectId: "2",
+    title: "Release plan",
+    type: "document",
+    templateId: null,
+    isPinned: false,
+    content: "<h1>Release plan</h1>",
+  }
+  state.workItemsById[primaryItemId] = {
+    ...state.workItemsById[primaryItemId],
+    linkedResourceIds: [resourceId, "resource-1-document"],
+  }
+  state.workItemsById[siblingItemId] = {
+    ...state.workItemsById[siblingItemId],
+    linkedResourceIds: [resourceId],
+  }
+  state.workItemsById[invalidItemId] = {
+    ...state.workItemsById[siblingItemId],
+    id: invalidItemId,
+    boardId: "missing-board",
+    title: "Ignore inconsistent task",
+    position: 0,
+  }
+  state.workItemsById[foreignItemId] = {
+    ...state.workItemsById[primaryItemId],
+    id: foreignItemId,
+    projectId: "3",
+    boardId: "task-board-2-backlog",
+    title: "Ignore cross-project task",
+  }
+
+  assert.deepEqual(
+    selectDocumentLinkedWorkItems(state, "2", resourceId),
+    [
+      {
+        boardViewId: "view-2-board",
+        boardId: "task-board-2-backlog",
+        boardTitle: "Backlog",
+        workItemId: primaryItemId,
+        workItemTitle: "Audit the onboarding flow",
+      },
+      {
+        boardViewId: "view-2-board",
+        boardId: "task-board-2-todo",
+        boardTitle: "To Do",
+        workItemId: siblingItemId,
+        workItemTitle: "Build workspace filters",
+      },
+    ]
+  )
+  assert.deepEqual(
+    selectDocumentLinkedWorkItems(state, "2", "resource-1-document"),
+    []
+  )
+  assert.deepEqual(
+    selectDocumentLinkedWorkItems(state, "2", "missing-document"),
+    []
+  )
+
+  state.resourcesById["resource-2-unlisted"] = {
+    ...state.resourcesById[resourceId],
+    id: "resource-2-unlisted",
+  }
+  assert.deepEqual(
+    selectDocumentLinkedWorkItems(state, "2", "resource-2-unlisted"),
+    []
+  )
+})
+
+test("caches nested derived results for one immutable store snapshot", () => {
+  const state = createProjectSeedState()
+
+  const resolvedWorkItems = selectProjectResolvedWorkItems(state, "2")
+  const assignments = selectWorkspaceWorkItemAssignments(
+    state,
+    "project-alpha"
+  )
+  const documentLinks = selectDocumentLinkedWorkItems(
+    state,
+    "1",
+    "resource-1-document"
+  )
+
+  assert.strictEqual(
+    selectProjectResolvedWorkItems(state, "2"),
+    resolvedWorkItems
+  )
+  assert.strictEqual(
+    selectWorkspaceWorkItemAssignments(state, "project-alpha"),
+    assignments
+  )
+  assert.strictEqual(
+    selectDocumentLinkedWorkItems(
+      state,
+      "1",
+      "resource-1-document"
+    ),
+    documentLinks
+  )
+
+  const nextState = { ...state }
+
+  assert.notStrictEqual(
+    selectProjectResolvedWorkItems(nextState, "2"),
+    resolvedWorkItems
   )
 })

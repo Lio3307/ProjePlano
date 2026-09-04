@@ -12,17 +12,17 @@ function createWorkItem(overrides = {}) {
   return {
     id: "item-a",
     projectId: "project-a",
+    boardId: "board-a",
     title: "Build shared work items",
     description: "One source for every view.",
     type: "feature",
-    status: "todo",
     priority: "medium",
     assigneeId: "member-project-alpha-maya-chen",
     startDate: null,
     dueDate: "2026-09-18",
     estimate: 3,
     position: 0,
-    labels: ["Frontend", "UX"],
+    labelIds: ["label-frontend", "label-ux"],
     checklist: [
       { id: "check-a", label: "Verify contract", completed: false },
     ],
@@ -43,13 +43,18 @@ test("creates independent defaults", () => {
     label: "Outside",
     completed: false,
   })
+  first.linkedResourceIds.push("outside")
 
   assert.equal(first.type, "feature")
-  assert.equal(first.status, "todo")
+  assert.equal("status" in first, false)
   assert.equal(first.priority, "medium")
   assert.equal(first.assigneeId, "")
+  assert.equal(first.startDate, "")
+  assert.equal(first.dueDate, "")
+  assert.deepEqual(first.labelIds, [])
   assert.deepEqual(second.checklist, [])
   assert.deepEqual(second.dependencyIds, [])
+  assert.deepEqual(second.linkedResourceIds, [])
 })
 
 test("maps an existing work item to form strings", () => {
@@ -60,8 +65,11 @@ test("maps an existing work item to form strings", () => {
     "member-project-alpha-maya-chen"
   )
   assert.equal(existing.estimate, "3")
-  assert.equal(existing.labels, "Frontend, UX")
+  assert.equal(existing.startDate, "")
+  assert.equal(existing.dueDate, "2026-09-18")
+  assert.deepEqual(existing.labelIds, ["label-frontend", "label-ux"])
   assert.deepEqual(existing.dependencyIds, ["item-b"])
+  assert.deepEqual(existing.linkedResourceIds, [])
 })
 
 test("normalizes all editable values in one conversion", () => {
@@ -69,32 +77,44 @@ test("normalizes all editable values in one conversion", () => {
     title: "  Fix hydration  ",
     description: "  Keep render deterministic.  ",
     type: "bug",
-    status: "review",
     priority: "urgent",
     assigneeId: "member-project-alpha-maya-chen",
+    startDate: "2026-09-18",
     dueDate: "2026-09-21",
     estimate: "5",
-    labels: "Frontend, Quality, Frontend,  ",
+    labelIds: [
+      " label-frontend ",
+      "label-quality",
+      "label-frontend",
+      " ",
+    ],
     checklist: [
       { id: " check-a ", label: "  Run build  ", completed: true },
     ],
     dependencyIds: ["item-b"],
+    linkedResourceIds: [
+      " resource-notes ",
+      "resource-brief",
+      "resource-notes",
+      " ",
+    ],
   })
 
   assert.deepEqual(result, {
     title: "Fix hydration",
     description: "Keep render deterministic.",
     type: "bug",
-    status: "review",
     priority: "urgent",
     assigneeId: "member-project-alpha-maya-chen",
+    startDate: "2026-09-18",
     dueDate: "2026-09-21",
     estimate: 5,
-    labels: ["Frontend", "Quality"],
+    labelIds: ["label-frontend", "label-quality"],
     checklist: [
       { id: "check-a", label: "Run build", completed: true },
     ],
     dependencyIds: ["item-b"],
+    linkedResourceIds: ["resource-notes", "resource-brief"],
   })
 })
 
@@ -105,14 +125,15 @@ test("maps blank optional fields to null", () => {
     title: "Task",
     description: "",
     type: "feature",
-    status: "todo",
     priority: "medium",
     assigneeId: null,
+    startDate: null,
     dueDate: null,
     estimate: null,
-    labels: [],
+    labelIds: [],
     checklist: [],
     dependencyIds: [],
+    linkedResourceIds: [],
   })
 })
 
@@ -133,6 +154,24 @@ test("rejects invalid title, enum, date, and estimate values", () => {
       ...base,
       title: "Task",
       dueDate: "2026-02-29",
+    }),
+    null
+  )
+  assert.equal(
+    normalizeWorkItemFormValue({
+      ...base,
+      title: "Task",
+      startDate: "2026-09-22",
+      dueDate: "2026-09-21",
+    }),
+    null
+  )
+  assert.notEqual(
+    normalizeWorkItemFormValue({
+      ...base,
+      title: "Task",
+      startDate: "2026-09-21",
+      dueDate: "2026-09-21",
     }),
     null
   )
@@ -190,15 +229,87 @@ test("rejects blank and duplicate dependency IDs", () => {
   )
 })
 
+test("reports a focused date-range validation reason", async () => {
+  const formModule = await import("./form.ts")
+  const base = createWorkItemFormValue(null)
+
+  assert.equal(
+    typeof formModule.validateWorkItemFormValue,
+    "function"
+  )
+  assert.deepEqual(
+    formModule.validateWorkItemFormValue({
+      ...base,
+      title: "Task",
+      startDate: "2026-09-22",
+      dueDate: "2026-09-21",
+    }),
+    {
+      ok: false,
+      field: "date-range",
+      message:
+        "Enter valid dates with the start date on or before the due date.",
+    }
+  )
+})
+
+test("reports a focused checklist validation reason", async () => {
+  const formModule = await import("./form.ts")
+  const base = createWorkItemFormValue(null)
+
+  assert.equal(
+    typeof formModule.validateWorkItemFormValue,
+    "function"
+  )
+  assert.deepEqual(
+    formModule.validateWorkItemFormValue({
+      ...base,
+      title: "Task",
+      checklist: [{ id: "check", label: " ", completed: false }],
+    }),
+    {
+      ok: false,
+      field: "checklist",
+      message:
+        "Enter text for every checklist item and remove duplicate entries.",
+    }
+  )
+})
+
+test("reports a focused relationship validation reason", async () => {
+  const formModule = await import("./form.ts")
+  const base = createWorkItemFormValue(null)
+
+  assert.equal(
+    typeof formModule.validateWorkItemFormValue,
+    "function"
+  )
+  assert.deepEqual(
+    formModule.validateWorkItemFormValue({
+      ...base,
+      title: "Task",
+      dependencyIds: ["item-b", "item-b"],
+    }),
+    {
+      ok: false,
+      field: "relationships",
+      message:
+        "Refresh task dependencies and select each dependency only once.",
+    }
+  )
+})
+
 test("extracts detached editable fields", () => {
   const item = createWorkItem()
   const fields = getEditableWorkItemFields(item)
 
-  fields.labels.push("Outside")
+  fields.labelIds.push("outside")
   fields.dependencyIds.push("outside")
+  fields.linkedResourceIds.push("outside")
 
-  assert.deepEqual(item.labels, ["Frontend", "UX"])
+  assert.deepEqual(item.labelIds, ["label-frontend", "label-ux"])
   assert.deepEqual(item.dependencyIds, ["item-b"])
+  assert.deepEqual(item.linkedResourceIds, [])
 })
 
 test("compares editable field values", () => {

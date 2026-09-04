@@ -5,9 +5,10 @@ export type SupportedProjectViewType = Exclude<
   "timeline"
 >
 
-export type SupportedProjectView = Omit<ProjectViewConfig, "type"> & {
-  type: SupportedProjectViewType
-}
+export type SupportedProjectView = Extract<
+  ProjectViewConfig,
+  { type: SupportedProjectViewType }
+>
 
 type ProjectViewDefinition = {
   title: string
@@ -36,7 +37,7 @@ export const PROJECT_VIEW_DEFINITIONS = {
       "labels",
       "checklist",
     ],
-    groupBy: "status",
+    groupBy: "board",
     filterIds: [],
   },
   table: {
@@ -78,12 +79,22 @@ export function createProjectViewConfig(
   type: SupportedProjectViewType
 ): SupportedProjectView {
   const definition = PROJECT_VIEW_DEFINITIONS[type]
-
-  return {
+  const view = {
     ...definition,
     id: "view-" + projectId + "-" + type,
     projectId,
     visibleFieldIds: [...definition.visibleFieldIds],
     filterIds: [...definition.filterIds],
   }
+
+  if (type === "board") {
+    return {
+      ...view,
+      type,
+      boardIds: [],
+      labels: [],
+    }
+  }
+
+  return { ...view, type }
 }

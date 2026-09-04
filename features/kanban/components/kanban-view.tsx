@@ -3,13 +3,12 @@
 import { DragDropProvider } from "@dnd-kit/react"
 
 import type { WorkspaceMember } from "@/features/member/model"
-import type {
-  WorkItem,
-  WorkItemStatus,
-} from "@/features/work-item/model"
+import type { ProjectBoardView } from "@/features/project/model"
+import type { TaskBoard } from "@/features/project/task-board"
 import { getBlockingDependencyCounts } from "@/features/work-item/dependencies"
+import type { WorkItem } from "@/features/work-item/model"
 import {
-  buildKanbanColumns,
+  buildKanbanBoards,
   getKanbanDropDestination,
   parseKanbanWorkItemDragId,
 } from "../model"
@@ -17,6 +16,8 @@ import { KanbanBoard } from "./kanban-board"
 
 interface KanbanViewProps {
   workItems: readonly WorkItem[]
+  board: ProjectBoardView
+  boards: readonly TaskBoard[]
   membersById: Readonly<Record<string, WorkspaceMember>>
   onOpenWorkItem: (
     workItemId: string,
@@ -24,20 +25,35 @@ interface KanbanViewProps {
   ) => void
   onMoveWorkItem: (
     workItemId: string,
-    status: WorkItemStatus,
+    boardId: string,
     index: number
   ) => void
+  onAddTask: (boardId: string, trigger: HTMLElement) => void
+  onAddBoard: (trigger: HTMLElement) => void
+  onEditBoard: (boardId: string, trigger: HTMLElement) => void
+  onSetLabels: (trigger: HTMLElement) => void
 }
 
 export function KanbanView({
   workItems,
+  board,
+  boards,
   membersById,
   onOpenWorkItem,
   onMoveWorkItem,
+  onAddTask,
+  onAddBoard,
+  onEditBoard,
+  onSetLabels,
 }: KanbanViewProps) {
-  const columns = buildKanbanColumns(workItems)
-  const blockingCountsByWorkItemId =
-    getBlockingDependencyCounts(workItems)
+  const records = buildKanbanBoards(boards, workItems)
+  const stagesByBoardId = Object.fromEntries(
+    boards.map((taskBoard) => [taskBoard.id, taskBoard.stage])
+  )
+  const blockingCountsByWorkItemId = getBlockingDependencyCounts(
+    workItems,
+    stagesByBoardId
+  )
 
   return (
     <DragDropProvider
@@ -54,22 +70,27 @@ export function KanbanView({
         }
 
         const workItemId = parseKanbanWorkItemDragId(sourceId)
-        const destination = getKanbanDropDestination(columns, targetId)
+        const destination = getKanbanDropDestination(records, targetId)
 
         if (workItemId && destination) {
           onMoveWorkItem(
             workItemId,
-            destination.status,
+            destination.boardId,
             destination.index
           )
         }
       }}
     >
       <KanbanBoard
-        columns={columns}
+        columns={records}
+        board={board}
         membersById={membersById}
         blockingCountsByWorkItemId={blockingCountsByWorkItemId}
         onOpenWorkItem={onOpenWorkItem}
+        onAddTask={onAddTask}
+        onAddBoard={onAddBoard}
+        onEditBoard={onEditBoard}
+        onSetLabels={onSetLabels}
       />
     </DragDropProvider>
   )

@@ -10,17 +10,17 @@ function createWorkItem(id, overrides = {}) {
   return {
     id,
     projectId: "project-a",
+    boardId: "board-a",
     title: id,
     description: "",
     type: "feature",
-    status: "backlog",
     priority: "medium",
     assigneeId: null,
     startDate: null,
     dueDate: null,
     estimate: null,
     position: 0,
-    labels: [],
+    labelIds: [],
     checklist: [],
     milestoneId: null,
     dependencyIds: [],
@@ -30,21 +30,25 @@ function createWorkItem(id, overrides = {}) {
   }
 }
 
+function createOverviewWorkItem(id, stage, overrides = {}) {
+  return {
+    workItem: createWorkItem(id, overrides),
+    stage,
+  }
+}
+
 test("derives progress, active work, overdue work, and next milestone", () => {
   const summary = buildProjectOverviewSummary({
     today: "2026-09-02",
     workItems: [
-      createWorkItem("backlog"),
-      createWorkItem("todo", {
-        status: "todo",
+      createOverviewWorkItem("backlog", "backlog"),
+      createOverviewWorkItem("todo", "todo", {
         dueDate: "2026-09-01",
       }),
-      createWorkItem("active", {
-        status: "in-progress",
+      createOverviewWorkItem("active", "in-progress", {
         dueDate: "2026-09-03",
       }),
-      createWorkItem("done", {
-        status: "done",
+      createOverviewWorkItem("done", "done", {
         dueDate: "2026-08-20",
       }),
     ],
@@ -96,8 +100,8 @@ test("counts all and only Phase 2 active statuses", () => {
   ]
   const summary = buildProjectOverviewSummary({
     today: "2026-09-02",
-    workItems: statuses.map((status, index) =>
-      createWorkItem("status-" + index, { status })
+    workItems: statuses.map((stage, index) =>
+      createOverviewWorkItem("status-" + index, stage)
     ),
     milestones: [],
     resources: [],

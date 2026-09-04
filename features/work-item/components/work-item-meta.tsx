@@ -2,13 +2,18 @@ import type { ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 import type { WorkspaceMember } from "@/features/member/model"
+import type {
+  BoardLabel,
+  BoardLabelColor,
+} from "@/features/project/board"
 import {
   isValidWorkItemDate,
   type WorkItem,
+  type WorkItemStatus,
 } from "../model"
 
 export const WORK_ITEM_STATUS_LABELS: Record<
-  WorkItem["status"],
+  WorkItemStatus,
   string
 > = {
   backlog: "Backlog",
@@ -39,7 +44,7 @@ export const WORK_ITEM_PRIORITY_LABELS: Record<
   urgent: "Urgent",
 }
 
-const STATUS_STYLES: Record<WorkItem["status"], string> = {
+const STATUS_STYLES: Record<WorkItemStatus, string> = {
   backlog:
     "bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-200",
   todo: "bg-zinc-100 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
@@ -71,6 +76,21 @@ const PRIORITY_STYLES: Record<WorkItem["priority"], string> = {
     "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200",
 }
 
+export const BOARD_LABEL_STYLES: Record<BoardLabelColor, string> = {
+  gray: "bg-slate-200 text-slate-900 dark:bg-slate-700 dark:text-slate-50",
+  orange:
+    "bg-orange-200 text-orange-950 dark:bg-orange-800 dark:text-orange-50",
+  yellow:
+    "bg-yellow-200 text-yellow-950 dark:bg-yellow-700 dark:text-yellow-50",
+  green:
+    "bg-emerald-200 text-emerald-950 dark:bg-emerald-800 dark:text-emerald-50",
+  blue: "bg-blue-200 text-blue-950 dark:bg-blue-800 dark:text-blue-50",
+  purple:
+    "bg-violet-200 text-violet-950 dark:bg-violet-800 dark:text-violet-50",
+  pink: "bg-pink-200 text-pink-950 dark:bg-pink-800 dark:text-pink-50",
+  red: "bg-red-200 text-red-950 dark:bg-red-800 dark:text-red-50",
+}
+
 function MetaBadge({
   children,
   className,
@@ -93,7 +113,7 @@ function MetaBadge({
 export function WorkItemStatusBadge({
   status,
 }: {
-  status: WorkItem["status"]
+  status: WorkItemStatus
 }) {
   return (
     <MetaBadge className={STATUS_STYLES[status]}>
@@ -126,7 +146,11 @@ export function WorkItemPriorityBadge({
   )
 }
 
-export function WorkItemLabelList({ labels }: { labels: string[] }) {
+export function WorkItemLabelList({
+  labels,
+}: {
+  labels: readonly BoardLabel[]
+}) {
   if (labels.length === 0) {
     return null
   }
@@ -135,10 +159,13 @@ export function WorkItemLabelList({ labels }: { labels: string[] }) {
     <ul className="flex flex-wrap gap-1" aria-label="Labels">
       {labels.map((label) => (
         <li
-          key={label}
-          className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground ring-1 ring-foreground/10"
+          key={label.id}
+          className={cn(
+            "rounded-full px-2 py-0.5 text-[10px] font-medium",
+            BOARD_LABEL_STYLES[label.color]
+          )}
         >
-          {label}
+          {label.name}
         </li>
       ))}
     </ul>

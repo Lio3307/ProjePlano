@@ -12,12 +12,13 @@ import {
   WorkItemStatusBadge,
   WorkItemTypeBadge,
 } from "@/features/work-item/components/work-item-meta"
-import type { WorkItem } from "@/features/work-item/model"
+import type { WorkItem, WorkItemStatus } from "@/features/work-item/model"
 import { cn } from "@/lib/utils"
 import { getCalendarTaskDragId } from "../model"
 
 interface CalendarTaskCardProps {
   workItem: WorkItem
+  status: WorkItemStatus
   assignee: WorkspaceMember | null
   blockingCount: number
   onOpen: (workItemId: string, trigger: HTMLElement) => void
@@ -25,6 +26,7 @@ interface CalendarTaskCardProps {
 
 export function CalendarTaskCard({
   workItem,
+  status,
   assignee,
   blockingCount,
   onOpen,
@@ -46,6 +48,7 @@ export function CalendarTaskCard({
       <div className="flex items-start">
         <button
           type="button"
+          data-work-item-open-trigger={workItem.id}
           className="min-w-0 flex-1 space-y-2 p-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
           aria-label={"Open details for " + workItem.title}
           onClick={(event) =>
@@ -56,7 +59,7 @@ export function CalendarTaskCard({
             {workItem.title}
           </h3>
           <div className="flex flex-wrap gap-1">
-            <WorkItemStatusBadge status={workItem.status} />
+            <WorkItemStatusBadge status={status} />
             <WorkItemTypeBadge type={workItem.type} />
             <WorkItemPriorityBadge priority={workItem.priority} />
             <WorkItemBlockedBadge count={blockingCount} />

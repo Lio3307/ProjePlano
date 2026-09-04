@@ -1,18 +1,49 @@
-import {
-  WORK_ITEM_STATUSES,
-  type WorkItemStatus,
-} from "../work-item/model.ts"
 import type { WorkspaceMember } from "../member/model.ts"
+import type { WorkItem, WorkItemStatus } from "../work-item/model.ts"
 import type {
   ProjectDocumentResource,
+  ProjectBoardView,
   ProjectResource,
   ProjectViewConfig,
   ProjectWorkspaceState,
 } from "./model"
+import type { TaskBoard } from "./task-board.ts"
 import {
   isSupportedProjectViewType,
   type SupportedProjectView,
 } from "./view-definitions.ts"
+
+export type DocumentLinkedWorkItem = {
+  boardViewId: string
+  boardId: string
+  boardTitle: string
+  workItemId: string
+  workItemTitle: string
+}
+
+export type ResolvedWorkItem = {
+  workItem: WorkItem
+  board: TaskBoard
+  stage: WorkItemStatus
+}
+
+export type WorkspaceWorkItemAssignment = {
+  projectId: string
+  assigneeId: string | null
+  stage: WorkItemStatus
+}
+
+type ArraySelectorCache<T> = WeakMap<
+  ProjectWorkspaceState,
+  Map<string, T[]>
+>
+
+const workspaceAssignmentCache: ArraySelectorCache<WorkspaceWorkItemAssignment> =
+  new WeakMap()
+const resolvedWorkItemCache: ArraySelectorCache<ResolvedWorkItem> =
+  new WeakMap()
+const documentLinkedWorkItemCache: ArraySelectorCache<DocumentLinkedWorkItem> =
+  new WeakMap()
 
 export function selectProjectById(
   state: ProjectWorkspaceState,
@@ -69,12 +100,25 @@ export function selectWorkspaceMembersById(
   return membersById
 }
 
-export function selectWorkspaceWorkItems(
+export function selectWorkspaceWorkItemAssignments(
   state: ProjectWorkspaceState,
   workspaceId: string
-) {
-  return selectProjectsByWorkspaceId(state, workspaceId).flatMap(
-    (project) => selectProjectWorkItems(state, project.id)
+): WorkspaceWorkItemAssignment[] {
+  return getCachedArray(
+    workspaceAssignmentCache,
+    state,
+    workspaceId,
+    () =>
+      selectProjectsByWorkspaceId(state, workspaceId).flatMap(
+        (project) =>
+          selectProjectResolvedWorkItems(state, project.id).map(
+            ({ workItem, stage }) => ({
+              projectId: workItem.projectId,
+              assigneeId: workItem.assigneeId,
+              stage,
+            })
+          )
+      )
   )
 }
 
@@ -107,43 +151,106 @@ export function selectProjectWorkItems(
   state: ProjectWorkspaceState,
   projectId: string
 ) {
-  if (!state.projectsById[projectId]) {
+  return selectProjectResolvedWorkItems(state, projectId).map(
+    ({ workItem }) => workItem
+  )
+}
+
+export function selectProjectBoardView(
+  state: ProjectWorkspaceState,
+  projectId: string,
+  viewId: string
+): ProjectBoardView | null {
+  const project = state.projectsById[projectId]
+  const view = state.projectViewsById[viewId]
+
+  return project?.viewIds.includes(viewId) &&
+    view?.type === "board" &&
+    view.projectId === projectId
+    ? view
+    : null
+}
+
+export function selectTaskBoards(
+  state: ProjectWorkspaceState,
+  projectId: string,
+  viewId: string
+) {
+  const view = selectProjectBoardView(state, projectId, viewId)
+
+  if (!view) {
     return []
   }
 
-  return Object.values(state.workItemsById)
-    .filter((workItem) => workItem.projectId === projectId)
-    .sort((left, right) => {
-      const statusDifference =
-        WORK_ITEM_STATUSES.indexOf(left.status) -
-        WORK_ITEM_STATUSES.indexOf(right.status)
+  return view.boardIds.flatMap((boardId) => {
+    const board = state.taskBoardsById[boardId]
 
-      return (
-        statusDifference ||
-        left.position - right.position ||
-        left.id.localeCompare(right.id)
-      )
-    })
+    return board?.projectId === projectId && board.viewId === view.id
+      ? [board]
+      : []
+  })
 }
 
-export function selectWorkItemsByStatus(
+export function selectTaskBoard(
   state: ProjectWorkspaceState,
   projectId: string,
-  status: WorkItemStatus
+  boardId: string
+): TaskBoard | null {
+  const board = state.taskBoardsById[boardId]
+  const view = board
+    ? selectProjectBoardView(state, projectId, board.viewId)
+    : null
+
+  return board?.projectId === projectId && view?.boardIds.includes(board.id)
+    ? board
+    : null
+}
+
+export function selectBoardWorkItems(
+  state: ProjectWorkspaceState,
+  projectId: string,
+  boardId: string
 ) {
-  if (!state.projectsById[projectId]) {
+  if (!selectTaskBoard(state, projectId, boardId)) {
     return []
   }
 
   return Object.values(state.workItemsById)
     .filter(
       (workItem) =>
-        workItem.projectId === projectId && workItem.status === status
+        workItem.projectId === projectId && workItem.boardId === boardId
     )
     .sort(
       (left, right) =>
         left.position - right.position || left.id.localeCompare(right.id)
     )
+}
+
+export function selectProjectResolvedWorkItems(
+  state: ProjectWorkspaceState,
+  projectId: string
+): ResolvedWorkItem[] {
+  return getCachedArray(resolvedWorkItemCache, state, projectId, () => {
+    const resolved: ResolvedWorkItem[] = []
+
+    for (const view of selectProjectViews(state, projectId)) {
+      if (view.type !== "board") {
+        continue
+      }
+
+      for (const board of selectTaskBoards(state, projectId, view.id)) {
+        for (const workItem of selectBoardWorkItems(
+          state,
+          projectId,
+          board.id
+        )) {
+          resolved.push({ workItem, board, stage: board.stage })
+        }
+      }
+    }
+
+    return resolved
+  })
 }
 
 export function selectProjectResources(
@@ -168,6 +275,56 @@ export function selectProjectDocumentResources(
 ) {
   return selectProjectResources(state, projectId).filter(
     isProjectDocumentResource
+  )
+}
+
+export function selectDocumentLinkedWorkItems(
+  state: ProjectWorkspaceState,
+  projectId: string,
+  resourceId: string
+): DocumentLinkedWorkItem[] {
+  const cacheKey = JSON.stringify([projectId, resourceId])
+
+  return getCachedArray(
+    documentLinkedWorkItemCache,
+    state,
+    cacheKey,
+    () => {
+      const project = state.projectsById[projectId]
+      const resource = state.resourcesById[resourceId]
+
+      if (
+        !project ||
+        !project.resourceIds.includes(resourceId) ||
+        resource?.type !== "document" ||
+        resource.projectId !== projectId
+      ) {
+        return []
+      }
+
+      return selectProjectResolvedWorkItems(state, projectId).flatMap(
+        ({ workItem, board }) => {
+          const boardView = state.projectViewsById[board.viewId]
+
+          if (
+            !workItem.linkedResourceIds.includes(resourceId) ||
+            boardView?.type !== "board"
+          ) {
+            return []
+          }
+
+          return [
+            {
+              boardViewId: boardView.id,
+              boardId: board.id,
+              boardTitle: board.title,
+              workItemId: workItem.id,
+              workItemTitle: workItem.title,
+            },
+          ]
+        }
+      )
+    }
   )
 }
 
@@ -197,4 +354,28 @@ function isProjectDocumentResource(
   resource: ProjectResource
 ): resource is ProjectDocumentResource {
   return resource.type === "document"
+}
+
+function getCachedArray<T>(
+  cache: ArraySelectorCache<T>,
+  state: ProjectWorkspaceState,
+  key: string,
+  createValue: () => T[]
+) {
+  let valuesByKey = cache.get(state)
+
+  if (!valuesByKey) {
+    valuesByKey = new Map()
+    cache.set(state, valuesByKey)
+  }
+
+  const cached = valuesByKey.get(key)
+
+  if (cached !== undefined) {
+    return cached
+  }
+
+  const value = createValue()
+  valuesByKey.set(key, value)
+  return value
 }

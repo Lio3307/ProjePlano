@@ -2,29 +2,41 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
-  buildKanbanColumns,
-  getKanbanColumnDropId,
+  buildKanbanBoards,
+  getKanbanBoardDropId,
   getKanbanDropDestination,
   getKanbanWorkItemDragId,
   parseKanbanWorkItemDragId,
 } from "./model.ts"
 import { INITIAL_KANBAN_COLUMNS } from "./mock-data.ts"
 
-function createWorkItem(id, status, position) {
+function createTaskBoard(id, stage, position) {
   return {
     id,
     projectId: "project-a",
+    viewId: "view-project-a-board",
+    title: id,
+    description: "",
+    stage,
+    position,
+  }
+}
+
+function createWorkItem(id, boardId, position) {
+  return {
+    id,
+    projectId: "project-a",
+    boardId,
     title: "Task " + id,
     description: "Description " + id,
     type: "feature",
-    status,
     priority: "medium",
     assigneeId: null,
     startDate: null,
     dueDate: null,
     estimate: null,
     position,
-    labels: [],
+    labelIds: [],
     checklist: [],
     milestoneId: null,
     dependencyIds: [],
@@ -33,28 +45,30 @@ function createWorkItem(id, status, position) {
   }
 }
 
-test("builds all six work-item status columns", () => {
-  const columns = buildKanbanColumns([
-    createWorkItem("todo-a", "todo", 0),
-    createWorkItem("done-a", "done", 0),
-  ])
-
-  assert.deepEqual(
-    columns.map((column) => column.status),
-    ["backlog", "todo", "in-progress", "review", "testing", "done"]
+test("builds only the Boards supplied by the owning view", () => {
+  const todo = createTaskBoard("board-todo", "todo", 0)
+  const boards = buildKanbanBoards(
+    [todo],
+    [createWorkItem("todo-a", todo.id, 0)]
   )
-  assert.deepEqual(columns[4].workItems, [])
+
+  assert.deepEqual(boards.map((record) => record.board.id), [todo.id])
+  assert.deepEqual(boards[0].workItems.map((item) => item.id), ["todo-a"])
 })
 
-test("sorts each Board status by position and stable ID", () => {
-  const columns = buildKanbanColumns([
-    createWorkItem("b", "todo", 0),
-    createWorkItem("a", "todo", 0),
-    createWorkItem("c", "todo", 1),
-  ])
+test("sorts each Board by position and stable ID", () => {
+  const todo = createTaskBoard("board-todo", "todo", 0)
+  const boards = buildKanbanBoards(
+    [todo],
+    [
+      createWorkItem("b", todo.id, 0),
+      createWorkItem("a", todo.id, 0),
+      createWorkItem("c", todo.id, 1),
+    ]
+  )
 
   assert.deepEqual(
-    columns[1].workItems.map((item) => item.id),
+    boards[0].workItems.map((item) => item.id),
     ["a", "b", "c"]
   )
 })
@@ -62,36 +76,44 @@ test("sorts each Board status by position and stable ID", () => {
 test("creates and parses an unambiguous Board work-item drag ID", () => {
   assert.equal(getKanbanWorkItemDragId("todo-a"), "kanban-item:todo-a")
   assert.equal(parseKanbanWorkItemDragId("kanban-item:todo-a"), "todo-a")
-  assert.equal(parseKanbanWorkItemDragId("kanban-column:todo"), null)
+  assert.equal(parseKanbanWorkItemDragId("kanban-board:board-todo"), null)
   assert.equal(parseKanbanWorkItemDragId("kanban-item:"), null)
 })
 
-test("resolves a column drop target to its end", () => {
-  const columns = buildKanbanColumns([
-    createWorkItem("todo-a", "todo", 0),
-    createWorkItem("todo-b", "todo", 1),
-  ])
+test("resolves a Board drop target to its end", () => {
+  const todo = createTaskBoard("board-todo", "todo", 0)
+  const boards = buildKanbanBoards(
+    [todo],
+    [
+      createWorkItem("todo-a", todo.id, 0),
+      createWorkItem("todo-b", todo.id, 1),
+    ]
+  )
 
   assert.deepEqual(
-    getKanbanDropDestination(columns, getKanbanColumnDropId("todo")),
-    { status: "todo", index: 2 }
+    getKanbanDropDestination(boards, getKanbanBoardDropId(todo.id)),
+    { boardId: todo.id, index: 2 }
   )
 })
 
-test("resolves a work-item drop target to its current index", () => {
-  const columns = buildKanbanColumns([
-    createWorkItem("todo-a", "todo", 0),
-    createWorkItem("todo-b", "todo", 1),
-  ])
+test("resolves a work-item drop target to its current Board index", () => {
+  const todo = createTaskBoard("board-todo", "todo", 0)
+  const boards = buildKanbanBoards(
+    [todo],
+    [
+      createWorkItem("todo-a", todo.id, 0),
+      createWorkItem("todo-b", todo.id, 1),
+    ]
+  )
 
   assert.deepEqual(
     getKanbanDropDestination(
-      columns,
+      boards,
       getKanbanWorkItemDragId("todo-b")
     ),
-    { status: "todo", index: 1 }
+    { boardId: todo.id, index: 1 }
   )
-  assert.equal(getKanbanDropDestination(columns, "missing"), null)
+  assert.equal(getKanbanDropDestination(boards, "missing"), null)
 })
 
 test("provides six seed columns and an empty drop target", () => {

@@ -1,22 +1,22 @@
 import { INITIAL_CALENDAR_TASKS } from "../calendar/mock-data.ts"
 import { INITIAL_KANBAN_COLUMNS } from "../kanban/mock-data.ts"
 import { WORKSPACE_MEMBERS } from "../member/mock-data.ts"
-import { INITIAL_ROWS } from "../table/mock-data.ts"
-import type { Row } from "../table/model"
 import type {
   WorkItem,
-  WorkItemPriority,
   WorkItemStatus,
-} from "../work-item/model"
+} from "../work-item/model.ts"
 import { PROJECTS } from "./mock-data.ts"
 import type {
   ProjectDocumentResource,
+  ProjectBoardView,
   ProjectRecord,
   ProjectResource,
   ProjectViewConfig,
   ProjectWorkspaceState,
 } from "./model"
 import type { Project } from "./types"
+import { BOARD_LABEL_COLORS, type BoardLabel } from "./board.ts"
+import type { TaskBoard } from "./task-board.ts"
 import { createProjectViewConfig } from "./view-definitions.ts"
 
 const KANBAN_DEPENDENCIES: Readonly<Record<string, readonly string[]>> = {
@@ -32,16 +32,17 @@ export function createProjectSeedState(): ProjectWorkspaceState {
   const members = WORKSPACE_MEMBERS.map((member) => ({ ...member }))
   const projectRecords: ProjectRecord[] = []
   const projectViews: ProjectViewConfig[] = []
+  const taskBoards: TaskBoard[] = []
   const resources: ProjectResource[] = []
   const workItems: WorkItem[] = []
 
   for (const project of PROJECTS) {
-    const view = createLegacyProjectView(project)
+    const views = createLegacyProjectViews(project)
+    const projectTaskBoards = createLegacyTaskBoards(project, views)
     const projectResources = createLegacyProjectResources(project)
 
-    if (view) {
-      projectViews.push(view)
-    }
+    projectViews.push(...views)
+    taskBoards.push(...projectTaskBoards)
 
     resources.push(...projectResources)
 
@@ -52,12 +53,14 @@ export function createProjectSeedState(): ProjectWorkspaceState {
       description: "",
       templateId: null,
       status: "active",
-      viewIds: view ? [view.id] : [],
+      viewIds: views.map((view) => view.id),
       resourceIds: projectResources.map((resource) => resource.id),
       milestoneIds: [],
     })
 
-    workItems.push(...createLegacyWorkItems(project))
+    workItems.push(
+      ...createLegacyWorkItems(project, views, projectTaskBoards)
+    )
   }
 
   return {
@@ -66,20 +69,104 @@ export function createProjectSeedState(): ProjectWorkspaceState {
     projectIdsByWorkspaceId: groupProjectIdsByWorkspace(PROJECTS),
     projectsById: indexById(projectRecords),
     projectViewsById: indexById(projectViews),
+    taskBoardsById: indexById(taskBoards),
     workItemsById: indexById(workItems),
     resourcesById: indexById(resources),
     milestonesById: {},
   }
 }
 
-function createLegacyProjectView(project: Project) {
-  if (project.type === "document") {
-    return null
+function createLegacyTaskBoards(
+  project: Project,
+  views: ProjectViewConfig[]
+): TaskBoard[] {
+  const boardView = views.find(
+    (view): view is ProjectBoardView => view.type === "board"
+  )
+
+  if (!boardView) {
+    return []
   }
 
-  const viewType = project.type === "kanban" ? "board" : project.type
+  const definitions =
+    project.type === "kanban"
+      ? INITIAL_KANBAN_COLUMNS.map((column) => ({
+          stage: getKanbanStatus(column.id),
+          title: column.title,
+        }))
+      : project.type === "calendar"
+        ? getCalendarBoardDefinitions()
+        : []
 
-  return createProjectViewConfig(project.id, viewType)
+  const boards = definitions.map(({ stage, title }, position) => ({
+    id: `task-board-${project.id}-${stage}`,
+    projectId: project.id,
+    viewId: boardView.id,
+    title,
+    description: "",
+    stage,
+    position,
+  }))
+
+  boardView.boardIds = boards.map((board) => board.id)
+  return boards
+}
+
+function getCalendarBoardDefinitions() {
+  const stages = new Set(
+    INITIAL_CALENDAR_TASKS.map((task) => task.status)
+  )
+
+  return (
+    ["backlog", "todo", "in-progress", "review", "testing", "done"] as const
+  )
+    .filter((stage) => stages.has(stage))
+    .map((stage) => ({ stage, title: getStageTitle(stage) }))
+}
+
+function getStageTitle(stage: WorkItemStatus) {
+  switch (stage) {
+    case "backlog":
+      return "Backlog"
+    case "todo":
+      return "To Do"
+    case "in-progress":
+      return "In Progress"
+    case "review":
+      return "Review"
+    case "testing":
+      return "Testing"
+    case "done":
+      return "Done"
+  }
+}
+
+function createLegacyProjectViews(project: Project): ProjectViewConfig[] {
+  switch (project.type) {
+    case "kanban":
+      return [
+        createSeedBoard(
+          project.id,
+          INITIAL_KANBAN_COLUMNS.flatMap((column) =>
+            column.cards.flatMap((card) => card.labels)
+          )
+        ),
+      ]
+    case "table":
+      return [createProjectViewConfig(project.id, "table")]
+    case "calendar":
+      return [
+        createSeedBoard(
+          project.id,
+          INITIAL_CALENDAR_TASKS.flatMap((task) => task.labels)
+        ),
+        createProjectViewConfig(project.id, "calendar"),
+      ]
+    case "document":
+      return []
+    default:
+      return assertNever(project.type)
+  }
 }
 
 function createLegacyProjectResources(
@@ -139,14 +226,25 @@ function createDocumentResource(
   }
 }
 
-function createLegacyWorkItems(project: Project): WorkItem[] {
+function createLegacyWorkItems(
+  project: Project,
+  views: ProjectViewConfig[],
+  taskBoards: TaskBoard[]
+): WorkItem[] {
+  const board = views.find(
+    (view): view is ProjectBoardView => view.type === "board"
+  )
+
   switch (project.type) {
     case "kanban":
-      return createKanbanWorkItems(project.id)
+      return board
+        ? createKanbanWorkItems(project.id, board, taskBoards)
+        : []
     case "calendar":
-      return createCalendarWorkItems(project.id)
+      return board
+        ? createCalendarWorkItems(project.id, board, taskBoards)
+        : []
     case "table":
-      return createTableWorkItems(project.id)
     case "document":
       return []
     default:
@@ -154,7 +252,11 @@ function createLegacyWorkItems(project: Project): WorkItem[] {
   }
 }
 
-function createKanbanWorkItems(projectId: string) {
+function createKanbanWorkItems(
+  projectId: string,
+  boardView: ProjectBoardView,
+  taskBoards: TaskBoard[]
+) {
   const workItems = INITIAL_KANBAN_COLUMNS.flatMap((column) => {
     const status = getKanbanStatus(column.id)
 
@@ -164,17 +266,17 @@ function createKanbanWorkItems(projectId: string) {
       return {
         id: workItemId,
         projectId,
+        boardId: getTaskBoardId(taskBoards, status),
         title: card.title,
         description: card.description,
         type: "feature" as const,
-        status,
         priority: card.priority,
         assigneeId: card.assigneeId,
         startDate: null,
         dueDate: card.dueDate,
         estimate: null,
         position: 0,
-        labels: [...card.labels],
+        labelIds: getBoardLabelIds(boardView, card.labels),
         checklist: card.checklist.map((checklistItem) => ({
           ...checklistItem,
           id: `${workItemId}-${checklistItem.id}`,
@@ -190,24 +292,28 @@ function createKanbanWorkItems(projectId: string) {
     })
   })
 
-  return normalizeStatusPositions(workItems)
+  return normalizeBoardPositions(workItems)
 }
 
-function createCalendarWorkItems(projectId: string) {
+function createCalendarWorkItems(
+  projectId: string,
+  boardView: ProjectBoardView,
+  taskBoards: TaskBoard[]
+) {
   const workItems: WorkItem[] = INITIAL_CALENDAR_TASKS.map((task) => ({
     id: `work-item-${projectId}-${task.id}`,
     projectId,
+    boardId: getTaskBoardId(taskBoards, task.status),
     title: task.title,
     description: task.description,
     type: "feature",
-    status: task.status,
     priority: task.priority,
     assigneeId: task.assigneeId,
     startDate: null,
     dueDate: task.dueDate,
     estimate: null,
     position: 0,
-    labels: [...task.labels],
+    labelIds: getBoardLabelIds(boardView, task.labels),
     checklist: task.checklist.map((checklistItem) => ({
       ...checklistItem,
       id: `work-item-${projectId}-${task.id}-${checklistItem.id}`,
@@ -221,52 +327,31 @@ function createCalendarWorkItems(projectId: string) {
     customFields: {},
   }))
 
-  return normalizeStatusPositions(workItems)
+  return normalizeBoardPositions(workItems)
 }
 
-function createTableWorkItems(projectId: string) {
-  const workItems: WorkItem[] = INITIAL_ROWS.map((row) => {
-    const attachmentValue = row.cells.attachments
-    const dueDate = getStringCell(row, "due")
-
-    return {
-      id: `work-item-${projectId}-${row.id}`,
-      projectId,
-      title: getStringCell(row, "name"),
-      description: "",
-      type: "chore",
-      status: getTableStatus(getStringCell(row, "status")),
-      priority: getTablePriority(getStringCell(row, "priority")),
-      assigneeId: null,
-      startDate: null,
-      dueDate: dueDate || null,
-      estimate: null,
-      position: 0,
-      labels: [],
-      checklist: [],
-      milestoneId: null,
-      dependencyIds: [],
-      linkedResourceIds: [],
-      customFields: {
-        attachments: Array.isArray(attachmentValue)
-          ? attachmentValue.map((attachment) => ({ ...attachment }))
-          : [],
-      },
-    }
-  })
-
-  return normalizeStatusPositions(workItems)
-}
-
-function normalizeStatusPositions(workItems: WorkItem[]) {
-  const nextPositionByStatus: Partial<Record<WorkItemStatus, number>> = {}
+function normalizeBoardPositions(workItems: WorkItem[]) {
+  const nextPositionByGroup = new Map<string, number>()
 
   return workItems.map((workItem) => {
-    const position = nextPositionByStatus[workItem.status] ?? 0
-    nextPositionByStatus[workItem.status] = position + 1
+    const position = nextPositionByGroup.get(workItem.boardId) ?? 0
+    nextPositionByGroup.set(workItem.boardId, position + 1)
 
     return { ...workItem, position }
   })
+}
+
+function getTaskBoardId(
+  taskBoards: readonly TaskBoard[],
+  stage: WorkItemStatus
+) {
+  const board = taskBoards.find((candidate) => candidate.stage === stage)
+
+  if (!board) {
+    throw new Error(`Missing seeded Board for stage: ${stage}`)
+  }
+
+  return board.id
 }
 
 function createSeedDependencyIds(
@@ -292,36 +377,56 @@ function getKanbanStatus(columnId: string): WorkItemStatus {
   }
 }
 
-function getTableStatus(value: string): WorkItemStatus {
-  switch (value) {
-    case "todo":
-    case "in-progress":
-    case "done":
-      return value
-    default:
-      throw new Error(`Unsupported Table status: ${value}`)
+function createSeedBoard(
+  projectId: string,
+  fixtureLabelNames: readonly string[]
+): ProjectBoardView {
+  const board = createProjectViewConfig(projectId, "board")
+
+  if (board.type !== "board") {
+    throw new Error("Expected Board view configuration")
   }
+
+  const seenNames = new Set<string>()
+  const labels: BoardLabel[] = []
+
+  for (const name of fixtureLabelNames) {
+    const normalizedName = name.trim()
+    const lookupName = normalizedName.toLowerCase()
+
+    if (!normalizedName || seenNames.has(lookupName)) {
+      continue
+    }
+
+    seenNames.add(lookupName)
+    const index = labels.length
+    labels.push({
+      id: `${board.id}-label-${index + 1}`,
+      name: normalizedName,
+      color: BOARD_LABEL_COLORS[index % BOARD_LABEL_COLORS.length],
+    })
+  }
+
+  return { ...board, labels }
 }
 
-function getTablePriority(value: string): WorkItemPriority {
-  switch (value) {
-    case "low":
-    case "medium":
-    case "high":
-      return value
-    default:
-      throw new Error(`Unsupported Table priority: ${value}`)
-  }
-}
+function getBoardLabelIds(
+  board: ProjectBoardView,
+  fixtureLabelNames: readonly string[]
+) {
+  const labelIdByName = new Map(
+    board.labels.map((label) => [label.name.toLowerCase(), label.id])
+  )
 
-function getStringCell(row: Row, columnId: string) {
-  const value = row.cells[columnId]
+  return fixtureLabelNames.map((name) => {
+    const labelId = labelIdByName.get(name.trim().toLowerCase())
 
-  if (typeof value !== "string") {
-    throw new Error(`Expected a string in ${columnId} for row ${row.id}`)
-  }
+    if (!labelId) {
+      throw new Error(`Missing Board label for fixture value: ${name}`)
+    }
 
-  return value
+    return labelId
+  })
 }
 
 function groupProjectIdsByWorkspace(projects: Project[]) {

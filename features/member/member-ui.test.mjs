@@ -67,6 +67,7 @@ test("explains destructive assignment cleanup", () => {
 
 test("keeps store access at the member view boundary", () => {
   assert.match(viewSource, /useProjectStore/)
+  assert.match(viewSource, /selectWorkspaceWorkItemAssignments/)
   assert.match(viewSource, /buildWorkspaceMemberSummaries/)
   assert.match(viewSource, /crypto\.randomUUID\(\)/)
   assert.match(viewSource, /data-workspace-members=/)

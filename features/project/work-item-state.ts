@@ -1,20 +1,30 @@
 import {
   isValidWorkItem,
   isValidWorkItemDateRange,
-  isWorkItemStatus,
   wouldCreateDependencyCycle,
   type EditableWorkItemFields,
   type WorkItem,
-  type WorkItemStatus,
 } from "../work-item/model.ts"
 import type { ProjectWorkspaceState } from "./model"
+import { addProjectDocumentState } from "./project-state.ts"
 
 export type WorkItemDetailsPatch = Partial<
   Omit<
     WorkItem,
-    "id" | "projectId" | "status" | "position" | "startDate" | "dueDate"
+    | "id"
+    | "projectId"
+    | "boardId"
+    | "position"
+    | "startDate"
+    | "dueDate"
   >
 >
+
+export type CreateAndLinkWorkItemDocumentInput = {
+  id: string
+  workItemId: string
+  title: string
+}
 
 export function createWorkItemState(
   state: ProjectWorkspaceState,
@@ -30,14 +40,14 @@ export function createWorkItemState(
     return state
   }
 
-  const statusItems = getOrderedStatusItems(
+  const boardItems = getOrderedBoardItems(
     state.workItemsById,
     detachedWorkItem.projectId,
-    detachedWorkItem.status
+    detachedWorkItem.boardId
   )
   const insertIndex = clampIndex(
     detachedWorkItem.position,
-    statusItems.length
+    boardItems.length
   )
   const candidate = { ...detachedWorkItem, position: insertIndex }
 
@@ -45,11 +55,11 @@ export function createWorkItemState(
     return state
   }
 
-  const nextStatusItems = [...statusItems]
-  nextStatusItems.splice(insertIndex, 0, candidate)
+  const nextBoardItems = [...boardItems]
+  nextBoardItems.splice(insertIndex, 0, candidate)
 
   const nextWorkItems = { ...state.workItemsById }
-  writeOrderedItems(nextWorkItems, nextStatusItems, candidate.status)
+  writeOrderedItems(nextWorkItems, nextBoardItems)
 
   return { ...state, workItemsById: nextWorkItems }
 }
@@ -105,87 +115,85 @@ export function saveWorkItemState(
     return state
   }
 
-  if (current.status === candidate.status) {
-    return {
-      ...state,
-      workItemsById: {
-        ...state.workItemsById,
-        [workItemId]: candidate,
-      },
-    }
+  return {
+    ...state,
+    workItemsById: {
+      ...state.workItemsById,
+      [workItemId]: candidate,
+    },
   }
-
-  const sourceItems = getOrderedStatusItems(
-    state.workItemsById,
-    current.projectId,
-    current.status
-  ).filter((workItem) => workItem.id !== current.id)
-  const targetItems = getOrderedStatusItems(
-    state.workItemsById,
-    current.projectId,
-    candidate.status
-  )
-  const movedCandidate = { ...candidate, position: targetItems.length }
-  const nextWorkItems = { ...state.workItemsById }
-
-  writeOrderedItems(nextWorkItems, sourceItems, current.status)
-  writeOrderedItems(
-    nextWorkItems,
-    [...targetItems, movedCandidate],
-    candidate.status
-  )
-
-  return { ...state, workItemsById: nextWorkItems }
 }
 
 export function moveWorkItemState(
   state: ProjectWorkspaceState,
   workItemId: string,
-  status: WorkItemStatus,
+  targetBoardId: string,
   index: number
 ) {
   const current = state.workItemsById[workItemId]
+  const sourceBoard = current
+    ? state.taskBoardsById[current.boardId]
+    : undefined
+  const targetBoard = state.taskBoardsById[targetBoardId]
 
-  if (!current || !isWorkItemStatus(status) || !Number.isInteger(index)) {
+  if (
+    !current ||
+    !sourceBoard ||
+    !targetBoard ||
+    sourceBoard.projectId !== current.projectId ||
+    targetBoard.projectId !== current.projectId ||
+    sourceBoard.viewId !== targetBoard.viewId ||
+    !Number.isInteger(index) ||
+    !hasValidReferences(state, current)
+  ) {
     return state
   }
 
-  const sourceItems = getOrderedStatusItems(
+  const sourceItems = getOrderedBoardItems(
     state.workItemsById,
     current.projectId,
-    current.status
+    current.boardId
   )
   const sourceWithoutCurrent = sourceItems.filter(
     (workItem) => workItem.id !== current.id
   )
 
-  if (current.status === status) {
+  if (current.boardId === targetBoardId) {
     const insertIndex = clampIndex(index, sourceWithoutCurrent.length)
-    const nextStatusItems = [...sourceWithoutCurrent]
-    nextStatusItems.splice(insertIndex, 0, current)
+    const nextBoardItems = [...sourceWithoutCurrent]
+    nextBoardItems.splice(insertIndex, 0, current)
 
-    if (haveSameOrder(sourceItems, nextStatusItems)) {
+    if (haveSameOrder(sourceItems, nextBoardItems)) {
       return state
     }
 
     const nextWorkItems = { ...state.workItemsById }
-    writeOrderedItems(nextWorkItems, nextStatusItems, status)
+    writeOrderedItems(nextWorkItems, nextBoardItems)
     return { ...state, workItemsById: nextWorkItems }
   }
 
-  const targetItems = getOrderedStatusItems(
+  const targetItems = getOrderedBoardItems(
     state.workItemsById,
     current.projectId,
-    status
+    targetBoardId
   )
   const insertIndex = clampIndex(index, targetItems.length)
-  const movedWorkItem = { ...current, status, position: insertIndex }
+  const movedWorkItem = {
+    ...current,
+    boardId: targetBoardId,
+    position: insertIndex,
+  }
+
+  if (!hasValidReferences(state, movedWorkItem)) {
+    return state
+  }
+
   const nextTargetItems = [...targetItems]
   nextTargetItems.splice(insertIndex, 0, movedWorkItem)
 
   const nextWorkItems = { ...state.workItemsById }
-  writeOrderedItems(nextWorkItems, sourceWithoutCurrent, current.status)
-  writeOrderedItems(nextWorkItems, nextTargetItems, status)
+  writeOrderedItems(nextWorkItems, sourceWithoutCurrent)
+  writeOrderedItems(nextWorkItems, nextTargetItems)
 
   return { ...state, workItemsById: nextWorkItems }
 }
@@ -201,7 +209,8 @@ export function updateWorkItemDateRangeState(
   if (
     !current ||
     !isValidWorkItemDateRange(startDate, dueDate) ||
-    (current.startDate === startDate && current.dueDate === dueDate)
+    (current.startDate === startDate && current.dueDate === dueDate) ||
+    !hasValidReferences(state, current)
   ) {
     return state
   }
@@ -215,6 +224,100 @@ export function updateWorkItemDateRangeState(
       [workItemId]: candidate,
     },
   }
+}
+
+export function linkWorkItemDocumentState(
+  state: ProjectWorkspaceState,
+  workItemId: string,
+  resourceId: string
+) {
+  const current = state.workItemsById[workItemId]
+  const resource = state.resourcesById[resourceId]
+
+  if (
+    !current ||
+    !resource ||
+    resource.type !== "document" ||
+    resource.projectId !== current.projectId ||
+    current.linkedResourceIds.includes(resourceId)
+  ) {
+    return state
+  }
+
+  const candidate = {
+    ...current,
+    linkedResourceIds: [...current.linkedResourceIds, resourceId],
+  }
+
+  if (!isValidWorkItem(candidate) || !hasValidReferences(state, candidate)) {
+    return state
+  }
+
+  return {
+    ...state,
+    workItemsById: {
+      ...state.workItemsById,
+      [workItemId]: candidate,
+    },
+  }
+}
+
+export function unlinkWorkItemDocumentState(
+  state: ProjectWorkspaceState,
+  workItemId: string,
+  resourceId: string
+) {
+  const current = state.workItemsById[workItemId]
+
+  if (!current || !current.linkedResourceIds.includes(resourceId)) {
+    return state
+  }
+
+  return {
+    ...state,
+    workItemsById: {
+      ...state.workItemsById,
+      [workItemId]: {
+        ...current,
+        linkedResourceIds: current.linkedResourceIds.filter(
+          (candidateId) => candidateId !== resourceId
+        ),
+      },
+    },
+  }
+}
+
+export function createAndLinkWorkItemDocumentState(
+  state: ProjectWorkspaceState,
+  input: CreateAndLinkWorkItemDocumentInput
+) {
+  const workItem = state.workItemsById[input.workItemId]
+
+  if (
+    !workItem ||
+    !isValidWorkItem(workItem) ||
+    !hasValidReferences(state, workItem)
+  ) {
+    return state
+  }
+
+  const withDocument = addProjectDocumentState(state, {
+    id: input.id,
+    projectId: workItem.projectId,
+    title: input.title,
+  })
+
+  if (withDocument === state) {
+    return state
+  }
+
+  const linked = linkWorkItemDocumentState(
+    withDocument,
+    input.workItemId,
+    input.id
+  )
+
+  return linked === withDocument ? state : linked
 }
 
 export function deleteWorkItemState(
@@ -241,12 +344,12 @@ export function deleteWorkItemState(
     }
   }
 
-  const remainingStatusItems = getOrderedStatusItems(
+  const remainingBoardItems = getOrderedBoardItems(
     nextWorkItems,
     current.projectId,
-    current.status
+    current.boardId
   )
-  writeOrderedItems(nextWorkItems, remainingStatusItems, current.status)
+  writeOrderedItems(nextWorkItems, remainingBoardItems)
 
   return { ...state, workItemsById: nextWorkItems }
 }
@@ -255,11 +358,36 @@ function hasValidReferences(
   state: ProjectWorkspaceState,
   workItem: WorkItem
 ) {
+  const project = state.projectsById[workItem.projectId]
+  const board = state.taskBoardsById[workItem.boardId]
+  const boardView = board
+    ? state.projectViewsById[board.viewId]
+    : undefined
+
+  if (
+    !project ||
+    !board ||
+    boardView?.type !== "board" ||
+    board.projectId !== workItem.projectId ||
+    boardView.projectId !== workItem.projectId ||
+    !project.viewIds.includes(boardView.id) ||
+    !boardView.boardIds.includes(board.id)
+  ) {
+    return false
+  }
+
+  const boardLabelIds = new Set(
+    boardView.labels.map((label) => label.id)
+  )
+
+  if (workItem.labelIds.some((labelId) => !boardLabelIds.has(labelId))) {
+    return false
+  }
+
   if (workItem.assigneeId !== null) {
     const member = state.membersById[workItem.assigneeId]
-    const project = state.projectsById[workItem.projectId]
 
-    if (!member || !project || member.workspaceId !== project.workspaceId) {
+    if (!member || member.workspaceId !== project.workspaceId) {
       return false
     }
   }
@@ -279,7 +407,12 @@ function hasValidReferences(
   for (const resourceId of workItem.linkedResourceIds) {
     const resource = state.resourcesById[resourceId]
 
-    if (!resource || resource.projectId !== workItem.projectId) {
+    if (
+      !resource ||
+      resource.type !== "document" ||
+      resource.projectId !== workItem.projectId ||
+      !project.resourceIds.includes(resourceId)
+    ) {
       return false
     }
   }
@@ -312,15 +445,16 @@ function hasValidReferences(
   )
 }
 
-function getOrderedStatusItems(
+function getOrderedBoardItems(
   workItemsById: Readonly<Record<string, WorkItem>>,
   projectId: string,
-  status: WorkItemStatus
+  boardId: string
 ) {
   return Object.values(workItemsById)
     .filter(
       (workItem) =>
-        workItem.projectId === projectId && workItem.status === status
+        workItem.projectId === projectId &&
+        workItem.boardId === boardId
     )
     .sort(
       (left, right) =>
@@ -330,14 +464,13 @@ function getOrderedStatusItems(
 
 function writeOrderedItems(
   workItemsById: Record<string, WorkItem>,
-  workItems: WorkItem[],
-  status: WorkItemStatus
+  workItems: WorkItem[]
 ) {
   workItems.forEach((workItem, position) => {
     workItemsById[workItem.id] =
-      workItem.status === status && workItem.position === position
+      workItem.position === position
         ? workItem
-        : { ...workItem, status, position }
+        : { ...workItem, position }
   })
 }
 

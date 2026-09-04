@@ -3,7 +3,6 @@ import { createStore, type StoreApi } from "zustand/vanilla"
 import type {
   EditableWorkItemFields,
   WorkItem,
-  WorkItemStatus,
 } from "../work-item/model"
 import type { ProjectWorkspaceState } from "./model"
 import {
@@ -16,20 +15,32 @@ import {
 import {
   addProjectDocumentState,
   addProjectViewState,
+  addTaskBoardState,
+  createFirstTaskBoardState,
   createProjectFromTemplateState,
   saveProjectDocumentState,
+  updateBoardLabelsState,
+  updateTaskBoardState,
   type CreateProjectDocumentInput,
+  type CreateFirstTaskBoardInput,
   type CreateProjectInput,
   type CreateProjectViewInput,
+  type CreateTaskBoardInput,
+  type UpdateBoardLabelsInput,
+  type UpdateTaskBoardInput,
 } from "./project-state.ts"
 import { createProjectSeedState } from "./seed-data.ts"
 import {
+  createAndLinkWorkItemDocumentState,
   createWorkItemState,
   deleteWorkItemState,
+  linkWorkItemDocumentState,
   moveWorkItemState,
   saveWorkItemState,
   updateWorkItemDateRangeState,
   updateWorkItemState,
+  unlinkWorkItemDocumentState,
+  type CreateAndLinkWorkItemDocumentInput,
   type WorkItemDetailsPatch,
 } from "./work-item-state.ts"
 
@@ -39,6 +50,10 @@ export type ProjectStoreActions = {
   removeWorkspaceMember: (memberId: string) => boolean
   createProjectFromTemplate: (input: CreateProjectInput) => boolean
   addProjectView: (input: CreateProjectViewInput) => boolean
+  createFirstTaskBoard: (input: CreateFirstTaskBoardInput) => boolean
+  addTaskBoard: (input: CreateTaskBoardInput) => boolean
+  updateTaskBoard: (input: UpdateTaskBoardInput) => boolean
+  updateBoardLabels: (input: UpdateBoardLabelsInput) => boolean
   addProjectDocument: (input: CreateProjectDocumentInput) => boolean
   saveProjectDocument: (resourceId: string, content: string) => boolean
   createWorkItem: (workItem: WorkItem) => boolean
@@ -52,13 +67,24 @@ export type ProjectStoreActions = {
   ) => boolean
   moveWorkItem: (
     workItemId: string,
-    status: WorkItemStatus,
+    targetBoardId: string,
     index: number
   ) => boolean
   updateWorkItemDateRange: (
     workItemId: string,
     startDate: string | null,
     dueDate: string | null
+  ) => boolean
+  linkWorkItemDocument: (
+    workItemId: string,
+    resourceId: string
+  ) => boolean
+  unlinkWorkItemDocument: (
+    workItemId: string,
+    resourceId: string
+  ) => boolean
+  createAndLinkWorkItemDocument: (
+    input: CreateAndLinkWorkItemDocumentInput
   ) => boolean
   deleteWorkItem: (workItemId: string) => boolean
   resetDemo: () => void
@@ -135,6 +161,54 @@ export function createProjectStore(
       return true
     },
 
+    createFirstTaskBoard(input) {
+      const current = readProjectState(get())
+      const next = createFirstTaskBoardState(current, input)
+
+      if (next === current) {
+        return false
+      }
+
+      set(next)
+      return true
+    },
+
+    addTaskBoard(input) {
+      const current = readProjectState(get())
+      const next = addTaskBoardState(current, input)
+
+      if (next === current) {
+        return false
+      }
+
+      set(next)
+      return true
+    },
+
+    updateTaskBoard(input) {
+      const current = readProjectState(get())
+      const next = updateTaskBoardState(current, input)
+
+      if (next === current) {
+        return false
+      }
+
+      set(next)
+      return true
+    },
+
+    updateBoardLabels(input) {
+      const current = readProjectState(get())
+      const next = updateBoardLabelsState(current, input)
+
+      if (next === current) {
+        return false
+      }
+
+      set(next)
+      return true
+    },
+
     addProjectDocument(input) {
       const current = readProjectState(get())
       const next = addProjectDocumentState(current, input)
@@ -195,9 +269,14 @@ export function createProjectStore(
       return true
     },
 
-    moveWorkItem(workItemId, status, index) {
+    moveWorkItem(workItemId, targetBoardId, index) {
       const current = readProjectState(get())
-      const next = moveWorkItemState(current, workItemId, status, index)
+      const next = moveWorkItemState(
+        current,
+        workItemId,
+        targetBoardId,
+        index
+      )
 
       if (next === current) {
         return false
@@ -215,6 +294,50 @@ export function createProjectStore(
         startDate,
         dueDate
       )
+
+      if (next === current) {
+        return false
+      }
+
+      set(next)
+      return true
+    },
+
+    linkWorkItemDocument(workItemId, resourceId) {
+      const current = readProjectState(get())
+      const next = linkWorkItemDocumentState(
+        current,
+        workItemId,
+        resourceId
+      )
+
+      if (next === current) {
+        return false
+      }
+
+      set(next)
+      return true
+    },
+
+    unlinkWorkItemDocument(workItemId, resourceId) {
+      const current = readProjectState(get())
+      const next = unlinkWorkItemDocumentState(
+        current,
+        workItemId,
+        resourceId
+      )
+
+      if (next === current) {
+        return false
+      }
+
+      set(next)
+      return true
+    },
+
+    createAndLinkWorkItemDocument(input) {
+      const current = readProjectState(get())
+      const next = createAndLinkWorkItemDocumentState(current, input)
 
       if (next === current) {
         return false
@@ -249,6 +372,7 @@ function readProjectState(store: ProjectStore): ProjectWorkspaceState {
     projectIdsByWorkspaceId: store.projectIdsByWorkspaceId,
     projectsById: store.projectsById,
     projectViewsById: store.projectViewsById,
+    taskBoardsById: store.taskBoardsById,
     workItemsById: store.workItemsById,
     resourcesById: store.resourcesById,
     milestonesById: store.milestonesById,

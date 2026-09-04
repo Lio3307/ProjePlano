@@ -1,9 +1,14 @@
 "use client"
 
-import { useState, type ComponentProps, type FormEvent } from "react"
+import {
+  useRef,
+  useState,
+  type ComponentProps,
+  type FormEvent,
+  type RefObject,
+} from "react"
 
 import { Button } from "@/components/ui/button"
-import type { WorkspaceMember } from "@/features/member/model"
 import {
   Dialog,
   DialogContent,
@@ -12,25 +17,42 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import type { WorkspaceMember } from "@/features/member/model"
+import type { BoardLabel } from "@/features/project/board"
 import {
   createWorkItemFormValue,
   getEditableWorkItemFields,
   haveSameEditableWorkItemFields,
-  normalizeWorkItemFormValue,
+  validateWorkItemFormValue,
 } from "../form"
-import type { EditableWorkItemFields, WorkItem } from "../model"
+import type {
+  EditableWorkItemFields,
+  WorkItem,
+  WorkItemStatus,
+} from "../model"
+import type { WorkItemStagesByBoardId } from "../dependencies"
+import { WorkItemDetails } from "./work-item-details"
+import { WorkItemDocumentDialog } from "./work-item-document-dialog"
+import type { WorkItemDocumentOption } from "./work-item-documents-field"
 import { WorkItemForm } from "./work-item-form"
 
 type DialogFinalFocus = ComponentProps<
   typeof DialogContent
 >["finalFocus"]
 
+type ExistingTaskScreen = "view" | "edit"
+
 interface WorkItemDialogProps {
-  mode: "create" | "edit"
+  mode: "create" | "view"
   open: boolean
   projectId: string
+  boardTitle: string
+  boardStage: WorkItemStatus
+  boardLabels: readonly BoardLabel[]
   projectWorkItems: readonly WorkItem[]
+  stagesByBoardId: WorkItemStagesByBoardId
   workspaceMembers: readonly WorkspaceMember[]
+  documents: readonly WorkItemDocumentOption[]
   workItem: WorkItem | null
   finalFocus: DialogFinalFocus
   onOpenChange: (open: boolean) => void
@@ -40,47 +62,74 @@ interface WorkItemDialogProps {
     fields: EditableWorkItemFields
   ) => boolean
   onDelete: (workItemId: string) => boolean
+  onLinkDocument: (workItemId: string, resourceId: string) => boolean
+  onUnlinkDocument: (workItemId: string, resourceId: string) => boolean
+  onCreateAndLinkDocument: (
+    workItemId: string,
+    title: string
+  ) => boolean
 }
 
 export function WorkItemDialog({
   mode,
   open,
   projectId,
+  boardTitle,
+  boardStage,
+  boardLabels,
   projectWorkItems,
+  stagesByBoardId,
   workspaceMembers,
+  documents,
   workItem,
   finalFocus,
   onOpenChange,
   onCreate,
   onSave,
   onDelete,
+  onLinkDocument,
+  onUnlinkDocument,
+  onCreateAndLinkDocument,
 }: WorkItemDialogProps) {
+  const [existingTaskScreen, setExistingTaskScreen] =
+    useState<ExistingTaskScreen>("view")
   const [draft, setDraft] = useState(() =>
     createWorkItemFormValue(workItem)
   )
   const [error, setError] = useState<string | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [documentDialogOpen, setDocumentDialogOpen] = useState(false)
+  const errorRef = useRef<HTMLParagraphElement | null>(null)
+  const documentDialogTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const isFormScreen = mode === "create" || existingTaskScreen === "edit"
+
+  function focusError(message: string) {
+    setError(message)
+    requestAnimationFrame(() => {
+      errorRef.current?.focus()
+    })
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const fields = normalizeWorkItemFormValue(draft)
+    const validation = validateWorkItemFormValue(draft)
 
-    if (!fields) {
-      setError(
-        "Check the title, assignee, date, estimate, labels, and checklist values."
-      )
+    if (!validation.ok) {
+      focusError(validation.message)
       return
     }
 
+    const fields = validation.fields
+
     if (
-      mode === "edit" &&
+      mode === "view" &&
       workItem &&
       haveSameEditableWorkItemFields(
         getEditableWorkItemFields(workItem),
         fields
       )
     ) {
-      setError("Change at least one field before saving.")
+      focusError("Change at least one field before saving.")
       return
     }
 
@@ -90,22 +139,57 @@ export function WorkItemDialog({
         : workItem !== null && onSave(workItem.id, fields)
 
     if (!saved) {
-      setError(
-        "The task could not be saved. Review the values and try again."
+      focusError(
+        "The task could not be saved because a selected assignee, label, dependency, or document is no longer valid."
       )
+      return
+    }
+
+    setError(null)
+
+    if (mode === "create") {
+      onOpenChange(false)
+      return
+    }
+
+    setConfirmingDelete(false)
+    setExistingTaskScreen("view")
+  }
+
+  function handleStartEditing() {
+    if (!workItem) {
+      return
+    }
+
+    setDraft(createWorkItemFormValue(workItem))
+    setError(null)
+    setConfirmingDelete(false)
+    setExistingTaskScreen("edit")
+  }
+
+  function handleCancel() {
+    setError(null)
+    setConfirmingDelete(false)
+
+    if (mode === "create") {
+      onOpenChange(false)
+      return
+    }
+
+    setExistingTaskScreen("view")
+  }
+
+  function handleConfirmDelete() {
+    if (!workItem || !onDelete(workItem.id)) {
+      focusError("The task could not be deleted.")
       return
     }
 
     onOpenChange(false)
   }
 
-  function handleConfirmDelete() {
-    if (!workItem || !onDelete(workItem.id)) {
-      setError("The task could not be deleted.")
-      return
-    }
-
-    onOpenChange(false)
+  if (mode === "view" && !workItem) {
+    return null
   }
 
   return (
@@ -114,96 +198,174 @@ export function WorkItemDialog({
         finalFocus={finalFocus}
         className="flex max-w-3xl flex-col overflow-hidden p-0"
       >
-        <form
-          className="flex min-h-0 flex-1 flex-col"
-          onSubmit={handleSubmit}
-        >
-          <DialogHeader className="shrink-0 border-b bg-popover py-5 pl-6 pr-14">
-            <DialogTitle>
-              {mode === "create" ? "Create task" : "Edit task"}
-            </DialogTitle>
-            <DialogDescription>
-              Board, Table, Calendar, and Overview use the same task record.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogHeader className="shrink-0 border-b bg-popover py-5 pl-6 pr-14">
+          <DialogTitle>
+            {isFormScreen
+              ? mode === "create"
+                ? "Create task"
+                : "Edit task"
+              : `View task: ${workItem?.title}`}
+          </DialogTitle>
+          <DialogDescription>
+            {isFormScreen
+              ? "Tasks and their relationships remain local to this frontend demo."
+              : "View task details before choosing to edit them."}
+          </DialogDescription>
+        </DialogHeader>
 
-          <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-5">
-            <div className="space-y-5">
+        <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          {isFormScreen ? (
+            <form
+              id="work-item-form"
+              className="space-y-5"
+              onSubmit={handleSubmit}
+            >
               <WorkItemForm
                 value={draft}
                 projectId={projectId}
+                boardLabels={boardLabels}
+                documents={documents}
                 workItemId={workItem?.id ?? null}
                 projectWorkItems={projectWorkItems}
+                stagesByBoardId={stagesByBoardId}
                 workspaceMembers={workspaceMembers}
                 onChange={(value) => {
                   setDraft(value)
                   setError(null)
                 }}
               />
+              <DialogError errorRef={errorRef}>{error}</DialogError>
+            </form>
+          ) : workItem ? (
+            <WorkItemDetails
+              workItem={workItem}
+              boardTitle={boardTitle}
+              boardStage={boardStage}
+              boardLabels={boardLabels}
+              projectWorkItems={projectWorkItems}
+              stagesByBoardId={stagesByBoardId}
+              workspaceMembers={workspaceMembers}
+              documents={documents}
+            />
+          ) : null}
+        </div>
 
-              <p
-                role="alert"
-                aria-live="polite"
-                className="min-h-5 text-xs text-destructive"
-              >
-                {error}
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter
-            className="shrink-0 border-t bg-popover px-6 py-4 sm:items-center sm:justify-between"
-          >
-            <div>
-              {mode === "edit" && workItem ? (
-                confirmingDelete ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs text-destructive">
-                      Delete this task?
-                    </span>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      onClick={handleConfirmDelete}
-                    >
-                      Confirm delete
-                    </Button>
+        <DialogFooter className="shrink-0 border-t bg-popover px-6 py-4 sm:items-center sm:justify-between">
+          {isFormScreen ? (
+            <>
+              <div>
+                {mode === "view" &&
+                existingTaskScreen === "edit" &&
+                workItem ? (
+                  confirmingDelete ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs text-destructive">
+                        Delete this task?
+                      </span>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={handleConfirmDelete}
+                      >
+                        Confirm delete
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setConfirmingDelete(false)}
+                      >
+                        Cancel delete
+                      </Button>
+                    </div>
+                  ) : (
                     <Button
                       type="button"
                       variant="ghost"
-                      onClick={() => setConfirmingDelete(false)}
+                      className="text-destructive"
+                      onClick={() => setConfirmingDelete(true)}
                     >
-                      Cancel delete
+                      Delete
                     </Button>
-                  </div>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="text-destructive"
-                    onClick={() => setConfirmingDelete(true)}
-                  >
-                    Delete
-                  </Button>
-                )
-              ) : null}
-            </div>
-
-            <div className="flex gap-2">
+                  )
+                ) : null}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancel}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  form="work-item-form"
+                  disabled={!draft.title.trim()}
+                >
+                  {mode === "create" ? "Create task" : "Save changes"}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
               >
-                Cancel
+                Close
               </Button>
-              <Button type="submit" disabled={!draft.title.trim()}>
-                {mode === "create" ? "Create task" : "Save changes"}
-              </Button>
-            </div>
-          </DialogFooter>
-        </form>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  ref={documentDialogTriggerRef}
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDocumentDialogOpen(true)}
+                >
+                  Add document
+                </Button>
+                <Button type="button" onClick={handleStartEditing}>
+                  Edit task
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogFooter>
       </DialogContent>
+
+      {mode === "view" && workItem ? (
+        <WorkItemDocumentDialog
+          open={documentDialogOpen}
+          workItemId={workItem.id}
+          documents={documents}
+          linkedResourceIds={workItem.linkedResourceIds}
+          finalFocus={documentDialogTriggerRef}
+          onOpenChange={setDocumentDialogOpen}
+          onLink={onLinkDocument}
+          onUnlink={onUnlinkDocument}
+          onCreateAndLink={onCreateAndLinkDocument}
+        />
+      ) : null}
     </Dialog>
+  )
+}
+
+function DialogError({
+  children,
+  errorRef,
+}: {
+  children: string | null
+  errorRef: RefObject<HTMLParagraphElement | null>
+}) {
+  return (
+    <p
+      ref={errorRef}
+      role="alert"
+      aria-live="polite"
+      tabIndex={-1}
+      className="min-h-5 text-xs text-destructive"
+    >
+      {children}
+    </p>
   )
 }

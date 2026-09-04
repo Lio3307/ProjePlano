@@ -1,47 +1,60 @@
 "use client"
 
-import { useRef, useState } from "react"
-import { Plus } from "lucide-react"
+import { useMemo, useRef, useState } from "react"
 import { useShallow } from "zustand/react/shallow"
 
-import { Button } from "@/components/ui/button"
 import { CalendarView } from "@/features/calendar/components/calendar-view"
 import { KanbanView } from "@/features/kanban/components/kanban-view"
 import { TableView } from "@/features/table/components/table-view"
 import { WorkItemDialog } from "@/features/work-item/components/work-item-dialog"
-import type {
-  EditableWorkItemFields,
-  WorkItem,
-} from "@/features/work-item/model"
+import type { WorkItemDocumentOption } from "@/features/work-item/components/work-item-documents-field"
+import type { EditableWorkItemFields } from "@/features/work-item/model"
 import {
+  selectBoardWorkItems,
   selectProjectById,
-  selectProjectWorkItems,
+  selectProjectDocumentResources,
+  selectProjectResolvedWorkItems,
+  selectSupportedProjectViews,
+  selectTaskBoards,
   selectWorkspaceMembers,
   selectWorkspaceMembersById,
 } from "../selectors"
+import { getProjectViewHref } from "../query-state"
 import { useProjectStore } from "../store-provider"
-import type { SupportedProjectViewType } from "../view-definitions"
+import type {
+  SupportedProjectView,
+  SupportedProjectViewType,
+} from "../view-definitions"
 
 type DialogSession =
-  | { key: string; mode: "create" }
-  | { key: string; mode: "edit"; workItem: WorkItem }
+  | { key: string; mode: "create"; boardId: string }
+  | { key: string; mode: "view"; workItemId: string }
 
 interface ProjectWorkViewProps {
   projectId: string
-  viewType: SupportedProjectViewType
+  view: SupportedProjectView
   today: string
+  onAddBoard: (trigger: HTMLElement) => void
+  onEditBoard: (boardId: string, trigger: HTMLElement) => void
+  onSetLabels: (trigger: HTMLElement) => void
 }
 
-type SharedWorkItemViewProps = Omit<ProjectWorkViewProps, "viewType"> & {
-  viewType: Exclude<SupportedProjectViewType, "table">
+type SharedWorkItemViewProps = Omit<ProjectWorkViewProps, "view"> & {
+  view: Extract<
+    SupportedProjectView,
+    { type: Exclude<SupportedProjectViewType, "table"> }
+  >
 }
 
 export function ProjectWorkView({
   projectId,
-  viewType,
+  view,
   today,
+  onAddBoard,
+  onEditBoard,
+  onSetLabels,
 }: ProjectWorkViewProps) {
-  if (viewType === "table") {
+  if (view.type === "table") {
     return (
       <div
         data-project-work-view="table"
@@ -55,23 +68,49 @@ export function ProjectWorkView({
   return (
     <SharedWorkItemView
       projectId={projectId}
-      viewType={viewType}
+      view={view}
       today={today}
+      onAddBoard={onAddBoard}
+      onEditBoard={onEditBoard}
+      onSetLabels={onSetLabels}
     />
   )
 }
 
 function SharedWorkItemView({
   projectId,
-  viewType,
+  view,
   today,
+  onAddBoard,
+  onEditBoard,
+  onSetLabels,
 }: SharedWorkItemViewProps) {
   const project = useProjectStore((state) =>
     selectProjectById(state, projectId)
   )
   const workspaceId = project?.workspaceId ?? ""
-  const workItems = useProjectStore(
-    useShallow((state) => selectProjectWorkItems(state, projectId))
+  const projectViews = useProjectStore(
+    useShallow((state) => selectSupportedProjectViews(state, projectId))
+  )
+  const resolvedWorkItems = useProjectStore(
+    useShallow((state) =>
+      selectProjectResolvedWorkItems(state, projectId)
+    )
+  )
+  const taskBoards = useProjectStore(
+    useShallow((state) =>
+      selectSupportedProjectViews(state, projectId).flatMap(
+        (candidate) =>
+          candidate.type === "board"
+            ? selectTaskBoards(state, projectId, candidate.id)
+            : []
+      )
+    )
+  )
+  const projectDocuments = useProjectStore(
+    useShallow((state) =>
+      selectProjectDocumentResources(state, projectId)
+    )
   )
   const workspaceMembers = useProjectStore(
     useShallow((state) =>
@@ -88,6 +127,9 @@ function SharedWorkItemView({
     saveWorkItem,
     moveWorkItem,
     updateWorkItemDateRange,
+    linkWorkItemDocument,
+    unlinkWorkItemDocument,
+    createAndLinkWorkItemDocument,
     deleteWorkItem,
   } = useProjectStore(
     useShallow((state) => ({
@@ -95,21 +137,93 @@ function SharedWorkItemView({
       saveWorkItem: state.saveWorkItem,
       moveWorkItem: state.moveWorkItem,
       updateWorkItemDateRange: state.updateWorkItemDateRange,
+      linkWorkItemDocument: state.linkWorkItemDocument,
+      unlinkWorkItemDocument: state.unlinkWorkItemDocument,
+      createAndLinkWorkItemDocument:
+        state.createAndLinkWorkItemDocument,
       deleteWorkItem: state.deleteWorkItem,
     }))
   )
   const [dialogSession, setDialogSession] =
     useState<DialogSession | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
-  const newTaskRef = useRef<HTMLButtonElement | null>(null)
   const dialogTriggerRef = useRef<HTMLElement | null>(null)
+  const deleteFallbackRef = useRef<HTMLElement | null>(null)
+  const boardViews = projectViews.filter(
+    (candidate) => candidate.type === "board"
+  )
+  const workItems = useMemo(
+    () => resolvedWorkItems.map(({ workItem }) => workItem),
+    [resolvedWorkItems]
+  )
+  const stagesByBoardId = useMemo(
+    () =>
+      Object.fromEntries(
+        taskBoards.map((taskBoard) => [taskBoard.id, taskBoard.stage])
+      ),
+    [taskBoards]
+  )
+  const activeBoards =
+    view.type === "board"
+      ? taskBoards.filter((taskBoard) => taskBoard.viewId === view.id)
+      : []
+  const dialogResolvedWorkItem =
+    dialogSession?.mode === "view"
+      ? (resolvedWorkItems.find(
+          ({ workItem }) => workItem.id === dialogSession.workItemId
+        ) ?? null)
+      : null
+  const dialogBoard =
+    dialogSession?.mode === "create"
+      ? (taskBoards.find(
+          (taskBoard) => taskBoard.id === dialogSession.boardId
+        ) ?? null)
+      : (dialogResolvedWorkItem?.board ?? null)
+  const dialogBoardView = dialogBoard
+    ? (boardViews.find(
+        (boardView) => boardView.id === dialogBoard.viewId
+      ) ?? null)
+    : null
+  const dialogWorkItem = dialogResolvedWorkItem?.workItem ?? null
+  const dialogSessionIsAvailable =
+    dialogSession?.mode === "create"
+      ? dialogBoard !== null
+      : dialogWorkItem !== null
+  const dialogBoardId = dialogBoard?.id ?? ""
+  const dialogBoardWorkItems = useProjectStore(
+    useShallow((state) =>
+      dialogBoardId
+        ? selectBoardWorkItems(state, projectId, dialogBoardId)
+        : []
+    )
+  )
+  const documents = useMemo<WorkItemDocumentOption[]>(
+    () =>
+      projectDocuments.map((document) => ({
+        id: document.id,
+        title: document.title,
+        href: getProjectViewHref(
+          workspaceId,
+          projectId,
+          "documents",
+          { resourceId: document.id }
+        ),
+      })),
+    [projectDocuments, projectId, workspaceId]
+  )
 
-  function openCreateDialog() {
-    dialogTriggerRef.current = newTaskRef.current
-    setDialogSession({ key: crypto.randomUUID(), mode: "create" })
+  function openCreateDialog(boardId: string, trigger: HTMLElement) {
+    dialogTriggerRef.current = trigger
+    deleteFallbackRef.current = null
+    setActionError(null)
+    setDialogSession({
+      key: crypto.randomUUID(),
+      mode: "create",
+      boardId,
+    })
   }
 
-  function openEditDialog(workItemId: string, trigger: HTMLElement) {
+  function openViewDialog(workItemId: string, trigger: HTMLElement) {
     const workItem = workItems.find(
       (candidate) => candidate.id === workItemId
     )
@@ -119,28 +233,93 @@ function SharedWorkItemView({
     }
 
     dialogTriggerRef.current = trigger
+    deleteFallbackRef.current = null
     setDialogSession({
       key: crypto.randomUUID(),
-      mode: "edit",
-      workItem,
+      mode: "view",
+      workItemId: workItem.id,
     })
   }
 
   function createTask(fields: EditableWorkItemFields) {
-    const position = workItems.filter(
-      (workItem) => workItem.status === fields.status
-    ).length
+    if (!dialogBoard) {
+      return false
+    }
 
     return createWorkItem({
       id: "work-item-" + crypto.randomUUID(),
       projectId,
+      boardId: dialogBoard.id,
       ...fields,
-      startDate: null,
-      position,
+      position: dialogBoardWorkItems.length,
       milestoneId: null,
-      linkedResourceIds: [],
       customFields: {},
     })
+  }
+
+  function handleCreateAndLinkDocument(
+    workItemId: string,
+    title: string
+  ) {
+    return createAndLinkWorkItemDocument({
+      id:
+        "resource-" +
+        projectId +
+        "-document-" +
+        crypto.randomUUID(),
+      workItemId,
+      title,
+    })
+  }
+
+  function getDeleteFocusFallback(workItemId: string) {
+    const triggers = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        "[data-work-item-open-trigger]"
+      )
+    )
+    const currentTrigger = triggers.find(
+      (trigger) =>
+        trigger.dataset.workItemOpenTrigger === workItemId
+    )
+    const focusScope =
+      currentTrigger?.closest<HTMLElement>("[data-kanban-board]") ??
+      currentTrigger?.closest<HTMLElement>(
+        "[data-project-work-view=calendar]"
+      )
+
+    if (!currentTrigger || !focusScope) {
+      return null
+    }
+
+    const scopedTriggers = Array.from(
+      focusScope.querySelectorAll<HTMLElement>(
+        "[data-work-item-open-trigger]"
+      )
+    )
+    const currentIndex = scopedTriggers.indexOf(currentTrigger)
+
+    return (
+      scopedTriggers[currentIndex + 1] ??
+      scopedTriggers[currentIndex - 1] ??
+      focusScope.querySelector<HTMLElement>(
+        "[data-work-item-delete-fallback]"
+      )
+    )
+  }
+
+  function deleteTask(workItemId: string) {
+    deleteFallbackRef.current =
+      getDeleteFocusFallback(workItemId)
+    const deleted = deleteWorkItem(workItemId)
+
+    if (deleted) {
+      setDialogSession(null)
+    } else {
+      deleteFallbackRef.current = null
+    }
+
+    return deleted
   }
 
   function moveWorkItemDate(workItemId: string, dueDate: string) {
@@ -167,28 +346,41 @@ function SharedWorkItemView({
     setActionError(null)
   }
 
-  const finalFocus = () =>
-    dialogTriggerRef.current?.isConnected
-      ? dialogTriggerRef.current
-      : newTaskRef.current
+  function finalFocus() {
+    if (dialogTriggerRef.current?.isConnected) {
+      return dialogTriggerRef.current
+    }
+
+    if (dialogSession?.mode !== "view") {
+      return null
+    }
+
+    const remountedTrigger = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        "[data-work-item-open-trigger]"
+      )
+    ).find(
+      (trigger) =>
+        trigger.dataset.workItemOpenTrigger ===
+        dialogSession.workItemId
+    )
+
+    if (remountedTrigger) {
+      return remountedTrigger
+    }
+
+    if (deleteFallbackRef.current?.isConnected) {
+      return deleteFallbackRef.current
+    }
+
+    return null
+  }
 
   return (
     <div
-      data-project-work-view={viewType}
+      data-project-work-view={view.type}
       className="min-w-0 space-y-4 p-4 sm:p-6"
     >
-      <div className="flex justify-end">
-        <Button
-          ref={newTaskRef}
-          type="button"
-          data-new-work-item-trigger
-          onClick={openCreateDialog}
-        >
-          <Plus aria-hidden="true" />
-          New task
-        </Button>
-      </div>
-
       <p
         role="alert"
         aria-live="polite"
@@ -197,36 +389,48 @@ function SharedWorkItemView({
         {actionError}
       </p>
 
-      {viewType === "board" ? (
+      {view.type === "board" ? (
         <KanbanView
           workItems={workItems}
+          board={view}
+          boards={activeBoards}
           membersById={membersById}
-          onOpenWorkItem={openEditDialog}
-          onMoveWorkItem={(workItemId, status, index) => {
-            moveWorkItem(workItemId, status, index)
+          onOpenWorkItem={openViewDialog}
+          onAddTask={openCreateDialog}
+          onAddBoard={onAddBoard}
+          onEditBoard={onEditBoard}
+          onSetLabels={onSetLabels}
+          onMoveWorkItem={(workItemId, targetBoardId, index) => {
+            moveWorkItem(workItemId, targetBoardId, index)
           }}
         />
       ) : (
         <CalendarView
           workItems={workItems}
+          stagesByBoardId={stagesByBoardId}
           membersById={membersById}
           todayIsoDate={today}
-          onOpenWorkItem={openEditDialog}
+          onOpenWorkItem={openViewDialog}
           onMoveWorkItemDate={moveWorkItemDate}
         />
       )}
 
-      {dialogSession ? (
+      {dialogSession && dialogSessionIsAvailable && dialogBoard ? (
         <WorkItemDialog
           key={dialogSession.key}
           mode={dialogSession.mode}
           open
           projectId={projectId}
+          boardTitle={dialogBoard.title}
+          boardStage={dialogBoard.stage}
+          boardLabels={dialogBoardView?.labels ?? []}
           projectWorkItems={workItems}
+          stagesByBoardId={stagesByBoardId}
           workspaceMembers={workspaceMembers}
+          documents={documents}
           workItem={
-            dialogSession.mode === "edit"
-              ? dialogSession.workItem
+            dialogSession.mode === "view"
+              ? dialogWorkItem
               : null
           }
           finalFocus={finalFocus}
@@ -237,7 +441,10 @@ function SharedWorkItemView({
           }}
           onCreate={createTask}
           onSave={saveWorkItem}
-          onDelete={deleteWorkItem}
+          onDelete={deleteTask}
+          onLinkDocument={linkWorkItemDocument}
+          onUnlinkDocument={unlinkWorkItemDocument}
+          onCreateAndLinkDocument={handleCreateAndLinkDocument}
         />
       ) : null}
     </div>

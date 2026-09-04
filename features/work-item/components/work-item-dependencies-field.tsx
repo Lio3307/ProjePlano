@@ -9,7 +9,10 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { wouldAcceptDependencySelection } from "../dependencies"
+import {
+  wouldAcceptDependencySelection,
+  type WorkItemStagesByBoardId,
+} from "../dependencies"
 import type { WorkItem } from "../model"
 import { WorkItemStatusBadge } from "./work-item-meta"
 
@@ -17,6 +20,7 @@ interface WorkItemDependenciesFieldProps {
   projectId: string
   workItemId: string | null
   workItems: readonly WorkItem[]
+  stagesByBoardId: WorkItemStagesByBoardId
   value: string[]
   disabled?: boolean
   onChange: (dependencyIds: string[]) => void
@@ -26,6 +30,7 @@ export function WorkItemDependenciesField({
   projectId,
   workItemId,
   workItems,
+  stagesByBoardId,
   value,
   disabled,
   onChange,
@@ -35,12 +40,15 @@ export function WorkItemDependenciesField({
   )
   const candidates = workItems.filter(
     (workItem) =>
-      workItem.projectId === projectId && workItem.id !== workItemId
+      workItem.projectId === projectId &&
+      workItem.id !== workItemId
   )
   const selectedWorkItems = value.flatMap((dependencyId) => {
     const dependency = workItemsById[dependencyId]
 
-    return dependency?.projectId === projectId ? [dependency] : []
+    return dependency?.projectId === projectId
+      ? [dependency]
+      : []
   })
 
   function updateDependency(dependencyId: string, checked: boolean) {
@@ -121,7 +129,9 @@ export function WorkItemDependenciesField({
                       Creates a cycle
                     </span>
                   ) : (
-                    <WorkItemStatusBadge status={candidate.status} />
+                    <WorkItemStatusBadge
+                      status={stagesByBoardId[candidate.boardId]}
+                    />
                   )}
                 </DropdownMenuCheckboxItem>
               )
@@ -144,7 +154,9 @@ export function WorkItemDependenciesField({
               <span className="min-w-0 flex-1 truncate text-xs">
                 {dependency.title}
               </span>
-              <WorkItemStatusBadge status={dependency.status} />
+              <WorkItemStatusBadge
+                status={stagesByBoardId[dependency.boardId]}
+              />
               <Button
                 type="button"
                 variant="ghost"

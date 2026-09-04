@@ -6,10 +6,12 @@ import {
   WorkItemTypeBadge,
 } from "@/features/work-item/components/work-item-meta"
 import { WorkItemBlockedBadge } from "@/features/work-item/components/work-item-blocked-badge"
+import type { WorkItemStagesByBoardId } from "@/features/work-item/dependencies"
 import type { WorkItem } from "@/features/work-item/model"
 
 interface CalendarUnscheduledProps {
   workItems: readonly WorkItem[]
+  stagesByBoardId: WorkItemStagesByBoardId
   membersById: Readonly<Record<string, WorkspaceMember>>
   blockingCountsByWorkItemId: Readonly<Record<string, number>>
   onOpenWorkItem: (workItemId: string, trigger: HTMLElement) => void
@@ -17,6 +19,7 @@ interface CalendarUnscheduledProps {
 
 export function CalendarUnscheduled({
   workItems,
+  stagesByBoardId,
   membersById,
   blockingCountsByWorkItemId,
   onOpenWorkItem,
@@ -46,6 +49,7 @@ export function CalendarUnscheduled({
             <li key={workItem.id}>
               <button
                 type="button"
+                data-work-item-open-trigger={workItem.id}
                 className="flex w-full flex-wrap items-center gap-2 rounded-lg bg-muted/45 p-3 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={(event) =>
                   onOpenWorkItem(workItem.id, event.currentTarget)
@@ -54,7 +58,9 @@ export function CalendarUnscheduled({
                 <span className="min-w-40 flex-1 font-medium">
                   {workItem.title}
                 </span>
-                <WorkItemStatusBadge status={workItem.status} />
+                <WorkItemStatusBadge
+                  status={stagesByBoardId[workItem.boardId]}
+                />
                 <WorkItemTypeBadge type={workItem.type} />
                 <WorkItemPriorityBadge priority={workItem.priority} />
                 <WorkItemBlockedBadge

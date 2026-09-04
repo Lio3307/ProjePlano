@@ -1,5 +1,7 @@
 import type { WorkItem } from "../work-item/model"
 import type { WorkspaceMember } from "../member/model"
+import type { BoardLabel } from "./board"
+import type { TaskBoard } from "./task-board"
 
 export type ProjectStatus = "planned" | "active" | "paused" | "completed"
 
@@ -17,15 +19,30 @@ export type ProjectRecord = {
 
 export type ProjectViewType = "board" | "table" | "calendar" | "timeline"
 
-export type ProjectViewConfig = {
+type ProjectViewBase = {
   id: string
   projectId: string
   title: string
-  type: ProjectViewType
   visibleFieldIds: string[]
   groupBy: string | null
   filterIds: string[]
 }
+
+export type ProjectBoardView = ProjectViewBase & {
+  type: "board"
+  boardIds: string[]
+  labels: BoardLabel[]
+}
+
+export type ProjectTableView = ProjectViewBase & { type: "table" }
+export type ProjectCalendarView = ProjectViewBase & { type: "calendar" }
+export type ProjectTimelineView = ProjectViewBase & { type: "timeline" }
+
+export type ProjectViewConfig =
+  | ProjectBoardView
+  | ProjectTableView
+  | ProjectCalendarView
+  | ProjectTimelineView
 
 type ProjectResourceBase = {
   id: string
@@ -63,6 +80,7 @@ export type ProjectWorkspaceState = {
   projectIdsByWorkspaceId: Record<string, string[]>
   projectsById: Record<string, ProjectRecord>
   projectViewsById: Record<string, ProjectViewConfig>
+  taskBoardsById: Record<string, TaskBoard>
   workItemsById: Record<string, WorkItem>
   resourcesById: Record<string, ProjectResource>
   milestonesById: Record<string, Milestone>

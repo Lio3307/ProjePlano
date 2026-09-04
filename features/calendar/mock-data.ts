@@ -1,6 +1,6 @@
 import type { CalendarMonth } from "./date-utils"
 import { WORKSPACE_MEMBER_IDS } from "../member/mock-data.ts"
-import type { WorkItem } from "../work-item/model"
+import type { WorkItem, WorkItemStatus } from "../work-item/model"
 
 type CalendarSeedTask = Omit<
   Pick<
@@ -8,16 +8,16 @@ type CalendarSeedTask = Omit<
     | "id"
     | "title"
     | "description"
-    | "status"
     | "priority"
     | "assigneeId"
     | "dueDate"
-    | "labels"
     | "checklist"
   >,
   "dueDate"
 > & {
   dueDate: string
+  status: WorkItemStatus
+  labels: string[]
 }
 
 export const INITIAL_CALENDAR_MONTH: CalendarMonth = {

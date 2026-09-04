@@ -1,5 +1,5 @@
 import { WORKSPACE_MEMBER_IDS } from "../member/mock-data.ts"
-import type { WorkItem } from "../work-item/model"
+import type { WorkItem, WorkItemStatus } from "../work-item/model"
 
 type KanbanSeedCard = Omit<
   Pick<
@@ -10,16 +10,16 @@ type KanbanSeedCard = Omit<
     | "priority"
     | "assigneeId"
     | "dueDate"
-    | "labels"
     | "checklist"
   >,
   "dueDate"
 > & {
   dueDate: string
+  labels: string[]
 }
 
 type KanbanSeedColumn = {
-  id: WorkItem["status"]
+  id: WorkItemStatus
   title: string
   cards: KanbanSeedCard[]
 }

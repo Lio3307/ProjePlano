@@ -30,27 +30,27 @@ const members = [
 const assignments = [
   {
     projectId: "project-a",
-    status: "todo",
+    stage: "todo",
     assigneeId: "member-a",
   },
   {
     projectId: "project-a",
-    status: "done",
+    stage: "done",
     assigneeId: "member-a",
   },
   {
     projectId: "project-b",
-    status: "review",
+    stage: "review",
     assigneeId: "member-a",
   },
   {
     projectId: "project-b",
-    status: "done",
+    stage: "done",
     assigneeId: "member-b",
   },
   {
     projectId: "project-c",
-    status: "todo",
+    stage: "todo",
     assigneeId: null,
   },
 ]

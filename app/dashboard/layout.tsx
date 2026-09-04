@@ -18,7 +18,7 @@ export default function DashboardLayout({
     <ProjectStoreProvider>
       <SidebarProvider>
         <AppSidebar workspaces={sidebarWorkspaces} />
-        <main className="flex min-h-svh min-w-0 flex-1 flex-col">
+        <main className="flex min-h-svh w-0 min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center border-b bg-background px-3">
             <SidebarTrigger />
           </header>

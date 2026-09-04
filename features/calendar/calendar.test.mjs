@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { readFile } from "node:fs/promises"
 import test from "node:test"
 
 import {
@@ -22,21 +23,34 @@ import {
   INITIAL_CALENDAR_TASKS,
 } from "./mock-data.ts"
 
+const calendarViewSourceUrl = new URL(
+  "./components/calendar-view.tsx",
+  import.meta.url
+)
+const calendarTaskCardSourceUrl = new URL(
+  "./components/calendar-task-card.tsx",
+  import.meta.url
+)
+const calendarUnscheduledSourceUrl = new URL(
+  "./components/calendar-unscheduled.tsx",
+  import.meta.url
+)
+
 function createWorkItem(id, dueDate) {
   return {
     id,
     projectId: "project-a",
+    boardId: "board-a",
     title: "Task " + id,
     description: "Description for " + id,
     type: "feature",
-    status: "todo",
     priority: "medium",
     assigneeId: "member-test-user",
     startDate: null,
     dueDate,
     estimate: null,
     position: 0,
-    labels: ["Test"],
+    labelIds: ["label-test"],
     checklist: [
       { id: id + "-check", label: "Verify " + id, completed: false },
     ],
@@ -177,4 +191,18 @@ test("keeps every mock deadline visible in the initial grid", () => {
     INITIAL_CALENDAR_TASKS.every((task) => visibleDates.has(task.dueDate)),
     true
   )
+})
+
+test("renders Board-derived stages without exposing Board creation in Calendar", async () => {
+  const [viewSource, cardSource, unscheduledSource] = await Promise.all([
+    readFile(calendarViewSourceUrl, "utf8"),
+    readFile(calendarTaskCardSourceUrl, "utf8"),
+    readFile(calendarUnscheduledSourceUrl, "utf8"),
+  ])
+
+  assert.match(viewSource, /stagesByBoardId/)
+  assert.doesNotMatch(viewSource, /onAddBoard|Add board/)
+  assert.match(cardSource, /status: WorkItemStatus/)
+  assert.match(unscheduledSource, /stagesByBoardId/)
+  assert.doesNotMatch(cardSource + unscheduledSource, /workItem\.status/)
 })

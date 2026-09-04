@@ -12,17 +12,17 @@ function createWorkItem(overrides = {}) {
   return {
     id: "item-a",
     projectId: "project-a",
+    boardId: "board-a",
     title: "Build project shell",
     description: "Create the shared project composition boundary.",
     type: "feature",
-    status: "todo",
     priority: "medium",
     assigneeId: "member-project-alpha-maya-chen",
     startDate: "2026-09-02",
     dueDate: "2026-09-08",
     estimate: 3,
     position: 0,
-    labels: ["Frontend"],
+    labelIds: ["label-frontend"],
     checklist: [
       {
         id: "item-a-check",
@@ -56,7 +56,10 @@ test("validates real date-only values without timezone conversion", () => {
 })
 
 test("accepts a complete shared work item", () => {
-  assert.equal(isValidWorkItem(createWorkItem()), true)
+  const item = createWorkItem()
+
+  assert.equal(isValidWorkItem(item), true)
+  assert.equal("status" in item, false)
   assert.equal(
     isValidWorkItem(createWorkItem({ assigneeId: null, estimate: null })),
     true
@@ -86,12 +89,44 @@ test("rejects invalid identity, scheduling, estimate, and position fields", () =
     isValidWorkItem(createWorkItem({ assigneeId: " " })),
     false
   )
+  assert.equal(isValidWorkItem(createWorkItem({ boardId: " " })), false)
+  assert.equal(
+    isValidWorkItem(createWorkItem({ boardId: " board-a" })),
+    false
+  )
 })
 
-test("rejects unnormalized or duplicate labels", () => {
-  assert.equal(isValidWorkItem(createWorkItem({ labels: [" UI"] })), false)
+test("rejects unnormalized or duplicate label IDs", () => {
   assert.equal(
-    isValidWorkItem(createWorkItem({ labels: ["UI", "UI"] })),
+    isValidWorkItem(createWorkItem({ labelIds: [" label-ui"] })),
+    false
+  )
+  assert.equal(isValidWorkItem(createWorkItem({ labelIds: [""] })), false)
+  assert.equal(
+    isValidWorkItem(
+      createWorkItem({ labelIds: ["label-ui", "label-ui"] })
+    ),
+    false
+  )
+})
+
+test("rejects unnormalized or duplicate linked document IDs", () => {
+  assert.equal(
+    isValidWorkItem(
+      createWorkItem({ linkedResourceIds: [" resource-notes"] })
+    ),
+    false
+  )
+  assert.equal(
+    isValidWorkItem(createWorkItem({ linkedResourceIds: [""] })),
+    false
+  )
+  assert.equal(
+    isValidWorkItem(
+      createWorkItem({
+        linkedResourceIds: ["resource-notes", "resource-notes"],
+      })
+    ),
     false
   )
 })

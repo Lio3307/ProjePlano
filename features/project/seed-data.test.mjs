@@ -3,7 +3,6 @@ import test from "node:test"
 
 import { INITIAL_CALENDAR_TASKS } from "../calendar/mock-data.ts"
 import { INITIAL_KANBAN_COLUMNS } from "../kanban/mock-data.ts"
-import { INITIAL_ROWS } from "../table/mock-data.ts"
 import {
   WORKSPACE_MEMBER_IDS,
   WORKSPACE_MEMBERS,
@@ -29,7 +28,7 @@ test("creates one normalized container for every current project", () => {
     PROJECTS.map((project) => project.id)
   )
   assert.equal(Object.keys(state.projectsById).length, PROJECTS.length)
-  assert.equal(Object.keys(state.projectViewsById).length, 4)
+  assert.equal(Object.keys(state.projectViewsById).length, 5)
   assert.equal(Object.keys(state.resourcesById).length, 4)
   assert.equal(Object.keys(state.milestonesById).length, 0)
   assert.equal(Object.keys(state.membersById).length, WORKSPACE_MEMBERS.length)
@@ -43,12 +42,16 @@ test("maps each legacy renderer to its first view or resource", () => {
 
   const boardViewId = state.projectsById["2"].viewIds[0]
   const tableViewId = state.projectsById["3"].viewIds[0]
-  const calendarViewId = state.projectsById["6"].viewIds[0]
+  const calendarViewId = state.projectsById["6"].viewIds[1]
   const documentResourceId = state.projectsById["1"].resourceIds[0]
 
   assert.equal(state.projectViewsById[boardViewId].type, "board")
   assert.equal(state.projectViewsById[tableViewId].type, "table")
   assert.equal(state.projectViewsById[calendarViewId].type, "calendar")
+  assert.deepEqual(state.projectsById["6"].viewIds, [
+    "view-6-board",
+    "view-6-calendar",
+  ])
   assert.deepEqual(state.projectsById["1"].viewIds, [])
   assert.equal(state.resourcesById[documentResourceId].type, "document")
   assert.equal(state.resourcesById[documentResourceId].title, "API Design")
@@ -93,6 +96,21 @@ test("maps each legacy renderer to its first view or resource", () => {
   )
 })
 
+test("creates explicit ordered Boards for every seeded Board view", () => {
+  const state = createProjectSeedState()
+  const view = state.projectViewsById["view-2-board"]
+
+  assert.equal(view.type, "board")
+  assert.deepEqual(
+    view.boardIds.map((boardId) => state.taskBoardsById[boardId].title),
+    ["Backlog", "To Do", "In Progress", "Review", "Testing", "Done"]
+  )
+  assert.deepEqual(
+    view.boardIds.map((boardId) => state.taskBoardsById[boardId].stage),
+    ["backlog", "todo", "in-progress", "review", "testing", "done"]
+  )
+})
+
 test("converts every current task fixture for its owning project", () => {
   const state = createProjectSeedState()
   const kanbanCardCount = INITIAL_KANBAN_COLUMNS.reduce(
@@ -100,11 +118,11 @@ test("converts every current task fixture for its owning project", () => {
     0
   )
   const expectedTotal =
-    kanbanCardCount * 2 + INITIAL_CALENDAR_TASKS.length + INITIAL_ROWS.length
+    kanbanCardCount * 2 + INITIAL_CALENDAR_TASKS.length
 
   assert.equal(getProjectWorkItems(state, "2").length, kanbanCardCount)
   assert.equal(getProjectWorkItems(state, "4").length, kanbanCardCount)
-  assert.equal(getProjectWorkItems(state, "3").length, INITIAL_ROWS.length)
+  assert.deepEqual(getProjectWorkItems(state, "3"), [])
   assert.equal(
     getProjectWorkItems(state, "6").length,
     INITIAL_CALENDAR_TASKS.length
@@ -119,16 +137,8 @@ test("converts every current task fixture for its owning project", () => {
     "2026-09-01"
   )
   assert.equal(
-    state.workItemsById["work-item-3-r1"].title,
-    "Design review"
-  )
-  assert.equal(
     state.workItemsById["work-item-2-audit-onboarding"].assigneeId,
     WORKSPACE_MEMBER_IDS.mayaChen
-  )
-  assert.deepEqual(
-    state.workItemsById["work-item-3-r1"].customFields.attachments,
-    []
   )
   assert.deepEqual(
     state.workItemsById["work-item-2-workspace-filters"].dependencyIds,
@@ -163,9 +173,23 @@ test("keeps every normalized relationship inside its owning project", () => {
 
   for (const workItem of Object.values(state.workItemsById)) {
     const project = state.projectsById[workItem.projectId]
+    const board = state.taskBoardsById[workItem.boardId]
+    const boardView = state.projectViewsById[board?.viewId]
 
     assert.ok(project)
+    assert.equal(board?.projectId, workItem.projectId)
+    assert.equal(boardView?.type, "board")
+    assert.equal(boardView?.projectId, workItem.projectId)
+    assert.equal(boardView?.boardIds.includes(board.id), true)
     assert.equal(isValidWorkItem(workItem), true)
+    assert.equal("status" in workItem, false)
+
+    for (const labelId of workItem.labelIds) {
+      assert.equal(
+        boardView.labels.some((label) => label.id === labelId),
+        true
+      )
+    }
 
     if (workItem.assigneeId) {
       assert.equal(
@@ -199,7 +223,7 @@ test("returns a fresh object graph for every seed request", () => {
 
   first.projectsById["2"].viewIds.push("mutated-view")
   first.workItemsById[workItemId].title = "Mutated title"
-  first.workItemsById[workItemId].labels.push("Mutated label")
+  first.workItemsById[workItemId].labelIds.push("mutated-label")
   first.membersById[WORKSPACE_MEMBER_IDS.mayaChen].name = "Mutated name"
 
   assert.deepEqual(second.projectsById["2"].viewIds, ["view-2-board"])
@@ -207,12 +231,28 @@ test("returns a fresh object graph for every seed request", () => {
     second.workItemsById[workItemId].title,
     "Audit the onboarding flow"
   )
-  assert.deepEqual(second.workItemsById[workItemId].labels, [
-    "Research",
-    "UX",
+  assert.deepEqual(second.workItemsById[workItemId].labelIds, [
+    "view-2-board-label-1",
+    "view-2-board-label-2",
   ])
   assert.equal(
     second.membersById[WORKSPACE_MEMBER_IDS.mayaChen].name,
     "Maya Chen"
   )
+})
+
+test("builds deterministic Board label catalogs in first-seen order", () => {
+  const state = createProjectSeedState()
+
+  assert.deepEqual(state.projectViewsById["view-2-board"].labels, [
+    { id: "view-2-board-label-1", name: "Research", color: "gray" },
+    { id: "view-2-board-label-2", name: "UX", color: "orange" },
+    { id: "view-2-board-label-3", name: "Backend", color: "yellow" },
+    { id: "view-2-board-label-4", name: "API", color: "green" },
+    { id: "view-2-board-label-5", name: "Frontend", color: "blue" },
+    { id: "view-2-board-label-6", name: "Docs", color: "purple" },
+    { id: "view-2-board-label-7", name: "Quality", color: "pink" },
+    { id: "view-2-board-label-8", name: "Product", color: "red" },
+    { id: "view-2-board-label-9", name: "Security", color: "gray" },
+  ])
 })

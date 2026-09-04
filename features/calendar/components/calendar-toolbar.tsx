@@ -33,7 +33,12 @@ export function CalendarToolbar({
         >
           <ChevronLeft aria-hidden="true" />
         </Button>
-        <Button type="button" variant="outline" onClick={onToday}>
+        <Button
+          type="button"
+          data-work-item-delete-fallback
+          variant="outline"
+          onClick={onToday}
+        >
           Today
         </Button>
         <Button

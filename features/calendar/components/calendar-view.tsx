@@ -5,7 +5,10 @@ import { DragDropProvider } from "@dnd-kit/react"
 
 import type { WorkspaceMember } from "@/features/member/model"
 import type { WorkItem } from "@/features/work-item/model"
-import { getBlockingDependencyCounts } from "@/features/work-item/dependencies"
+import {
+  getBlockingDependencyCounts,
+  type WorkItemStagesByBoardId,
+} from "@/features/work-item/dependencies"
 import {
   getCalendarMonthFromIsoDate,
   getCalendarMonthLabel,
@@ -22,6 +25,7 @@ import { CalendarUnscheduled } from "./calendar-unscheduled"
 
 interface CalendarViewProps {
   workItems: readonly WorkItem[]
+  stagesByBoardId: WorkItemStagesByBoardId
   membersById: Readonly<Record<string, WorkspaceMember>>
   todayIsoDate: string
   onOpenWorkItem: (workItemId: string, trigger: HTMLElement) => void
@@ -30,6 +34,7 @@ interface CalendarViewProps {
 
 export function CalendarView({
   workItems,
+  stagesByBoardId,
   membersById,
   todayIsoDate,
   onOpenWorkItem,
@@ -45,10 +50,13 @@ export function CalendarView({
   const { scheduled, unscheduled } =
     partitionCalendarWorkItems(workItems)
   const blockingCountsByWorkItemId =
-    getBlockingDependencyCounts(workItems)
+    getBlockingDependencyCounts(workItems, stagesByBoardId)
 
   return (
-    <div className="min-w-0 space-y-4">
+    <div
+      data-calendar-work-item-count={workItems.length}
+      className="min-w-0 space-y-4"
+    >
       <CalendarToolbar
         monthLabel={getCalendarMonthLabel(activeMonth)}
         onPrevious={() =>
@@ -68,6 +76,7 @@ export function CalendarView({
 
       <CalendarUnscheduled
         workItems={unscheduled}
+        stagesByBoardId={stagesByBoardId}
         membersById={membersById}
         blockingCountsByWorkItemId={blockingCountsByWorkItemId}
         onOpenWorkItem={onOpenWorkItem}
@@ -104,6 +113,7 @@ export function CalendarView({
         <CalendarGrid
           activeMonth={activeMonth}
           tasks={scheduled}
+          stagesByBoardId={stagesByBoardId}
           membersById={membersById}
           blockingCountsByWorkItemId={blockingCountsByWorkItemId}
           todayIsoDate={todayIsoDate}

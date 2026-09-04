@@ -21,7 +21,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { BoardDialog } from "@/features/kanban/components/board-dialog"
+import { LabelManagerDialog } from "@/features/kanban/components/label-manager-dialog"
+import type { BoardLabel } from "@/features/project/board"
 import { useProjectStore } from "@/features/project/store-provider"
+import type { EditableTaskBoardFields } from "@/features/project/task-board"
 import type { Workspace } from "@/features/workspace/types"
 import { buildProjectOverviewSummary } from "../overview"
 import {
@@ -31,15 +35,17 @@ import {
   type ProjectSelection,
 } from "../query-state"
 import {
+  selectDocumentLinkedWorkItems,
   selectProjectDocumentResources,
   selectProjectForWorkspace,
   selectProjectMilestones,
+  selectProjectResolvedWorkItems,
   selectProjectResources,
-  selectProjectWorkItems,
   selectSupportedProjectViews,
+  selectTaskBoards,
 } from "../selectors"
 import { getProjectTemplate } from "../templates"
-import type { SupportedProjectViewType } from "../view-definitions"
+import type { GenericProjectViewType } from "../project-state"
 import { NewDocumentDialog } from "./new-document-dialog"
 import { ProjectNavigation } from "./project-navigation"
 import { ProjectOverview } from "./project-overview"
@@ -54,6 +60,10 @@ type ProjectWorkspaceProps = {
   resourceQuery: ProjectQueryValue
 }
 
+type BoardDialogSession =
+  | { key: string; mode: "create" }
+  | { key: string; mode: "edit"; boardId: string }
+
 export function ProjectWorkspace({
   workspace,
   projectId,
@@ -64,7 +74,12 @@ export function ProjectWorkspace({
 }: ProjectWorkspaceProps) {
   const router = useRouter()
   const [actionError, setActionError] = useState<string | null>(null)
+  const [boardDialogSession, setBoardDialogSession] =
+    useState<BoardDialogSession | null>(null)
+  const [labelManagerOpen, setLabelManagerOpen] = useState(false)
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false)
+  const boardDialogTriggerRef = useRef<HTMLElement | null>(null)
+  const labelManagerTriggerRef = useRef<HTMLElement | null>(null)
   const documentDialogTriggerRef = useRef<HTMLButtonElement>(null)
   const project = useProjectStore((state) =>
     selectProjectForWorkspace(state, workspace.id, projectId)
@@ -74,14 +89,22 @@ export function ProjectWorkspace({
       selectSupportedProjectViews(state, projectId)
     )
   )
+  const boardView = workViews.find((view) => view.type === "board") ?? null
+  const taskBoards = useProjectStore(
+    useShallow((state) =>
+      boardView
+        ? selectTaskBoards(state, projectId, boardView.id)
+        : []
+    )
+  )
   const documents = useProjectStore(
     useShallow((state) =>
       selectProjectDocumentResources(state, projectId)
     )
   )
-  const workItems = useProjectStore(
+  const resolvedWorkItems = useProjectStore(
     useShallow((state) =>
-      selectProjectWorkItems(state, projectId)
+      selectProjectResolvedWorkItems(state, projectId)
     )
   )
   const resources = useProjectStore(
@@ -96,6 +119,16 @@ export function ProjectWorkspace({
   )
   const addProjectView = useProjectStore(
     (state) => state.addProjectView
+  )
+  const createFirstTaskBoard = useProjectStore(
+    (state) => state.createFirstTaskBoard
+  )
+  const addTaskBoard = useProjectStore((state) => state.addTaskBoard)
+  const updateTaskBoard = useProjectStore(
+    (state) => state.updateTaskBoard
+  )
+  const updateBoardLabels = useProjectStore(
+    (state) => state.updateBoardLabels
   )
   const addProjectDocument = useProjectStore(
     (state) => state.addProjectDocument
@@ -116,22 +149,52 @@ export function ProjectWorkspace({
       ),
     [documents, resourceQuery, viewQuery, workViewQuery, workViews]
   )
+  const documentLinkedWorkItems = useProjectStore(
+    useShallow((state) =>
+      selection.kind === "document"
+        ? selectDocumentLinkedWorkItems(
+            state,
+            projectId,
+            selection.resource.id
+          )
+        : []
+    )
+  )
+  const linkedWorkItems = useMemo(
+    () =>
+      documentLinkedWorkItems.map((linkedWorkItem) => ({
+        ...linkedWorkItem,
+        href: getProjectViewHref(
+          workspace.id,
+          projectId,
+          "board",
+          { workViewId: linkedWorkItem.boardViewId }
+        ),
+      })),
+    [documentLinkedWorkItems, projectId, workspace.id]
+  )
   const summary = useMemo(
     () =>
       buildProjectOverviewSummary({
         today,
-        workItems,
+        workItems: resolvedWorkItems,
         milestones,
         resources,
       }),
-    [milestones, resources, today, workItems]
+    [milestones, resolvedWorkItems, resources, today]
   )
+  const boardDialogBoard =
+    boardDialogSession?.mode === "edit"
+      ? (taskBoards.find(
+          (taskBoard) => taskBoard.id === boardDialogSession.boardId
+        ) ?? null)
+      : null
 
   if (!project) {
     return <MissingProjectState workspace={workspace} />
   }
 
-  function handleAddView(type: SupportedProjectViewType) {
+  function handleAddView(type: GenericProjectViewType) {
     const viewId =
       "view-" +
       projectId +
@@ -156,6 +219,101 @@ export function ProjectWorkspace({
         workViewId: viewId,
       })
     )
+  }
+
+  function openCreateBoardDialog(trigger: HTMLElement) {
+    boardDialogTriggerRef.current = trigger
+    setActionError(null)
+    setBoardDialogSession({
+      key: crypto.randomUUID(),
+      mode: "create",
+    })
+  }
+
+  function openEditBoardDialog(boardId: string, trigger: HTMLElement) {
+    const board = taskBoards.find(
+      (taskBoard) => taskBoard.id === boardId
+    )
+
+    if (!board) {
+      setActionError("The Board is no longer available.")
+      return
+    }
+
+    boardDialogTriggerRef.current = trigger
+    setActionError(null)
+    setBoardDialogSession({
+      key: crypto.randomUUID(),
+      mode: "edit",
+      boardId,
+    })
+  }
+
+  function openLabelManagerDialog(trigger: HTMLElement) {
+    if (!boardView) {
+      setActionError("The Kanban view is no longer available.")
+      return
+    }
+
+    labelManagerTriggerRef.current = trigger
+    setActionError(null)
+    setLabelManagerOpen(true)
+  }
+
+  function handleCreateBoard(fields: EditableTaskBoardFields) {
+    const boardId = "board-" + projectId + "-" + crypto.randomUUID()
+
+    if (boardView) {
+      const created = addTaskBoard({
+        id: boardId,
+        projectId,
+        viewId: boardView.id,
+        ...fields,
+      })
+
+      if (created) {
+        setActionError(null)
+      }
+
+      return created
+    }
+
+    const viewId = "view-" + projectId + "-board-" + crypto.randomUUID()
+    const created = createFirstTaskBoard({
+      viewId,
+      board: {
+        id: boardId,
+        projectId,
+        ...fields,
+      },
+    })
+
+    if (!created) {
+      return false
+    }
+
+    setActionError(null)
+    router.push(
+      getProjectViewHref(workspace.id, projectId, "board", {
+        workViewId: viewId,
+      })
+    )
+    return true
+  }
+
+  function handleSaveBoard(
+    boardId: string,
+    fields: EditableTaskBoardFields
+  ) {
+    return updateTaskBoard({ boardId, ...fields })
+  }
+
+  function handleSaveLabels(labels: BoardLabel[]) {
+    if (!boardView) {
+      return false
+    }
+
+    return updateBoardLabels({ viewId: boardView.id, labels })
   }
 
   function handleAddDocument(trigger: HTMLButtonElement) {
@@ -199,7 +357,7 @@ export function ProjectWorkspace({
     <div
       data-project-workspace={project.id}
       data-project-selection={getSelectionName(selection)}
-      className="flex min-h-0 flex-1 flex-col"
+      className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col"
     >
       <header className="space-y-3 border-b px-4 py-4 sm:px-6">
         <Breadcrumb>
@@ -264,9 +422,46 @@ export function ProjectWorkspace({
         selection={selection}
         workViews={workViews}
         documents={documents}
+        onAddBoard={openCreateBoardDialog}
         onAddView={handleAddView}
         onAddDocument={handleAddDocument}
       />
+
+      {boardDialogSession &&
+      (boardDialogSession.mode === "create" || boardDialogBoard) ? (
+        <BoardDialog
+          key={boardDialogSession.key}
+          open
+          mode={boardDialogSession.mode}
+          board={boardDialogBoard}
+          finalFocus={() =>
+            boardDialogTriggerRef.current?.isConnected
+              ? boardDialogTriggerRef.current
+              : null
+          }
+          onOpenChange={(open) => {
+            if (!open) {
+              setBoardDialogSession(null)
+            }
+          }}
+          onCreate={handleCreateBoard}
+          onSave={handleSaveBoard}
+        />
+      ) : null}
+
+      {labelManagerOpen && boardView ? (
+        <LabelManagerDialog
+          open
+          labels={boardView.labels}
+          finalFocus={() =>
+            labelManagerTriggerRef.current?.isConnected
+              ? labelManagerTriggerRef.current
+              : null
+          }
+          onOpenChange={setLabelManagerOpen}
+          onSave={handleSaveLabels}
+        />
+      ) : null}
 
       <NewDocumentDialog
         open={documentDialogOpen}
@@ -296,7 +491,7 @@ export function ProjectWorkspace({
             />
           </div>
         ) : selection.kind === "empty-work" ? (
-          <EmptyWorkState />
+          <EmptyWorkState onAddBoard={openCreateBoardDialog} />
         ) : selection.kind === "missing-resource" ? (
           <MissingResourceState
             workspaceId={workspace.id}
@@ -307,6 +502,10 @@ export function ProjectWorkspace({
           <ProjectView
             selection={selection}
             today={today}
+            linkedWorkItems={linkedWorkItems}
+            onAddBoard={openCreateBoardDialog}
+            onEditBoard={openEditBoardDialog}
+            onSetLabels={openLabelManagerDialog}
             onSaveDocument={saveProjectDocument}
           />
         )}
@@ -315,17 +514,28 @@ export function ProjectWorkspace({
   )
 }
 
-function EmptyWorkState() {
+function EmptyWorkState({
+  onAddBoard,
+}: {
+  onAddBoard: (trigger: HTMLElement) => void
+}) {
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6">
       <Card data-empty-work-state className="mx-auto max-w-xl">
         <CardHeader>
           <CardTitle>No work views yet</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <p className="max-w-prose text-muted-foreground">
-            Use the + menu above to add a Board, Table, or Calendar view.
+            Add a Board to organize project tasks, or use the + menu for a
+            Table or Calendar view.
           </p>
+          <Button
+            type="button"
+            onClick={(event) => onAddBoard(event.currentTarget)}
+          >
+            Add board
+          </Button>
         </CardContent>
       </Card>
     </div>

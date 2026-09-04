@@ -19,7 +19,7 @@ test("TableView uses the feature-local editable table model", () => {
 })
 
 test("project controller isolates Table from shared work-item controls", () => {
-  assert.match(projectWorkViewSource, /if \(viewType === "table"\)/)
+  assert.match(projectWorkViewSource, /if \(view\.type === "table"\)/)
   assert.match(projectWorkViewSource, /<TableView \/>/)
   assert.match(projectWorkViewSource, /function SharedWorkItemView/)
   assert.doesNotMatch(projectWorkViewSource, /<TableView\s+workItems=/)

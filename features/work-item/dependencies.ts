@@ -1,24 +1,31 @@
 import {
   wouldCreateDependencyCycle,
   type WorkItem,
+  type WorkItemStatus,
 } from "./model.ts"
+
+export type WorkItemStagesByBoardId = Readonly<
+  Record<string, WorkItemStatus>
+>
 
 export function getBlockingDependencies(
   workItem: WorkItem,
-  workItemsById: Readonly<Record<string, WorkItem>>
+  workItemsById: Readonly<Record<string, WorkItem>>,
+  stagesByBoardId: WorkItemStagesByBoardId
 ) {
   return workItem.dependencyIds.flatMap((dependencyId) => {
     const dependency = workItemsById[dependencyId]
 
     return dependency?.projectId === workItem.projectId &&
-      dependency.status !== "done"
+      stagesByBoardId[dependency.boardId] !== "done"
       ? [dependency]
       : []
   })
 }
 
 export function getBlockingDependencyCounts(
-  workItems: readonly WorkItem[]
+  workItems: readonly WorkItem[],
+  stagesByBoardId: WorkItemStagesByBoardId
 ) {
   const workItemsById = Object.fromEntries(
     workItems.map((workItem) => [workItem.id, workItem])
@@ -27,7 +34,11 @@ export function getBlockingDependencyCounts(
   return Object.fromEntries(
     workItems.map((workItem) => [
       workItem.id,
-      getBlockingDependencies(workItem, workItemsById).length,
+      getBlockingDependencies(
+        workItem,
+        workItemsById,
+        stagesByBoardId
+      ).length,
     ])
   )
 }
