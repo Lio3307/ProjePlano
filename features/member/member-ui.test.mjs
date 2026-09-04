@@ -40,6 +40,26 @@ test("keeps member presentation controlled and table-like", () => {
   assert.doesNotMatch(removeSource, /useProjectStore/)
 })
 
+test("keeps member dialog chrome outside its scroll region", () => {
+  const headerIndex = dialogSource.indexOf("<DialogHeader")
+  const scrollIndex = dialogSource.indexOf(
+    'className="no-scrollbar min-h-0 flex-1 overflow-y-auto'
+  )
+  const footerIndex = dialogSource.indexOf("<DialogFooter")
+
+  assert.match(
+    dialogSource,
+    /flex max-w-lg flex-col overflow-hidden p-0/
+  )
+  assert.doesNotMatch(dialogSource, /sticky top-0/)
+  assert.equal(dialogSource.match(/overflow-y-auto/g)?.length, 1)
+  assert.ok(headerIndex >= 0)
+  assert.ok(scrollIndex > headerIndex)
+  assert.ok(footerIndex > scrollIndex)
+  assert.match(dialogSource, /<DialogHeader[^>]*shrink-0/)
+  assert.match(dialogSource, /<DialogFooter[^>]*shrink-0/)
+})
+
 test("explains destructive assignment cleanup", () => {
   assert.match(removeSource, /assignments will be cleared/)
   assert.match(removeSource, /role="alert"/)

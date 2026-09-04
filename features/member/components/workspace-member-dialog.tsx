@@ -86,18 +86,18 @@ export function WorkspaceMemberDialog({
           className="flex min-h-0 flex-1 flex-col"
           onSubmit={handleSubmit}
         >
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <DialogHeader className="sticky top-0 z-10 border-b bg-popover py-5 pl-6 pr-14">
-              <DialogTitle>
-                {mode === "create" ? "Add member" : "Edit member"}
-              </DialogTitle>
-              <DialogDescription>
-                Member details stay in this frontend demo until the page is
-                reloaded.
-              </DialogDescription>
-            </DialogHeader>
+          <DialogHeader className="shrink-0 border-b bg-popover py-5 pl-6 pr-14">
+            <DialogTitle>
+              {mode === "create" ? "Add member" : "Edit member"}
+            </DialogTitle>
+            <DialogDescription>
+              Member details stay in this frontend demo until the page is
+              reloaded.
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="space-y-4 px-6 py-5">
+          <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-5">
+            <div className="space-y-4">
               <WorkspaceMemberForm
                 value={draft}
                 onChange={(value) => {

@@ -9,6 +9,25 @@ function readComponent(name) {
   return existsSync(file) ? readFileSync(file, "utf8") : ""
 }
 
+test("keeps project dialog chrome outside its scroll region", () => {
+  const source = readComponent("new-project-dialog.tsx")
+  const headerIndex = source.indexOf("<DialogHeader")
+  const scrollIndex = source.indexOf(
+    'className="no-scrollbar min-h-0 flex-1 overflow-y-auto'
+  )
+  const footerIndex = source.indexOf("<DialogFooter")
+
+  assert.match(source, /DialogFooter/)
+  assert.match(source, /flex max-w-3xl flex-col overflow-hidden p-0/)
+  assert.match(source, /flex min-h-0 flex-1 flex-col/)
+  assert.equal(source.match(/overflow-y-auto/g)?.length, 1)
+  assert.ok(headerIndex >= 0)
+  assert.ok(scrollIndex > headerIndex)
+  assert.ok(footerIndex > scrollIndex)
+  assert.match(source, /<DialogHeader[^>]*shrink-0/)
+  assert.match(source, /<DialogFooter[^>]*shrink-0/)
+})
+
 test("uses the shared dialog form for document creation", () => {
   const source = readComponent("new-document-dialog.tsx")
 

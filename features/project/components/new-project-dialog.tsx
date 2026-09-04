@@ -15,6 +15,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -124,165 +125,178 @@ export function NewProjectDialog({
         New project
       </Button>
 
-      <DialogContent finalFocus={triggerRef} className="max-w-3xl">
-        <DialogHeader>
-          <p className="text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground">
-            Step {step} of 2
-          </p>
-          <DialogTitle>
-            {step === 1 ? "Choose a template" : "Project details"}
-          </DialogTitle>
-          <DialogDescription>
-            {step === 1
-              ? "Pick a focused starting structure for your programming project."
-              : "Name the project and review the frontend-only structure."}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent
+        finalFocus={triggerRef}
+        className="flex max-w-3xl flex-col overflow-hidden p-0"
+      >
+        <form
+          className="flex min-h-0 flex-1 flex-col"
+          onSubmit={handleCreate}
+        >
+          <DialogHeader className="shrink-0 border-b bg-popover py-5 pl-6 pr-14">
+            <p className="text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground">
+              Step {step} of 2
+            </p>
+            <DialogTitle>
+              {step === 1 ? "Choose a template" : "Project details"}
+            </DialogTitle>
+            <DialogDescription>
+              {step === 1
+                ? "Pick a focused starting structure for your programming project."
+                : "Name the project and review the frontend-only structure."}
+            </DialogDescription>
+          </DialogHeader>
 
-        {step === 1 ? (
-          <div className="mt-5 space-y-5">
-            <div
-              role="group"
-              aria-label="Project template"
-              className="grid gap-3 sm:grid-cols-2"
-            >
-              {PROJECT_TEMPLATES.map((template) => {
-                const selected = template.id === templateId
+          <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-5">
+            {step === 1 ? (
+              <div
+                role="group"
+                aria-label="Project template"
+                className="grid gap-3 sm:grid-cols-2"
+              >
+                {PROJECT_TEMPLATES.map((template) => {
+                  const selected = template.id === templateId
 
-                return (
-                  <Card
-                    key={template.id}
-                    className={cn(
-                      "h-full py-0 transition-colors hover:bg-muted/40",
-                      selected && "bg-primary/5 ring-2 ring-primary"
-                    )}
-                  >
-                    <button
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => setTemplateId(template.id)}
-                      className="flex h-full w-full flex-col gap-2 rounded-lg p-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                  return (
+                    <Card
+                      key={template.id}
+                      className={cn(
+                        "h-full py-0 transition-colors hover:bg-muted/40",
+                        selected && "bg-primary/5 ring-2 ring-primary"
+                      )}
                     >
-                      <span className="font-heading text-sm font-medium">
-                        {template.name}
-                      </span>
-                      <span className="text-xs/relaxed text-muted-foreground">
-                        {template.description}
-                      </span>
-                      <span className="mt-auto text-xs/relaxed text-muted-foreground">
-                        {getTemplateSummary(template)}
-                      </span>
-                    </button>
-                  </Card>
-                )
-              })}
-            </div>
-
-            <div className="flex justify-end gap-2 border-t pt-4">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                disabled={!selectedTemplate}
-                onClick={() => setStep(2)}
-              >
-                Continue
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={handleCreate} className="mt-5 space-y-5">
-            <div className="space-y-2">
-              <label
-                htmlFor="project-name"
-                className="text-xs font-medium"
-              >
-                Project name
-              </label>
-              <Input
-                id="project-name"
-                name="projectName"
-                value={name}
-                required
-                autoFocus
-                autoComplete="off"
-                placeholder="Developer portal"
-                onChange={(event) => setName(event.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Required. You can use the same name for separate projects.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <label
-                htmlFor="project-description"
-                className="text-xs font-medium"
-              >
-                Description
-              </label>
-              <Textarea
-                id="project-description"
-                name="projectDescription"
-                value={description}
-                placeholder="What are you planning or building?"
-                onChange={(event) => setDescription(event.target.value)}
-              />
-            </div>
-
-            {selectedTemplate ? (
-              <Card size="sm">
-                <CardHeader>
-                  <CardTitle>{selectedTemplate.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <p>{getTemplateSummary(selectedTemplate)}</p>
-                  <p className="text-muted-foreground">
-                    Frontend demo data resets after a full page reload.
+                      <button
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => setTemplateId(template.id)}
+                        className="flex h-full w-full flex-col gap-2 rounded-lg p-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                      >
+                        <span className="font-heading text-sm font-medium">
+                          {template.name}
+                        </span>
+                        <span className="text-xs/relaxed text-muted-foreground">
+                          {template.description}
+                        </span>
+                        <span className="mt-auto text-xs/relaxed text-muted-foreground">
+                          {getTemplateSummary(template)}
+                        </span>
+                      </button>
+                    </Card>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="space-y-5">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="project-name"
+                    className="text-xs font-medium"
+                  >
+                    Project name
+                  </label>
+                  <Input
+                    id="project-name"
+                    name="projectName"
+                    value={name}
+                    required
+                    autoFocus
+                    autoComplete="off"
+                    placeholder="Developer portal"
+                    onChange={(event) => setName(event.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Required. You can use the same name for separate projects.
                   </p>
-                </CardContent>
-              </Card>
-            ) : null}
+                </div>
 
-            {error ? (
-              <p role="alert" className="text-xs text-destructive">
-                {error}
-              </p>
-            ) : null}
+                <div className="space-y-2">
+                  <label
+                    htmlFor="project-description"
+                    className="text-xs font-medium"
+                  >
+                    Description
+                  </label>
+                  <Textarea
+                    id="project-description"
+                    name="projectDescription"
+                    value={description}
+                    placeholder="What are you planning or building?"
+                    onChange={(event) => setDescription(event.target.value)}
+                  />
+                </div>
 
-            <div className="flex justify-between gap-2 border-t pt-4">
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={isCreating}
-                onClick={() => setStep(1)}
-              >
-                Back
-              </Button>
-              <div className="flex gap-2">
+                {selectedTemplate ? (
+                  <Card size="sm">
+                    <CardHeader>
+                      <CardTitle>{selectedTemplate.name}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <p>{getTemplateSummary(selectedTemplate)}</p>
+                      <p className="text-muted-foreground">
+                        Frontend demo data resets after a full page reload.
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : null}
+
+                {error ? (
+                  <p role="alert" className="text-xs text-destructive">
+                    {error}
+                  </p>
+                ) : null}
+
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="shrink-0 border-t bg-popover px-6 py-4 sm:items-center sm:justify-between">
+            {step === 1 ? (
+              <>
                 <Button
                   type="button"
                   variant="ghost"
-                  disabled={isCreating}
                   onClick={() => setOpen(false)}
                 >
                   Cancel
                 </Button>
                 <Button
-                  type="submit"
-                  disabled={name.trim().length === 0 || isCreating}
+                  type="button"
+                  disabled={!selectedTemplate}
+                  onClick={() => setStep(2)}
                 >
-                  {isCreating ? "Creating..." : "Create project"}
+                  Continue
                 </Button>
-              </div>
-            </div>
-          </form>
-        )}
+              </>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={isCreating}
+                  onClick={() => setStep(1)}
+                >
+                  Back
+                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={isCreating}
+                    onClick={() => setOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={name.trim().length === 0 || isCreating}
+                  >
+                    {isCreating ? "Creating..." : "Create project"}
+                  </Button>
+                </div>
+              </>
+            )}
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )

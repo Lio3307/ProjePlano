@@ -55,12 +55,22 @@ test("keeps task dialog chrome visible while its form content scrolls", async ()
     readFile(dialogPrimitiveSourceUrl, "utf8"),
   ])
 
+  const headerIndex = source.indexOf("<DialogHeader")
+  const scrollIndex = source.indexOf(
+    'className="no-scrollbar min-h-0 flex-1 overflow-y-auto'
+  )
+  const footerIndex = source.indexOf("<DialogFooter")
+
   assert.match(primitiveSource, /function DialogFooter/)
   assert.match(primitiveSource, /data-slot="dialog-footer"/)
-  assert.match(source, /overflow-hidden p-0/)
-  assert.match(source, /sticky top-0/)
-  assert.match(source, /min-h-0 flex-1 overflow-y-auto/)
-  assert.match(source, /<DialogFooter[\s\S]*?shrink-0/)
+  assert.match(source, /flex max-w-3xl flex-col overflow-hidden p-0/)
+  assert.doesNotMatch(source, /sticky top-0/)
+  assert.equal(source.match(/overflow-y-auto/g)?.length, 1)
+  assert.ok(headerIndex >= 0)
+  assert.ok(scrollIndex > headerIndex)
+  assert.ok(footerIndex > scrollIndex)
+  assert.match(source, /<DialogHeader[^>]*shrink-0/)
+  assert.match(source, /<DialogFooter[^>]*shrink-0/)
 })
 
 test("uses native accessible task controls", async () => {
