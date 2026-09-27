@@ -39,6 +39,23 @@ export type DatedWorkItem = WorkspaceWorkItem & {
   workItem: WorkItem & { dueDate: string }
 }
 
+export type AgendaFilters = {
+  workspaceId: string
+  projectId: string
+  priority: WorkItem["priority"] | ""
+}
+
+export function filterWorkspaceWorkItems(
+  items: readonly WorkspaceWorkItem[],
+  filters: AgendaFilters
+) {
+  return items.filter(({ workspace, project, workItem }) =>
+    (!filters.workspaceId || workspace.id === filters.workspaceId) &&
+    (!filters.projectId || project.id === filters.projectId) &&
+    (!filters.priority || workItem.priority === filters.priority)
+  )
+}
+
 const PRIORITY_ORDER: Record<WorkItem["priority"], number> = {
   urgent: 0,
   high: 1,

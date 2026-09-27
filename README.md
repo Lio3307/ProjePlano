@@ -121,6 +121,15 @@ case and surrounding spaces. An empty search lists all unfinished tasks; enable
 project, Board and status, sorted by title then task ID. Click a title to use the
 same live View/Edit dialog. Search and its checkbox reset when leaving the page.
 
+Today, Upcoming and Search tasks also provide **Workspace**, **Project** and
+**Priority** filters. Criteria combine with the page's date range or search;
+existing result ordering is preserved. Project options show active projects,
+grouped by workspace, including projects with no matching tasks. Changing
+workspace clears the project filter. Removed/archived selections show as
+unavailable and return no results until cleared. **Clear filters** resets these
+three dropdowns; the search text and completed-task checkbox remain unchanged.
+Filters reset when leaving the page or restoring a backup and are not exported.
+
 **New task** in Today/Upcoming first selects an active project and unfinished
 Board, then opens the existing Create task form. The initial deadline is today
 in Today and tomorrow in Upcoming; edit or clear it before saving. Empty Boards
@@ -136,6 +145,19 @@ reject the entire operation. Changing search/filter clears selection. Hidden
 tasks are excluded, and a successful update clears selection and refreshes the
 lists. There is no bulk-deadline Undo. Changes remain in memory and JSON backups;
 no automatic persistence or backend is introduced.
+
+The same visible unfinished-task selection supports **Apply priority** across
+projects and **Move tasks** within one project. Changing any filter clears the
+selection. Priority updates preserve other task fields. Moving appends tasks in
+their visible list order to the chosen Board and closes gaps in the source
+Boards; selected tasks already in the destination keep their positions. Board
+options identify Completed Boards, where moved tasks count as done. Mixed-project
+selections disable moving but still allow priority and deadline changes. Missing,
+completed, archived or invalid tasks reject the entire batch without partial
+writes. Success clears selection and updates the lists, project progress and
+backup data. These bulk actions do not create Undo history; moving a task covered
+by an earlier completion Undo clears that stale Undo. No backup format change is
+required.
 
 | Route | Purpose |
 | --- | --- |

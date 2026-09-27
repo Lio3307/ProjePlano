@@ -3,8 +3,10 @@ import {
   isValidWorkItemDate,
   isValidWorkItemDateRange,
   wouldCreateDependencyCycle,
+  WORK_ITEM_PRIORITIES,
   type EditableWorkItemFields,
   type WorkItem,
+  type WorkItemPriority,
 } from "../work-item/model.ts"
 import type { ProjectWorkspaceState } from "./model"
 import { addProjectDocumentState } from "./project-state.ts"
@@ -290,6 +292,54 @@ export function updateWorkItemDueDatesState(
     }
   }
   return changed ? { ...state, workItemsById } : state
+}
+
+export function updateWorkItemPrioritiesState(
+  state: ProjectWorkspaceState,
+  workItemIds: readonly string[],
+  priority: WorkItemPriority
+) {
+  if (!WORK_ITEM_PRIORITIES.includes(priority) || workItemIds.length === 0) return state
+
+  const workItemsById = { ...state.workItemsById }
+  let changed = false
+  for (const id of new Set(workItemIds)) {
+    const workItem = state.workItemsById[id]
+    if (!workItem || state.projectsById[workItem.projectId]?.archived ||
+      state.taskBoardsById[workItem.boardId]?.stage === "done" ||
+      !isValidWorkItem(workItem) || !hasValidReferences(state, workItem)) return state
+    if (workItem.priority !== priority) {
+      workItemsById[id] = { ...workItem, priority }
+      changed = true
+    }
+  }
+  return changed ? { ...state, workItemsById } : state
+}
+
+export function moveWorkItemsState(
+  state: ProjectWorkspaceState,
+  workItemIds: readonly string[],
+  targetBoardId: string
+) {
+  const target = state.taskBoardsById[targetBoardId]
+  if (!target || workItemIds.length === 0) return state
+
+  let next = state
+  for (const id of new Set(workItemIds)) {
+    const workItem = next.workItemsById[id]
+    const source = workItem ? next.taskBoardsById[workItem.boardId] : undefined
+    if (!workItem || !source || source.stage === "done" ||
+      state.projectsById[workItem.projectId]?.archived ||
+      workItem.projectId !== target.projectId || source.viewId !== target.viewId ||
+      !isValidWorkItem(workItem) || !hasValidReferences(next, workItem)) return state
+    if (workItem.boardId === targetBoardId) continue
+
+    const position = getOrderedBoardItems(next.workItemsById, workItem.projectId, targetBoardId).length
+    const moved = moveWorkItemState(next, id, targetBoardId, position)
+    if (moved === next) return state
+    next = moved
+  }
+  return next
 }
 
 export function linkWorkItemDocumentState(

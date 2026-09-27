@@ -14,11 +14,12 @@ import {
   WorkItemStatusBadge,
 } from "@/features/work-item/components/work-item-meta"
 import { getProjectViewHref } from "../query-state"
-import { selectSearchWorkItems, selectTaskBoards, selectTodayWorkItems, selectUpcomingWorkItems, type WorkspaceWorkItem } from "../selectors"
+import { filterWorkspaceWorkItems, selectSearchWorkItems, selectTaskBoards, selectTodayWorkItems, selectUpcomingWorkItems, type AgendaFilters, type WorkspaceWorkItem } from "../selectors"
 import { useProjectStore } from "../store-provider"
 import { useLocalToday } from "../use-local-today"
 import { ProjectWorkItemDialog } from "./project-work-item-dialog"
-import { BulkTaskDueDate } from "./bulk-task-due-date"
+import { BulkTaskActions } from "./bulk-task-actions"
+import { TaskAgendaFilters } from "./task-agenda-filters"
 import { QuickCreateTask } from "./quick-create-task"
 
 type AgendaMode = "today" | "upcoming" | "search"
@@ -55,13 +56,15 @@ export function TaskAgendaDashboard({ mode }: { mode: AgendaMode }) {
 function AgendaTasks({ today, mode }: { today: string; mode: AgendaMode }) {
   const [query, setQuery] = useState("")
   const [includeCompleted, setIncludeCompleted] = useState(false)
+  const [filters, setFilters] = useState<AgendaFilters>({ workspaceId: "", projectId: "", priority: "" })
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(() => new Set())
   const [bulkMessage, setBulkMessage] = useState<string | null>(null)
   const bulkStatusRef = useRef<HTMLParagraphElement>(null)
-  const items = useProjectStore(state => mode === "today"
+  const unfilteredItems = useProjectStore(state => mode === "today"
     ? selectTodayWorkItems(state, today)
     : mode === "upcoming" ? selectUpcomingWorkItems(state, today)
     : selectSearchWorkItems(state, query, includeCompleted))
+  const items = filterWorkspaceWorkItems(unfilteredItems, filters)
   const selectableItems = items.filter(item => item.board.stage !== "done")
   const selectedItems = selectableItems.filter(item => selectedIds.has(item.workItem.id))
   const completion = useProjectStore(state => state.lastWorkItemCompletion)
@@ -153,9 +156,10 @@ function AgendaTasks({ today, mode }: { today: string; mode: AgendaMode }) {
             }} />
             Include completed tasks
           </label>
-          <p role="status" className="w-full text-sm text-muted-foreground">{items.length} tasks found</p>
         </div>
       ) : null}
+      <TaskAgendaFilters value={filters} matchingCount={items.length} totalCount={unfilteredItems.length}
+        onChange={value => { setFilters(value); setSelectedIds(new Set()); setBulkMessage(null) }} />
       <div className={completion || undoneTitle ? "flex flex-wrap items-center gap-3 rounded-lg border bg-muted/40 p-4" : "sr-only"}>
         <p ref={statusRef} role="status" aria-atomic="true" tabIndex={-1} className="min-w-0 flex-1 break-words text-sm">
           {completion ? "Task completed: " + completion.title : undoneTitle ? "Task reopened: " + undoneTitle : ""}
@@ -172,10 +176,10 @@ function AgendaTasks({ today, mode }: { today: string; mode: AgendaMode }) {
         </label>
       ) : null}
       {selectedItems.length > 0 ? (
-        <BulkTaskDueDate workItems={selectedItems.map(item => item.workItem)}
+        <BulkTaskActions workItems={selectedItems.map(item => item.workItem)}
           onClear={() => { setSelectedIds(new Set()); requestAnimationFrame(() => listRef.current?.focus()) }}
-          onApplied={() => {
-            setBulkMessage("Deadline updated for " + selectedItems.length + " tasks.")
+          onApplied={message => {
+            setBulkMessage(message)
             setSelectedIds(new Set())
             requestAnimationFrame(() => bulkStatusRef.current?.focus())
           }} />
@@ -183,7 +187,7 @@ function AgendaTasks({ today, mode }: { today: string; mode: AgendaMode }) {
       <p ref={bulkStatusRef} role="status" tabIndex={-1} className={bulkMessage ? "text-sm text-muted-foreground" : "sr-only"}>{bulkMessage}</p>
       {sections.length === 0 ? (
         <p className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-          No tasks due in the next 7 days.
+          {unfilteredItems.length > 0 ? "No tasks match these filters." : "No tasks due in the next 7 days."}
         </p>
       ) : sections.map(section => (
         <TaskSection key={section.id} {...section} selectedIds={selectedIds} onToggleSelection={toggleTaskSelection}

@@ -9,6 +9,7 @@ import {
 import type {
   EditableWorkItemFields,
   WorkItem,
+  WorkItemPriority,
 } from "../work-item/model"
 import type { ProjectWorkspaceState } from "./model"
 import { isTableSnapshot, type TableSnapshot } from "../table/snapshot.ts"
@@ -38,10 +39,12 @@ import {
   deleteWorkItemState,
   linkWorkItemDocumentState,
   moveWorkItemState,
+  moveWorkItemsState,
   restoreDeletedWorkItemState,
   saveWorkItemState,
   updateWorkItemDateRangeState,
   updateWorkItemDueDatesState,
+  updateWorkItemPrioritiesState,
   updateWorkItemState,
   unlinkWorkItemDocumentState,
   undoWorkItemCompletionState,
@@ -89,6 +92,8 @@ export type ProjectStoreActions = {
     dueDate: string | null
   ) => boolean
   updateWorkItemDueDates: (workItemIds: readonly string[], dueDate: string) => boolean
+  updateWorkItemPriorities: (workItemIds: readonly string[], priority: WorkItemPriority) => boolean
+  moveWorkItems: (workItemIds: readonly string[], targetBoardId: string) => boolean
   linkWorkItemDocument: (
     workItemId: string,
     resourceId: string
@@ -397,6 +402,25 @@ export function createProjectStore(
       const next = updateWorkItemDueDatesState(current, workItemIds, dueDate)
       if (next === current) return false
       set(next)
+      return true
+    },
+
+    updateWorkItemPriorities(workItemIds, priority) {
+      const current = readProjectState(get())
+      const next = updateWorkItemPrioritiesState(current, workItemIds, priority)
+      if (next === current) return false
+      set(next)
+      return true
+    },
+
+    moveWorkItems(workItemIds, targetBoardId) {
+      const current = readProjectState(get())
+      const next = moveWorkItemsState(current, workItemIds, targetBoardId)
+      if (next === current) return false
+      const completion = get().lastWorkItemCompletion
+      const completedTaskMoved = completion &&
+        next.workItemsById[completion.workItemId]?.boardId !== current.workItemsById[completion.workItemId]?.boardId
+      set({ ...next, lastWorkItemCompletion: completedTaskMoved ? null : completion })
       return true
     },
 
