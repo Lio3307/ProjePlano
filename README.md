@@ -64,9 +64,19 @@ have no undo; an earlier JSON backup can restore the saved snapshot.
 
 ## Routes and ownership
 
+**Today** lists unfinished Board tasks across all workspaces and unarchived
+projects, grouped into **Overdue** and **Due today** using the browser's local
+date. It excludes undated/future tasks and completed Boards. Results sort by
+oldest due date, then priority (urgent first), then task ID. Each task includes
+workspace/project/Board context and **Open board** links to its Board Work view.
+Lists update from the shared in-memory store. The local date refreshes within a
+minute of midnight and when the tab regains focus or visibility. Table rows and
+project status do not determine task completion.
+
 | Route | Purpose |
 | --- | --- |
 | `/dashboard` | Workspaces |
+| `/dashboard/today` | Due-today and overdue tasks across projects |
 | `/dashboard/workspaces/[workspaceId]` | Workspace overview and projects |
 | `/dashboard/workspaces/[workspaceId]/projects/[projectId]` | Project shell |
 

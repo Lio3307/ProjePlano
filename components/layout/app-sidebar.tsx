@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  CalendarDays,
   FolderKanban,
   LayoutDashboard,
 } from "lucide-react"
@@ -84,6 +85,12 @@ export function AppSidebar() {
                 url="/dashboard"
                 icon={LayoutDashboard}
                 isActive={pathname === "/dashboard"}
+              />
+              <SidebarNavigationItem
+                title="Today"
+                url="/dashboard/today"
+                icon={CalendarDays}
+                isActive={pathname === "/dashboard/today"}
               />
             </SidebarMenu>
           </SidebarGroupContent>

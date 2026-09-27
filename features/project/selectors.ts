@@ -1,6 +1,8 @@
-import type { WorkItem, WorkItemStatus } from "../work-item/model.ts"
+import { isValidWorkItemDate, type WorkItem, type WorkItemStatus } from "../work-item/model.ts"
+import type { Workspace } from "../workspace/types"
 import type {
   ProjectDocumentResource,
+  ProjectRecord,
   ProjectBoardView,
   ProjectResource,
   ProjectViewConfig,
@@ -26,6 +28,20 @@ export type ResolvedWorkItem = {
   stage: WorkItemStatus
 }
 
+export type TodayWorkItem = {
+  workItem: WorkItem & { dueDate: string }
+  board: TaskBoard
+  project: ProjectRecord
+  workspace: Workspace
+}
+
+const PRIORITY_ORDER: Record<WorkItem["priority"], number> = {
+  urgent: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+}
+
 type ArraySelectorCache<T> = WeakMap<
   ProjectWorkspaceState,
   Map<string, T[]>
@@ -35,6 +51,42 @@ const resolvedWorkItemCache: ArraySelectorCache<ResolvedWorkItem> =
   new WeakMap()
 const documentLinkedWorkItemCache: ArraySelectorCache<DocumentLinkedWorkItem> =
   new WeakMap()
+const todayWorkItemCache: ArraySelectorCache<TodayWorkItem> = new WeakMap()
+
+export function selectTodayWorkItems(
+  state: ProjectWorkspaceState,
+  today: string
+): TodayWorkItem[] {
+  return getCachedArray(todayWorkItemCache, state, today, () => {
+    if (!isValidWorkItemDate(today)) return []
+
+    const items: TodayWorkItem[] = []
+
+    for (const workspace of selectWorkspaces(state)) {
+      for (const project of selectProjectsByWorkspaceId(state, workspace.id)) {
+        if (project.archived) continue
+
+        for (const { workItem, board } of selectProjectResolvedWorkItems(state, project.id)) {
+          if (board.stage === "done" || !hasValidDueDate(workItem) || workItem.dueDate > today) {
+            continue
+          }
+
+          items.push({ workItem, board, project, workspace })
+        }
+      }
+    }
+
+    return items.sort((left, right) =>
+      left.workItem.dueDate.localeCompare(right.workItem.dueDate) ||
+      PRIORITY_ORDER[left.workItem.priority] - PRIORITY_ORDER[right.workItem.priority] ||
+      left.workItem.id.localeCompare(right.workItem.id)
+    )
+  })
+}
+
+function hasValidDueDate(workItem: WorkItem): workItem is WorkItem & { dueDate: string } {
+  return workItem.dueDate !== null && isValidWorkItemDate(workItem.dueDate)
+}
 
 export function selectWorkspaces(state: ProjectWorkspaceState) {
   return state.workspaceIds.flatMap(id => state.workspacesById[id] ? [state.workspacesById[id]] : [])
