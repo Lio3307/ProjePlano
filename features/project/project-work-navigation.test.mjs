@@ -119,7 +119,7 @@ test("keeps Board creation inside Kanban rather than Calendar", () => {
   assert.doesNotMatch(calendarView, /onAddBoard|Add board/)
   assert.match(
     calendarView,
-    /data-calendar-work-item-count=\{workItems\.length\}/
+    /data-calendar-work-item-count=\{visibleWorkItems\.length\}/
   )
   assert.doesNotMatch(calendarView, /onAddTask|New task|Add task/)
 })

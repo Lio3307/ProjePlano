@@ -15,6 +15,7 @@ import { KanbanBoard } from "./kanban-board"
 
 interface KanbanViewProps {
   workItems: readonly WorkItem[]
+  visibleWorkItemIds: ReadonlySet<string>
   board: ProjectBoardView
   boards: readonly TaskBoard[]
   onOpenWorkItem: (
@@ -34,6 +35,7 @@ interface KanbanViewProps {
 
 export function KanbanView({
   workItems,
+  visibleWorkItemIds,
   board,
   boards,
   onOpenWorkItem,
@@ -80,6 +82,7 @@ export function KanbanView({
     >
       <KanbanBoard
         columns={records}
+        visibleWorkItemIds={visibleWorkItemIds}
         board={board}
         blockingCountsByWorkItemId={blockingCountsByWorkItemId}
         onOpenWorkItem={onOpenWorkItem}

@@ -44,7 +44,7 @@ export function CalendarUnscheduled({
 
       {workItems.length === 0 ? (
         <p className="mt-2 text-xs text-muted-foreground">
-          All tasks have a due date.
+          No unscheduled tasks in this view.
         </p>
       ) : (
         <ul className="mt-3 grid gap-2 lg:grid-cols-2">

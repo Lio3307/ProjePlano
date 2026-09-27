@@ -28,6 +28,7 @@ import { CalendarUnscheduled } from "./calendar-unscheduled"
 
 interface CalendarViewProps {
   workItems: readonly WorkItem[]
+  visibleWorkItemIds: ReadonlySet<string>
   labels: readonly BoardLabel[]
   stagesByBoardId: WorkItemStagesByBoardId
   todayIsoDate: string
@@ -37,6 +38,7 @@ interface CalendarViewProps {
 
 export function CalendarView({
   workItems,
+  visibleWorkItemIds,
   labels,
   stagesByBoardId,
   todayIsoDate,
@@ -51,8 +53,11 @@ export function CalendarView({
         month: 0,
       }
   )
+  const visibleWorkItems = workItems.filter(
+    (workItem) => visibleWorkItemIds.has(workItem.id)
+  )
   const { scheduled, unscheduled } =
-    partitionCalendarWorkItems(workItems)
+    partitionCalendarWorkItems(visibleWorkItems)
   const agendaGroups = groupCalendarWorkItemsByMonth(
     scheduled,
     activeMonth
@@ -62,7 +67,7 @@ export function CalendarView({
 
   return (
     <div
-      data-calendar-work-item-count={workItems.length}
+      data-calendar-work-item-count={visibleWorkItems.length}
       className="min-w-0 space-y-4"
     >
       <CalendarToolbar

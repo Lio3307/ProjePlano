@@ -15,6 +15,7 @@ import { KanbanCard } from "./kanban-card"
 
 interface KanbanColumnProps {
   column: KanbanBoardRecord
+  visibleWorkItemIds: ReadonlySet<string>
   labels: readonly BoardLabel[]
   blockingCountsByWorkItemId: Readonly<Record<string, number>>
   onOpenWorkItem: (
@@ -27,12 +28,16 @@ interface KanbanColumnProps {
 
 export function KanbanColumn({
   column,
+  visibleWorkItemIds,
   labels,
   blockingCountsByWorkItemId,
   onOpenWorkItem,
   onAddTask,
   onEditBoard,
 }: KanbanColumnProps) {
+  const visibleWorkItems = column.workItems.filter(
+    (workItem) => visibleWorkItemIds.has(workItem.id)
+  )
   const { ref, isDropTarget } = useDroppable({
     id: getKanbanBoardDropId(column.board.id),
     collisionPriority: -1,
@@ -56,7 +61,7 @@ export function KanbanColumn({
             ) : null}
           </div>
           <span className="rounded-full bg-background px-2 py-0.5 text-[11px] font-medium text-muted-foreground ring-1 ring-foreground/10">
-            {column.workItems.length}
+            {visibleWorkItems.length}
             <span className="sr-only"> tasks</span>
           </span>
         </div>
@@ -84,8 +89,8 @@ export function KanbanColumn({
           isDropTarget && "bg-primary/10"
         )}
       >
-        {column.workItems.length > 0 ? (
-          column.workItems.map((workItem) => (
+        {visibleWorkItems.length > 0 ? (
+          visibleWorkItems.map((workItem) => (
             <KanbanCard
               key={workItem.id}
               workItem={workItem}
@@ -96,7 +101,7 @@ export function KanbanColumn({
           ))
         ) : (
           <div className="flex min-h-24 items-center justify-center rounded-lg border border-dashed border-foreground/15 bg-background/50 px-4 text-center text-xs text-muted-foreground">
-            No tasks yet
+            {column.workItems.length > 0 ? "No matching tasks" : "No tasks yet"}
           </div>
         )}
       </div>

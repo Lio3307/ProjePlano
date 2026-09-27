@@ -7,6 +7,8 @@ import { CalendarView } from "@/features/calendar/components/calendar-view"
 import { KanbanView } from "@/features/kanban/components/kanban-view"
 import { TableView } from "@/features/table/components/table-view"
 import { WorkItemDialog } from "@/features/work-item/components/work-item-dialog"
+import { WorkItemFiltersToolbar } from "@/features/work-item/components/work-item-filters"
+import { createWorkItemFilters, filterWorkItems } from "@/features/work-item/filters"
 import type { WorkItemDocumentOption } from "@/features/work-item/components/work-item-documents-field"
 import type { EditableWorkItemFields } from "@/features/work-item/model"
 import {
@@ -142,6 +144,8 @@ function SharedWorkItemView({
   const [dialogSession, setDialogSession] =
     useState<DialogSession | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [filters, setFilters] = useState(createWorkItemFilters)
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const dialogTriggerRef = useRef<HTMLElement | null>(null)
   const deleteFallbackRef = useRef<HTMLElement | null>(null)
   const boardViews = projectViews.filter(
@@ -162,6 +166,12 @@ function SharedWorkItemView({
     view.type === "board"
       ? taskBoards.filter((taskBoard) => taskBoard.viewId === view.id)
       : []
+  const visibleWorkItemIds = useMemo(
+    () => new Set(
+      filterWorkItems(workItems, stagesByBoardId, filters).map((workItem) => workItem.id)
+    ),
+    [workItems, stagesByBoardId, filters]
+  )
   const dialogResolvedWorkItem =
     dialogSession?.mode === "view"
       ? (resolvedWorkItems.find(
@@ -368,7 +378,7 @@ function SharedWorkItemView({
       return deleteFallbackRef.current
     }
 
-    return null
+    return searchInputRef.current
   }
 
   return (
@@ -376,6 +386,14 @@ function SharedWorkItemView({
       data-project-work-view={view.type}
       className="min-w-0 space-y-4 p-4 sm:p-6"
     >
+      <WorkItemFiltersToolbar
+        value={filters}
+        labels={boardViews[0]?.labels ?? []}
+        matchingCount={visibleWorkItemIds.size}
+        totalCount={workItems.length}
+        searchInputRef={searchInputRef}
+        onChange={setFilters}
+      />
       <p
         role="alert"
         aria-live="polite"
@@ -387,6 +405,7 @@ function SharedWorkItemView({
       {view.type === "board" ? (
         <KanbanView
           workItems={workItems}
+          visibleWorkItemIds={visibleWorkItemIds}
           board={view}
           boards={activeBoards}
           onOpenWorkItem={openViewDialog}
@@ -401,6 +420,7 @@ function SharedWorkItemView({
       ) : (
         <CalendarView
           workItems={workItems}
+          visibleWorkItemIds={visibleWorkItemIds}
           labels={boardViews[0]?.labels ?? []}
           stagesByBoardId={stagesByBoardId}
           todayIsoDate={today}

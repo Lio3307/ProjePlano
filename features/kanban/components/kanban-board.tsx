@@ -8,6 +8,7 @@ import { KanbanColumn } from "./kanban-column"
 
 interface KanbanBoardProps {
   columns: KanbanBoardRecord[]
+  visibleWorkItemIds: ReadonlySet<string>
   board: ProjectBoardView
   blockingCountsByWorkItemId: Readonly<Record<string, number>>
   onOpenWorkItem: (
@@ -22,6 +23,7 @@ interface KanbanBoardProps {
 
 export function KanbanBoard({
   columns,
+  visibleWorkItemIds,
   board,
   blockingCountsByWorkItemId,
   onOpenWorkItem,
@@ -70,6 +72,7 @@ export function KanbanBoard({
               <KanbanColumn
                 key={column.board.id}
                 column={column}
+                visibleWorkItemIds={visibleWorkItemIds}
                 labels={board.labels}
                 blockingCountsByWorkItemId={blockingCountsByWorkItemId}
                 onOpenWorkItem={onOpenWorkItem}

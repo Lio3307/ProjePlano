@@ -42,6 +42,15 @@ can link to several tasks; unlinking does not delete document content.
 Table and Calendar Work views can be repeated. Calendar projects Board-owned
 tasks and does not create its own task records.
 
+Board and Calendar support title search plus one label, priority, and status
+filter each. Search ignores case and surrounding spaces; selected criteria
+combine. Status comes from the owning Board. **Clear filters** restores all
+tasks, and the result count covers the whole project, including other Calendar
+months and unscheduled tasks. An empty result does not delete any records.
+Hidden dependencies still count as blockers, and drag positions use the complete
+Board order. Filters reset when switching Work views/projects or restoring a
+backup; they are not saved or exported. Table has its own independent records.
+
 Create workspaces from **New workspace**. Workspace menus edit the name and
 description or delete the workspace after confirmation. Project menus edit the
 name, description, and status; archive/restore; or delete after confirmation.
