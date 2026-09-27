@@ -6,6 +6,7 @@ import { useId, useRef, useState } from "react"
 import { useShallow } from "zustand/react/shallow"
 
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
   formatWorkItemDate,
@@ -13,12 +14,14 @@ import {
   WorkItemStatusBadge,
 } from "@/features/work-item/components/work-item-meta"
 import { getProjectViewHref } from "../query-state"
-import { selectTaskBoards, selectTodayWorkItems, selectUpcomingWorkItems, type DatedWorkItem } from "../selectors"
+import { selectSearchWorkItems, selectTaskBoards, selectTodayWorkItems, selectUpcomingWorkItems, type WorkspaceWorkItem } from "../selectors"
 import { useProjectStore } from "../store-provider"
 import { useLocalToday } from "../use-local-today"
 import { ProjectWorkItemDialog } from "./project-work-item-dialog"
+import { BulkTaskDueDate } from "./bulk-task-due-date"
+import { QuickCreateTask } from "./quick-create-task"
 
-type AgendaMode = "today" | "upcoming"
+type AgendaMode = "today" | "upcoming" | "search"
 
 export function TaskAgendaDashboard({ mode }: { mode: AgendaMode }) {
   const today = useLocalToday()
@@ -26,15 +29,18 @@ export function TaskAgendaDashboard({ mode }: { mode: AgendaMode }) {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
       <header className="space-y-2 border-b pb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">{mode === "today" ? "Today" : "Upcoming"}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{mode === "today" ? "Today" : mode === "upcoming" ? "Upcoming" : "Search tasks"}</h1>
         {today ? (
           <p className="text-sm text-muted-foreground">
             {mode === "today" ? (
               <time dateTime={today}>{formatWorkItemDate(today)}</time>
-            ) : "Next 7 days"}
+            ) : mode === "upcoming" ? "Next 7 days" : "All deadlines"}
             <span aria-hidden="true"> · </span>
             All workspaces
           </p>
+        ) : null}
+        {today && mode !== "search" ? (
+          <QuickCreateTask initialDueDate={mode === "today" ? today : new Date(Date.parse(today) + 86_400_000).toISOString().slice(0, 10)} />
         ) : null}
       </header>
       {today ? (
@@ -47,9 +53,17 @@ export function TaskAgendaDashboard({ mode }: { mode: AgendaMode }) {
 }
 
 function AgendaTasks({ today, mode }: { today: string; mode: AgendaMode }) {
+  const [query, setQuery] = useState("")
+  const [includeCompleted, setIncludeCompleted] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(() => new Set())
+  const [bulkMessage, setBulkMessage] = useState<string | null>(null)
+  const bulkStatusRef = useRef<HTMLParagraphElement>(null)
   const items = useProjectStore(state => mode === "today"
     ? selectTodayWorkItems(state, today)
-    : selectUpcomingWorkItems(state, today))
+    : mode === "upcoming" ? selectUpcomingWorkItems(state, today)
+    : selectSearchWorkItems(state, query, includeCompleted))
+  const selectableItems = items.filter(item => item.board.stage !== "done")
+  const selectedItems = selectableItems.filter(item => selectedIds.has(item.workItem.id))
   const completion = useProjectStore(state => state.lastWorkItemCompletion)
   const completeWorkItem = useProjectStore(state => state.completeWorkItem)
   const undoCompleteWorkItem = useProjectStore(state => state.undoCompleteWorkItem)
@@ -62,10 +76,12 @@ function AgendaTasks({ today, mode }: { today: string; mode: AgendaMode }) {
   } | null>(null)
   const triggerRef = useRef<HTMLElement | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
-  const sections = mode === "today" ? [
-    { id: "overdue-tasks", title: "Overdue", items: items.filter(item => item.workItem.dueDate < today), emptyMessage: "No overdue tasks." },
+  const sections = mode === "search" ? [
+    { id: "search-tasks", title: "Tasks", items, emptyMessage: "No matching tasks." },
+  ] : mode === "today" ? [
+    { id: "overdue-tasks", title: "Overdue", items: items.filter(item => item.workItem.dueDate !== null && item.workItem.dueDate < today), emptyMessage: "No overdue tasks." },
     { id: "due-today-tasks", title: "Due today", items: items.filter(item => item.workItem.dueDate === today), emptyMessage: "No tasks due today." },
-  ] : Array.from(new Set(items.map(item => item.workItem.dueDate)), date => ({
+  ] : Array.from(new Set(items.flatMap(item => item.workItem.dueDate ? [item.workItem.dueDate] : [])), date => ({
     id: "due-" + date,
     title: formatWorkItemDate(date),
     items: items.filter(item => item.workItem.dueDate === date),
@@ -75,6 +91,13 @@ function AgendaTasks({ today, mode }: { today: string; mode: AgendaMode }) {
   function openTask(projectId: string, workItemId: string, trigger: HTMLElement) {
     triggerRef.current = trigger
     setSelectedTask({ key: crypto.randomUUID(), projectId, workItemId })
+  }
+
+  function toggleTaskSelection(workItemId: string) {
+    const next = new Set(selectedItems.map(item => item.workItem.id))
+    if (next.has(workItemId)) next.delete(workItemId)
+    else next.add(workItemId)
+    setSelectedIds(next)
   }
 
   function completeTask(workItemId: string, targetBoardId: string) {
@@ -113,7 +136,26 @@ function AgendaTasks({ today, mode }: { today: string; mode: AgendaMode }) {
   }
 
   return (
-    <div ref={listRef} role="region" tabIndex={-1} aria-label={mode === "today" ? "Today's tasks" : "Upcoming tasks"} className="space-y-8">
+    <div ref={listRef} role="region" tabIndex={-1} aria-label={mode === "today" ? "Today's tasks" : mode === "upcoming" ? "Upcoming tasks" : "Search results"} className="space-y-8">
+      {mode === "search" ? (
+        <div className="flex flex-wrap items-end gap-4">
+          <label className="grid min-w-0 flex-1 basis-64 gap-1.5 text-sm font-medium">
+            Search task titles
+            <Input type="search" value={query} placeholder="Search across projects…" onChange={event => {
+              setQuery(event.target.value)
+              setSelectedIds(new Set())
+            }} />
+          </label>
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input type="checkbox" checked={includeCompleted} onChange={event => {
+              setIncludeCompleted(event.target.checked)
+              setSelectedIds(new Set())
+            }} />
+            Include completed tasks
+          </label>
+          <p role="status" className="w-full text-sm text-muted-foreground">{items.length} tasks found</p>
+        </div>
+      ) : null}
       <div className={completion || undoneTitle ? "flex flex-wrap items-center gap-3 rounded-lg border bg-muted/40 p-4" : "sr-only"}>
         <p ref={statusRef} role="status" aria-atomic="true" tabIndex={-1} className="min-w-0 flex-1 break-words text-sm">
           {completion ? "Task completed: " + completion.title : undoneTitle ? "Task reopened: " + undoneTitle : ""}
@@ -121,12 +163,31 @@ function AgendaTasks({ today, mode }: { today: string; mode: AgendaMode }) {
         {completion ? <Button type="button" variant="outline" onClick={undoCompletion}>Undo completion</Button> : null}
       </div>
       <p ref={errorRef} role="alert" tabIndex={-1} className={actionError ? "text-sm text-destructive" : "sr-only"}>{actionError}</p>
+      {selectableItems.length > 0 ? (
+        <label className="flex min-h-11 items-center gap-2 text-sm">
+          <input type="checkbox" checked={selectedItems.length === selectableItems.length}
+            ref={node => { if (node) node.indeterminate = selectedItems.length > 0 && selectedItems.length < selectableItems.length }}
+            onChange={event => setSelectedIds(new Set(event.target.checked ? selectableItems.map(item => item.workItem.id) : []))} />
+          Select all unfinished tasks ({selectableItems.length})
+        </label>
+      ) : null}
+      {selectedItems.length > 0 ? (
+        <BulkTaskDueDate workItems={selectedItems.map(item => item.workItem)}
+          onClear={() => { setSelectedIds(new Set()); requestAnimationFrame(() => listRef.current?.focus()) }}
+          onApplied={() => {
+            setBulkMessage("Deadline updated for " + selectedItems.length + " tasks.")
+            setSelectedIds(new Set())
+            requestAnimationFrame(() => bulkStatusRef.current?.focus())
+          }} />
+      ) : null}
+      <p ref={bulkStatusRef} role="status" tabIndex={-1} className={bulkMessage ? "text-sm text-muted-foreground" : "sr-only"}>{bulkMessage}</p>
       {sections.length === 0 ? (
         <p className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
           No tasks due in the next 7 days.
         </p>
       ) : sections.map(section => (
-        <DatedTaskSection key={section.id} {...section} onOpenTask={openTask} onCompleteTask={completeTask} />
+        <TaskSection key={section.id} {...section} selectedIds={selectedIds} onToggleSelection={toggleTaskSelection}
+          onOpenTask={openTask} onCompleteTask={completeTask} />
       ))}
       {selectedTask ? (
         <ProjectWorkItemDialog
@@ -141,20 +202,24 @@ function AgendaTasks({ today, mode }: { today: string; mode: AgendaMode }) {
   )
 }
 
-function DatedTaskSection({
+function TaskSection({
   id,
   title,
   items,
   emptyMessage,
   onOpenTask,
   onCompleteTask,
+  selectedIds,
+  onToggleSelection,
 }: {
   id: string
   title: string
-  items: readonly DatedWorkItem[]
+  items: readonly WorkspaceWorkItem[]
   emptyMessage: string
   onOpenTask: (projectId: string, workItemId: string, trigger: HTMLElement) => void
   onCompleteTask: (workItemId: string, targetBoardId: string) => void
+  selectedIds: ReadonlySet<string>
+  onToggleSelection: (workItemId: string) => void
 }) {
   return (
     <section aria-labelledby={id} className="space-y-3">
@@ -172,6 +237,12 @@ function DatedTaskSection({
         <ul className="divide-y rounded-lg border bg-card">
           {items.map(({ workItem, board, project, workspace }) => (
             <li key={workItem.id} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
+              {board.stage !== "done" ? (
+                <label className="flex size-11 shrink-0 items-center justify-center">
+                  <input type="checkbox" aria-label={"Select " + workItem.title} checked={selectedIds.has(workItem.id)}
+                    onChange={() => onToggleSelection(workItem.id)} />
+                </label>
+              ) : null}
               <div className="min-w-0 flex-1 space-y-2">
                 <h3 className="text-sm font-medium">
                   <button
@@ -190,11 +261,11 @@ function DatedTaskSection({
                   <WorkItemStatusBadge status={board.stage} />
                   <WorkItemPriorityBadge priority={workItem.priority} />
                   <span className="text-xs text-muted-foreground">
-                    Due <time dateTime={workItem.dueDate}>{formatWorkItemDate(workItem.dueDate)}</time>
+                    {workItem.dueDate ? <>Due <time dateTime={workItem.dueDate}>{formatWorkItemDate(workItem.dueDate)}</time></> : "No due date"}
                   </span>
                 </div>
               </div>
-              <CompleteTaskAction projectId={project.id} viewId={board.viewId} workItemId={workItem.id} title={workItem.title} onComplete={onCompleteTask} />
+              {board.stage !== "done" ? <CompleteTaskAction projectId={project.id} viewId={board.viewId} workItemId={workItem.id} title={workItem.title} onComplete={onCompleteTask} /> : null}
               <Button
                 nativeButton={false}
                 variant="outline"

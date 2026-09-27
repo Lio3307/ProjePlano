@@ -52,6 +52,7 @@ interface WorkItemDialogProps {
   stagesByBoardId: WorkItemStagesByBoardId
   documents: readonly WorkItemDocumentOption[]
   workItem: WorkItem | null
+  initialDueDate?: string
   finalFocus: DialogFinalFocus
   onOpenChange: (open: boolean) => void
   onCreate: (fields: EditableWorkItemFields) => boolean
@@ -79,6 +80,7 @@ export function WorkItemDialog({
   stagesByBoardId,
   documents,
   workItem,
+  initialDueDate = "",
   finalFocus,
   onOpenChange,
   onCreate,
@@ -91,7 +93,7 @@ export function WorkItemDialog({
   const [existingTaskScreen, setExistingTaskScreen] =
     useState<ExistingTaskScreen>("view")
   const [draft, setDraft] = useState(() =>
-    createWorkItemFormValue(workItem)
+    createWorkItemFormValue(workItem, mode === "create" ? initialDueDate : "")
   )
   const [error, setError] = useState<string | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)

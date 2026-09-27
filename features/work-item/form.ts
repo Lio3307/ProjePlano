@@ -39,7 +39,8 @@ export type WorkItemFormValidationResult =
     }
 
 export function createWorkItemFormValue(
-  workItem: WorkItem | null
+  workItem: WorkItem | null,
+  initialDueDate = ""
 ): WorkItemFormValue {
   if (!workItem) {
     return {
@@ -48,7 +49,7 @@ export function createWorkItemFormValue(
       type: "feature",
       priority: "medium",
       startDate: "",
-      dueDate: "",
+      dueDate: initialDueDate,
       estimate: "",
       labelIds: [],
       checklist: [],

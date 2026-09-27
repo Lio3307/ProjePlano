@@ -27,6 +27,8 @@ type ProjectWorkItemDialogProps = {
   finalFocus: ComponentProps<typeof WorkItemDialog>["finalFocus"]
   onOpenChange: (open: boolean) => void
   onDelete?: (workItemId: string) => boolean
+  initialDueDate?: string
+  onCreated?: (title: string) => void
 }
 
 export function ProjectWorkItemDialog({
@@ -35,6 +37,8 @@ export function ProjectWorkItemDialog({
   finalFocus,
   onOpenChange,
   onDelete,
+  initialDueDate,
+  onCreated,
 }: ProjectWorkItemDialogProps) {
   const project = useProjectStore(state => selectProjectById(state, projectId))
   const resolvedWorkItems = useProjectStore(state => selectProjectResolvedWorkItems(state, projectId))
@@ -74,7 +78,7 @@ export function ProjectWorkItemDialog({
 
   function createTask(fields: EditableWorkItemFields) {
     if (!dialogBoard) return false
-    return createWorkItem({
+    const created = createWorkItem({
       id: "work-item-" + crypto.randomUUID(),
       projectId,
       boardId: dialogBoard.id,
@@ -83,6 +87,8 @@ export function ProjectWorkItemDialog({
       milestoneId: null,
       customFields: {},
     })
+    if (created) onCreated?.(fields.title)
+    return created
   }
 
   function handleCreateAndLinkDocument(workItemId: string, title: string) {
@@ -108,6 +114,7 @@ export function ProjectWorkItemDialog({
       stagesByBoardId={stagesByBoardId}
       documents={documents}
       workItem={dialogWorkItem}
+      initialDueDate={initialDueDate}
       finalFocus={finalFocus}
       onOpenChange={onOpenChange}
       onCreate={createTask}

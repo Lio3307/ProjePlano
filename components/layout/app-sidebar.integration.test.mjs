@@ -8,6 +8,7 @@ const VALID_SIDEBAR_HREFS = [
   "/dashboard",
   "/dashboard/today",
   "/dashboard/upcoming",
+  "/dashboard/search",
   "/dashboard/workspaces/project-alpha",
   "/dashboard/workspaces/project-alpha/projects/1",
   "/dashboard/workspaces/project-alpha/projects/2",
@@ -30,6 +31,7 @@ const ACTIVE_ROUTES = [
   { pathname: "/dashboard", href: "/dashboard" },
   { pathname: "/dashboard/today", href: "/dashboard/today" },
   { pathname: "/dashboard/upcoming", href: "/dashboard/upcoming" },
+  { pathname: "/dashboard/search", href: "/dashboard/search" },
   {
     pathname: "/dashboard/workspaces/project-alpha",
     href: "/dashboard/workspaces/project-alpha",

@@ -114,11 +114,35 @@ data. A newer completion replaces the previous Undo; moving/deleting that task,
 deleting its project/workspace, importing a backup, resetting or reloading clears
 it. Completion history is separate from deletion Undo and is not exported.
 
+**Search tasks** searches titles across all workspaces and unarchived projects,
+including tasks without a deadline or with a distant deadline. Matching ignores
+case and surrounding spaces. An empty search lists all unfinished tasks; enable
+**Include completed tasks** to include completed Boards. Results show workspace,
+project, Board and status, sorted by title then task ID. Click a title to use the
+same live View/Edit dialog. Search and its checkbox reset when leaving the page.
+
+**New task** in Today/Upcoming first selects an active project and unfinished
+Board, then opens the existing Create task form. The initial deadline is today
+in Today and tomorrow in Upcoming; edit or clear it before saving. Empty Boards
+are valid destinations. If the project has no unfinished Boards, **Open project**
+opens its Work area. Cancel saves nothing; successful creation shows confirmation.
+
+In Today, Upcoming and Search tasks, select unfinished tasks individually or use
+**Select all unfinished tasks**, then **Apply deadline** to set one date for the
+visible selection. Start dates and other task fields are preserved. Every record
+is validated before one atomic store update: missing/completed/archived tasks,
+invalid dates, invalid references or a deadline before any selected start date
+reject the entire operation. Changing search/filter clears selection. Hidden
+tasks are excluded, and a successful update clears selection and refreshes the
+lists. There is no bulk-deadline Undo. Changes remain in memory and JSON backups;
+no automatic persistence or backend is introduced.
+
 | Route | Purpose |
 | --- | --- |
 | `/dashboard` | Workspaces |
 | `/dashboard/today` | Due-today and overdue tasks across projects |
 | `/dashboard/upcoming` | Tasks due tomorrow through the next seven days |
+| `/dashboard/search` | Title search across project tasks, regardless of deadline |
 | `/dashboard/workspaces/[workspaceId]` | Workspace overview and projects |
 | `/dashboard/workspaces/[workspaceId]/projects/[projectId]` | Project shell |
 
@@ -145,7 +169,8 @@ typed records and callbacks; they do not read the store themselves. Table owns
 its data model and editing actions; snapshots live in the dashboard store and
 never create hidden normalized tasks.
 `features/project/components/project-work-item-dialog.tsx` connects the shared
-task dialog to live project records and store actions for Board, Calendar, Today and Upcoming.
+task dialog to live project records and store actions for Board, Calendar, Today,
+Upcoming and Search tasks, including agenda task creation.
 
 ## JSON backups
 

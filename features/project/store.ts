@@ -41,6 +41,7 @@ import {
   restoreDeletedWorkItemState,
   saveWorkItemState,
   updateWorkItemDateRangeState,
+  updateWorkItemDueDatesState,
   updateWorkItemState,
   unlinkWorkItemDocumentState,
   undoWorkItemCompletionState,
@@ -87,6 +88,7 @@ export type ProjectStoreActions = {
     startDate: string | null,
     dueDate: string | null
   ) => boolean
+  updateWorkItemDueDates: (workItemIds: readonly string[], dueDate: string) => boolean
   linkWorkItemDocument: (
     workItemId: string,
     resourceId: string
@@ -386,6 +388,14 @@ export function createProjectStore(
         return false
       }
 
+      set(next)
+      return true
+    },
+
+    updateWorkItemDueDates(workItemIds, dueDate) {
+      const current = readProjectState(get())
+      const next = updateWorkItemDueDatesState(current, workItemIds, dueDate)
+      if (next === current) return false
       set(next)
       return true
     },

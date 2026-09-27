@@ -5,6 +5,7 @@ import {
   CalendarRange,
   FolderKanban,
   LayoutDashboard,
+  Search,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import Link from "next/link"
@@ -98,6 +99,12 @@ export function AppSidebar() {
                 url="/dashboard/upcoming"
                 icon={CalendarRange}
                 isActive={pathname === "/dashboard/upcoming"}
+              />
+              <SidebarNavigationItem
+                title="Search tasks"
+                url="/dashboard/search"
+                icon={Search}
+                isActive={pathname === "/dashboard/search"}
               />
             </SidebarMenu>
           </SidebarGroupContent>

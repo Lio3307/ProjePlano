@@ -28,11 +28,15 @@ export type ResolvedWorkItem = {
   stage: WorkItemStatus
 }
 
-export type DatedWorkItem = {
-  workItem: WorkItem & { dueDate: string }
+export type WorkspaceWorkItem = {
+  workItem: WorkItem
   board: TaskBoard
   project: ProjectRecord
   workspace: Workspace
+}
+
+export type DatedWorkItem = WorkspaceWorkItem & {
+  workItem: WorkItem & { dueDate: string }
 }
 
 const PRIORITY_ORDER: Record<WorkItem["priority"], number> = {
@@ -52,6 +56,31 @@ const resolvedWorkItemCache: ArraySelectorCache<ResolvedWorkItem> =
 const documentLinkedWorkItemCache: ArraySelectorCache<DocumentLinkedWorkItem> =
   new WeakMap()
 const datedWorkItemCache: ArraySelectorCache<DatedWorkItem> = new WeakMap()
+const workspaceWorkItemCache: ArraySelectorCache<WorkspaceWorkItem> = new WeakMap()
+const searchWorkItemCache: ArraySelectorCache<WorkspaceWorkItem> = new WeakMap()
+
+function selectWorkspaceWorkItems(state: ProjectWorkspaceState): WorkspaceWorkItem[] {
+  return getCachedArray(workspaceWorkItemCache, state, "all", () =>
+    selectWorkspaces(state).flatMap(workspace =>
+      selectProjectsByWorkspaceId(state, workspace.id).filter(project => !project.archived).flatMap(project =>
+        selectProjectResolvedWorkItems(state, project.id).map(({ workItem, board }) => ({ workItem, board, project, workspace }))
+      )
+    )
+  )
+}
+
+export function selectSearchWorkItems(
+  state: ProjectWorkspaceState,
+  query: string,
+  includeCompleted = false
+): WorkspaceWorkItem[] {
+  const normalizedQuery = query.trim().toLowerCase()
+  return getCachedArray(searchWorkItemCache, state, JSON.stringify([normalizedQuery, includeCompleted]), () =>
+    selectWorkspaceWorkItems(state).filter(({ workItem, board }) =>
+      (includeCompleted || board.stage !== "done") && workItem.title.toLowerCase().includes(normalizedQuery)
+    ).sort((left, right) => left.workItem.title.localeCompare(right.workItem.title) || left.workItem.id.localeCompare(right.workItem.id))
+  )
+}
 
 export function selectTodayWorkItems(
   state: ProjectWorkspaceState,
@@ -78,24 +107,18 @@ function selectDatedWorkItems(
     const items: DatedWorkItem[] = []
     const todayTime = Date.parse(today)
 
-    for (const workspace of selectWorkspaces(state)) {
-      for (const project of selectProjectsByWorkspaceId(state, workspace.id)) {
-        if (project.archived) continue
-
-        for (const { workItem, board } of selectProjectResolvedWorkItems(state, project.id)) {
-          if (board.stage === "done" || !hasValidDueDate(workItem)) {
-            continue
-          }
-
-          // ISO date-only strings use UTC, so calendar-day distance is DST-independent.
-          const daysAhead = (Date.parse(workItem.dueDate) - todayTime) / 86_400_000
-          if (mode === "today" ? daysAhead > 0 : daysAhead <= 0 || daysAhead > 7) {
-            continue
-          }
-
-          items.push({ workItem, board, project, workspace })
-        }
+    for (const { workItem, board, project, workspace } of selectWorkspaceWorkItems(state)) {
+      if (board.stage === "done" || !hasValidDueDate(workItem)) {
+        continue
       }
+
+      // ISO date-only strings use UTC, so calendar-day distance is DST-independent.
+      const daysAhead = (Date.parse(workItem.dueDate) - todayTime) / 86_400_000
+      if (mode === "today" ? daysAhead > 0 : daysAhead <= 0 || daysAhead > 7) {
+        continue
+      }
+
+      items.push({ workItem, board, project, workspace })
     }
 
     return items.sort((left, right) =>

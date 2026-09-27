@@ -1,5 +1,6 @@
 import {
   isValidWorkItem,
+  isValidWorkItemDate,
   isValidWorkItemDateRange,
   wouldCreateDependencyCycle,
   type EditableWorkItemFields,
@@ -265,6 +266,30 @@ export function updateWorkItemDateRangeState(
       [workItemId]: candidate,
     },
   }
+}
+
+export function updateWorkItemDueDatesState(
+  state: ProjectWorkspaceState,
+  workItemIds: readonly string[],
+  dueDate: string
+) {
+  if (!isValidWorkItemDate(dueDate) || workItemIds.length === 0) return state
+
+  const workItemsById = { ...state.workItemsById }
+  let changed = false
+  for (const id of new Set(workItemIds)) {
+    const workItem = state.workItemsById[id]
+    if (!workItem || state.projectsById[workItem.projectId]?.archived ||
+      state.taskBoardsById[workItem.boardId]?.stage === "done" ||
+      !isValidWorkItemDateRange(workItem.startDate, dueDate) || !hasValidReferences(state, workItem)) {
+      return state
+    }
+    if (workItem.dueDate !== dueDate) {
+      workItemsById[id] = { ...workItem, dueDate }
+      changed = true
+    }
+  }
+  return changed ? { ...state, workItemsById } : state
 }
 
 export function linkWorkItemDocumentState(
