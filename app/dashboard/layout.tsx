@@ -2,6 +2,7 @@ import { AppSidebar } from "@/components/layout/app-sidebar"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { ProjectStoreProvider } from "@/features/project/store-provider"
 import { BackupDialog } from "@/features/project/components/backup-dialog"
+import { TaskDeletionNotice } from "@/features/project/components/task-deletion-notice"
 
 export default function DashboardLayout({
   children,
@@ -18,6 +19,7 @@ export default function DashboardLayout({
             <span className="text-sm font-medium">ProjePlano</span>
             <BackupDialog />
           </header>
+          <TaskDeletionNotice />
           <div className="flex min-w-0 flex-1 flex-col">{children}</div>
         </main>
       </SidebarProvider>

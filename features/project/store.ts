@@ -37,12 +37,14 @@ import {
   deleteWorkItemState,
   linkWorkItemDocumentState,
   moveWorkItemState,
+  restoreDeletedWorkItemState,
   saveWorkItemState,
   updateWorkItemDateRangeState,
   updateWorkItemState,
   unlinkWorkItemDocumentState,
   type CreateAndLinkWorkItemDocumentInput,
   type WorkItemDetailsPatch,
+  type WorkItemDeletion,
 } from "./work-item-state.ts"
 
 export type ProjectStoreActions = {
@@ -94,11 +96,13 @@ export type ProjectStoreActions = {
     input: CreateAndLinkWorkItemDocumentInput
   ) => boolean
   deleteWorkItem: (workItemId: string) => boolean
+  undoDeleteWorkItem: () => boolean
   resetDemo: () => void
 }
 
 export type ProjectStore = ProjectWorkspaceState & ProjectStoreActions & {
   dataRevision: number
+  lastWorkItemDeletion: WorkItemDeletion | null
 }
 export type ProjectStoreApi = StoreApi<ProjectStore>
 
@@ -110,6 +114,7 @@ export function createProjectStore(
   return createStore<ProjectStore>()((set, get) => ({
     ...cloneProjectState(baseline),
     dataRevision: 0,
+    lastWorkItemDeletion: null,
 
     createWorkspace(input) {
       const current = readProjectState(get())
@@ -131,7 +136,8 @@ export function createProjectStore(
       const current = readProjectState(get())
       const next = deleteWorkspaceState(current, id)
       if (next === current) return false
-      set(next)
+      const deletion = get().lastWorkItemDeletion
+      set({ ...next, lastWorkItemDeletion: deletion && next.projectsById[deletion.workItem.projectId] ? deletion : null })
       return true
     },
 
@@ -155,7 +161,8 @@ export function createProjectStore(
       const current = readProjectState(get())
       const next = deleteProjectState(current, id)
       if (next === current) return false
-      set(next)
+      const deletion = get().lastWorkItemDeletion
+      set({ ...next, lastWorkItemDeletion: deletion && next.projectsById[deletion.workItem.projectId] ? deletion : null })
       return true
     },
 
@@ -166,7 +173,7 @@ export function createProjectStore(
     importBackup(text) {
       const result = parseBackup(text)
       if (!result.ok) return result
-      set({ ...cloneProjectState(result.data), dataRevision: get().dataRevision + 1 })
+      set({ ...cloneProjectState(result.data), dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null })
       return result
     },
 
@@ -397,12 +404,29 @@ export function createProjectStore(
         return false
       }
 
-      set(next)
+      const deletion: WorkItemDeletion = {
+        workItem: structuredClone(current.workItemsById[workItemId]),
+        dependents: Object.values(current.workItemsById).flatMap(item => {
+          const dependencyIndex = item.dependencyIds.indexOf(workItemId)
+          return dependencyIndex < 0 ? [] : [{ id: item.id, dependencyIndex }]
+        }),
+      }
+      set({ ...next, lastWorkItemDeletion: deletion })
+      return true
+    },
+
+    undoDeleteWorkItem() {
+      const deletion = get().lastWorkItemDeletion
+      if (!deletion) return false
+      const current = readProjectState(get())
+      const next = restoreDeletedWorkItemState(current, deletion)
+      if (next === current) return false
+      set({ ...next, lastWorkItemDeletion: null })
       return true
     },
 
     resetDemo() {
-      set({ ...cloneProjectState(baseline), dataRevision: get().dataRevision + 1 })
+      set({ ...cloneProjectState(baseline), dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null })
     },
   }))
 }

@@ -26,6 +26,11 @@ export type CreateAndLinkWorkItemDocumentInput = {
   title: string
 }
 
+export type WorkItemDeletion = {
+  workItem: WorkItem
+  dependents: { id: string; dependencyIndex: number }[]
+}
+
 export function createWorkItemState(
   state: ProjectWorkspaceState,
   workItem: WorkItem
@@ -352,6 +357,32 @@ export function deleteWorkItemState(
   writeOrderedItems(nextWorkItems, remainingBoardItems)
 
   return { ...state, workItemsById: nextWorkItems }
+}
+
+export function restoreDeletedWorkItemState(
+  state: ProjectWorkspaceState,
+  deletion: WorkItemDeletion
+) {
+  const restored = createWorkItemState(state, deletion.workItem)
+  if (restored === state) return state
+
+  const workItemsById = { ...restored.workItemsById }
+  for (const { id, dependencyIndex } of deletion.dependents) {
+    const dependent = workItemsById[id]
+    if (!dependent) return state
+    if (dependent.dependencyIds.includes(deletion.workItem.id)) continue
+
+    const dependencyIds = [...dependent.dependencyIds]
+    dependencyIds.splice(dependencyIndex, 0, deletion.workItem.id)
+    workItemsById[id] = { ...dependent, dependencyIds }
+  }
+
+  const candidate = { ...restored, workItemsById }
+  const affectedIds = [deletion.workItem.id, ...deletion.dependents.map(item => item.id)]
+  // Validate the complete restored dependency graph before publishing any changes.
+  return affectedIds.every(id => hasValidReferences(candidate, workItemsById[id]))
+    ? candidate
+    : state
 }
 
 function hasValidReferences(

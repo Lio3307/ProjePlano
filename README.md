@@ -69,6 +69,15 @@ Deleting a project removes all its views, Boards, tasks, documents, milestones,
 and Tables. Deleting a workspace removes all its projects as well. These actions
 have no undo; an earlier JSON backup can restore the saved snapshot.
 
+Deleting a task offers **Undo** below the dashboard header, even after navigating
+to another page. It restores the last deleted task at its original Board position
+(or the end if the Board is now shorter), including links and incoming
+dependencies, without rolling back subsequent edits. If changed references or a
+dependency cycle prevent a valid restore, Undo reports an error and changes
+nothing. A newer task deletion replaces the previous Undo. Reload, successful
+backup import, demo reset, or deletion of the owning project/workspace clears it.
+Undo history is not included in JSON backups.
+
 ## Routes and ownership
 
 **Today** lists unfinished Board tasks across all workspaces and unarchived
