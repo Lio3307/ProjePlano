@@ -384,7 +384,7 @@ function SharedWorkItemView({
       <p
         role="alert"
         aria-live="polite"
-        className="min-h-5 text-sm text-destructive"
+        className={actionError ? "text-sm text-destructive" : "sr-only"}
       >
         {actionError}
       </p>
@@ -407,6 +407,7 @@ function SharedWorkItemView({
       ) : (
         <CalendarView
           workItems={workItems}
+          labels={boardViews[0]?.labels ?? []}
           stagesByBoardId={stagesByBoardId}
           membersById={membersById}
           todayIsoDate={today}

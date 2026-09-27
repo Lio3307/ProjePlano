@@ -1,12 +1,15 @@
 import type { ReactNode } from "react"
-import Link from "next/link"
 import { CheckCircle2, Circle } from "lucide-react"
 
 import type { WorkspaceMember } from "@/features/member/model"
-import type { BoardLabel } from "@/features/project/board"
+import {
+  resolveBoardLabels,
+  type BoardLabel,
+} from "@/features/project/board"
 import type { WorkItem, WorkItemStatus } from "../model"
 import type { WorkItemStagesByBoardId } from "../dependencies"
 import type { WorkItemDocumentOption } from "./work-item-documents-field"
+import { WorkItemDocumentManager } from "./work-item-document-manager"
 import {
   WorkItemAssignee,
   WorkItemLabelList,
@@ -26,6 +29,12 @@ interface WorkItemDetailsProps {
   stagesByBoardId: WorkItemStagesByBoardId
   workspaceMembers: readonly WorkspaceMember[]
   documents: readonly WorkItemDocumentOption[]
+  onLinkDocument: (workItemId: string, resourceId: string) => boolean
+  onUnlinkDocument: (workItemId: string, resourceId: string) => boolean
+  onCreateAndLinkDocument: (
+    workItemId: string,
+    title: string
+  ) => boolean
 }
 
 export function WorkItemDetails({
@@ -37,16 +46,16 @@ export function WorkItemDetails({
   stagesByBoardId,
   workspaceMembers,
   documents,
+  onLinkDocument,
+  onUnlinkDocument,
+  onCreateAndLinkDocument,
 }: WorkItemDetailsProps) {
   const assignee = workItem.assigneeId
     ? (workspaceMembers.find(
         (member) => member.id === workItem.assigneeId
       ) ?? null)
     : null
-  const labels = workItem.labelIds.flatMap((labelId) => {
-    const label = boardLabels.find((candidate) => candidate.id === labelId)
-    return label ? [label] : []
-  })
+  const labels = resolveBoardLabels(boardLabels, workItem.labelIds)
   const workItemsById = Object.fromEntries(
     projectWorkItems.map((candidate) => [candidate.id, candidate])
   )
@@ -54,10 +63,6 @@ export function WorkItemDetails({
     const dependency = workItemsById[dependencyId]
     return dependency ? [dependency] : []
   })
-  const linkedIds = new Set(workItem.linkedResourceIds)
-  const linkedDocuments = documents.filter((document) =>
-    linkedIds.has(document.id)
-  )
   const checklistProgress = getWorkItemChecklistProgress(
     workItem.checklist
   )
@@ -163,24 +168,15 @@ export function WorkItemDetails({
         )}
       </DetailSection>
 
-      <DetailSection title="Linked documents">
-        {linkedDocuments.length > 0 ? (
-          <ul className="space-y-2">
-            {linkedDocuments.map((document) => (
-              <li key={document.id}>
-                <Link
-                  href={document.href}
-                  className="block rounded-md border px-3 py-2 text-sm font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {document.title}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <EmptyValue>No linked documents.</EmptyValue>
-        )}
-      </DetailSection>
+      <WorkItemDocumentManager
+        key={workItem.id}
+        workItemId={workItem.id}
+        documents={documents}
+        linkedResourceIds={workItem.linkedResourceIds}
+        onLink={onLinkDocument}
+        onUnlink={onUnlinkDocument}
+        onCreateAndLink={onCreateAndLinkDocument}
+      />
     </div>
   )
 }

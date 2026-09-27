@@ -32,7 +32,6 @@ import type {
 } from "../model"
 import type { WorkItemStagesByBoardId } from "../dependencies"
 import { WorkItemDetails } from "./work-item-details"
-import { WorkItemDocumentDialog } from "./work-item-document-dialog"
 import type { WorkItemDocumentOption } from "./work-item-documents-field"
 import { WorkItemForm } from "./work-item-form"
 
@@ -98,9 +97,7 @@ export function WorkItemDialog({
   )
   const [error, setError] = useState<string | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
-  const [documentDialogOpen, setDocumentDialogOpen] = useState(false)
   const errorRef = useRef<HTMLParagraphElement | null>(null)
-  const documentDialogTriggerRef = useRef<HTMLButtonElement | null>(null)
   const isFormScreen = mode === "create" || existingTaskScreen === "edit"
 
   function focusError(message: string) {
@@ -192,6 +189,15 @@ export function WorkItemDialog({
     return null
   }
 
+  let dialogTitle = "Create task"
+
+  if (mode === "view") {
+    dialogTitle =
+      existingTaskScreen === "edit"
+        ? "Edit task"
+        : `View task: ${workItem?.title}`
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -199,21 +205,15 @@ export function WorkItemDialog({
         className="flex max-w-3xl flex-col overflow-hidden p-0"
       >
         <DialogHeader className="shrink-0 border-b bg-popover py-5 pl-6 pr-14">
-          <DialogTitle>
-            {isFormScreen
-              ? mode === "create"
-                ? "Create task"
-                : "Edit task"
-              : `View task: ${workItem?.title}`}
+          <DialogTitle className="wrap-anywhere">
+            {dialogTitle}
           </DialogTitle>
-          <DialogDescription>
-            {isFormScreen
-              ? "Tasks and their relationships remain local to this frontend demo."
-              : "View task details before choosing to edit them."}
+          <DialogDescription className="wrap-anywhere">
+            Board: {boardTitle}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-5">
+        <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-5 wrap-anywhere">
           {isFormScreen ? (
             <form
               id="work-item-form"
@@ -246,6 +246,9 @@ export function WorkItemDialog({
               stagesByBoardId={stagesByBoardId}
               workspaceMembers={workspaceMembers}
               documents={documents}
+              onLinkDocument={onLinkDocument}
+              onUnlinkDocument={onUnlinkDocument}
+              onCreateAndLinkDocument={onCreateAndLinkDocument}
             />
           ) : null}
         </div>
@@ -289,7 +292,7 @@ export function WorkItemDialog({
                   )
                 ) : null}
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap justify-end gap-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -315,37 +318,13 @@ export function WorkItemDialog({
               >
                 Close
               </Button>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  ref={documentDialogTriggerRef}
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDocumentDialogOpen(true)}
-                >
-                  Add document
-                </Button>
-                <Button type="button" onClick={handleStartEditing}>
-                  Edit task
-                </Button>
-              </div>
+              <Button type="button" onClick={handleStartEditing}>
+                Edit task
+              </Button>
             </>
           )}
         </DialogFooter>
       </DialogContent>
-
-      {mode === "view" && workItem ? (
-        <WorkItemDocumentDialog
-          open={documentDialogOpen}
-          workItemId={workItem.id}
-          documents={documents}
-          linkedResourceIds={workItem.linkedResourceIds}
-          finalFocus={documentDialogTriggerRef}
-          onOpenChange={setDocumentDialogOpen}
-          onLink={onLinkDocument}
-          onUnlink={onUnlinkDocument}
-          onCreateAndLink={onCreateAndLinkDocument}
-        />
-      ) : null}
     </Dialog>
   )
 }

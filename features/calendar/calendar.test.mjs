@@ -14,6 +14,7 @@ import {
 import {
   getCalendarDateDropId,
   getCalendarTaskDragId,
+  groupCalendarWorkItemsByMonth,
   parseCalendarDateDropId,
   parseCalendarTaskDragId,
   partitionCalendarWorkItems,
@@ -141,6 +142,50 @@ test("partitions scheduled and unscheduled shared work items", () => {
   assert.deepEqual(
     result.unscheduled.map((item) => item.id),
     ["without-date", "invalid-date"]
+  )
+})
+
+test("groups only valid selected-month tasks by sorted date without mutating inputs", () => {
+  const workItems = [
+    createWorkItem("later-first", "2026-09-18"),
+    createWorkItem("same-day-first", "2026-09-04"),
+    createWorkItem("outside-month", "2026-10-01"),
+    createWorkItem("same-day-second", "2026-09-04"),
+    createWorkItem("invalid", "2026-09-31"),
+    createWorkItem("undated", null),
+  ]
+  const originalWorkItems = structuredClone(workItems)
+  const activeMonth = { year: 2026, month: 8 }
+
+  const result = groupCalendarWorkItemsByMonth(
+    workItems,
+    activeMonth
+  )
+
+  assert.deepEqual(
+    result.map((group) => ({
+      isoDate: group.isoDate,
+      workItemIds: group.workItems.map((workItem) => workItem.id),
+    })),
+    [
+      {
+        isoDate: "2026-09-04",
+        workItemIds: ["same-day-first", "same-day-second"],
+      },
+      { isoDate: "2026-09-18", workItemIds: ["later-first"] },
+    ]
+  )
+  assert.deepEqual(workItems, originalWorkItems)
+  assert.deepEqual(activeMonth, { year: 2026, month: 8 })
+})
+
+test("returns no agenda groups for a selected month without tasks", () => {
+  assert.deepEqual(
+    groupCalendarWorkItemsByMonth(
+      [createWorkItem("other-month", "2026-08-31")],
+      { year: 2026, month: 8 }
+    ),
+    []
   )
 })
 

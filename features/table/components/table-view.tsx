@@ -155,67 +155,77 @@ export function TableView() {
   } = useEditableTable()
 
   return (
-    <div className="overflow-hidden border bg-background">
-      <Table className="min-w-max text-sm">
-        <TableHeader className="[&_th]:sticky [&_th]:top-0 [&_th]:bg-background">
-          <TableRow className="hover:bg-transparent">
-            <TableHead
-              className={cn(GUTTER_CELL, "z-20 h-9")}
-              aria-hidden="true"
-            />
+    <section
+      aria-label="Table"
+      className="overflow-hidden border bg-background"
+    >
+      <div
+        role="region"
+        aria-label="Editable table, horizontally scrollable"
+        tabIndex={0}
+        className="overflow-x-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&>[data-slot=table-container]]:overflow-visible"
+      >
+        <Table className="min-w-max text-sm">
+          <TableHeader className="[&_th]:sticky [&_th]:top-0 [&_th]:bg-background">
+            <TableRow className="hover:bg-transparent">
+              <TableHead
+                className={cn(GUTTER_CELL, "z-20 h-9")}
+                aria-hidden="true"
+              />
 
-            {columns.map((column) => (
-              <ColumnHeaderCell
-                key={column.id}
-                column={column}
-                canDelete={columns.length > 1}
-                onRename={(title) => renameColumn(column.id, title)}
-                onChangeType={(type) => changeColumnType(column.id, type)}
-                onDelete={() => deleteColumn(column.id)}
+              {columns.map((column) => (
+                <ColumnHeaderCell
+                  key={column.id}
+                  column={column}
+                  canDelete={columns.length > 1}
+                  onRename={(title) => renameColumn(column.id, title)}
+                  onChangeType={(type) => changeColumnType(column.id, type)}
+                  onDelete={() => deleteColumn(column.id)}
+                />
+              ))}
+
+              <TableHead className={cn(DATA_CELL, "z-20 h-9 w-9 min-w-9")}>
+                <div className="flex h-9 items-center justify-center">
+                  <IconButton onClick={addColumn} aria-label="Add column">
+                    <Plus className="size-4" />
+                  </IconButton>
+                </div>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
+            {rows.map((row, index) => (
+              <DataRow
+                key={row.id}
+                row={row}
+                rowNumber={index + 1}
+                columns={columns}
+                statusOptionActions={statusOptionActions}
+                onUpdateCell={(columnId, value) =>
+                  updateCell(row.id, columnId, value)
+                }
+                onDelete={() => deleteRow(row.id)}
               />
             ))}
 
-            <TableHead className={cn(DATA_CELL, "z-20 h-9 w-9 min-w-9")}>
-              <div className="flex h-9 items-center justify-center">
-                <IconButton onClick={addColumn} aria-label="Add column">
-                  <Plus className="size-4" />
-                </IconButton>
-              </div>
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-
-        <TableBody>
-          {rows.map((row, index) => (
-            <DataRow
-              key={row.id}
-              row={row}
-              rowNumber={index + 1}
-              columns={columns}
-              statusOptionActions={statusOptionActions}
-              onUpdateCell={(columnId, value) =>
-                updateCell(row.id, columnId, value)
-              }
-              onDelete={() => deleteRow(row.id)}
-            />
-          ))}
-
-          <TableRow className="hover:bg-transparent">
-            <TableCell colSpan={columns.length + 1} className="p-0">
-              <div className="flex px-1 py-1">
-                <button
-                  type="button"
-                  onClick={addRow}
-                  className="flex h-7 items-center gap-1.5 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
-                >
-                  <Plus className="size-4" />
-                  New
-                </button>
-              </div>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-    </div>
+            <TableRow className="hover:bg-transparent">
+              <TableCell colSpan={columns.length + 1} className="p-0">
+                <div className="flex px-1 py-1">
+                  <button
+                    type="button"
+                    onClick={addRow}
+                    className="flex h-11 items-center gap-1.5 rounded-md px-3 text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+                  >
+                    <Plus className="size-4" />
+                    Add row
+                  </button>
+                </div>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    </section>
   )
 }

@@ -5,9 +5,14 @@ import { GripVertical } from "lucide-react"
 
 import { Card } from "@/components/ui/card"
 import type { WorkspaceMember } from "@/features/member/model"
+import {
+  resolveBoardLabels,
+  type BoardLabel,
+} from "@/features/project/board"
 import { WorkItemBlockedBadge } from "@/features/work-item/components/work-item-blocked-badge"
 import {
   WorkItemAssignee,
+  WorkItemLabelList,
   WorkItemPriorityBadge,
   WorkItemStatusBadge,
   WorkItemTypeBadge,
@@ -18,6 +23,7 @@ import { getCalendarTaskDragId } from "../model"
 
 interface CalendarTaskCardProps {
   workItem: WorkItem
+  labels: readonly BoardLabel[]
   status: WorkItemStatus
   assignee: WorkspaceMember | null
   blockingCount: number
@@ -26,6 +32,7 @@ interface CalendarTaskCardProps {
 
 export function CalendarTaskCard({
   workItem,
+  labels,
   status,
   assignee,
   blockingCount,
@@ -35,6 +42,7 @@ export function CalendarTaskCard({
     id: getCalendarTaskDragId(workItem.id),
     type: "calendar-work-item",
   })
+  const resolvedLabels = resolveBoardLabels(labels, workItem.labelIds)
 
   return (
     <Card
@@ -51,11 +59,10 @@ export function CalendarTaskCard({
           data-work-item-open-trigger={workItem.id}
           className="min-w-0 flex-1 space-y-2 p-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
           aria-label={"Open details for " + workItem.title}
-          onClick={(event) =>
-            onOpen(workItem.id, event.currentTarget)
-          }
+          onClick={(event) => onOpen(workItem.id, event.currentTarget)}
         >
-          <h3 className="text-xs leading-4 font-medium">
+          <WorkItemLabelList labels={resolvedLabels} />
+          <h3 className="text-xs leading-4 font-medium wrap-anywhere">
             {workItem.title}
           </h3>
           <div className="flex flex-wrap gap-1">
@@ -64,9 +71,7 @@ export function CalendarTaskCard({
             <WorkItemPriorityBadge priority={workItem.priority} />
             <WorkItemBlockedBadge count={blockingCount} />
           </div>
-          {assignee ? (
-            <WorkItemAssignee assignee={assignee} />
-          ) : null}
+          {assignee ? <WorkItemAssignee assignee={assignee} /> : null}
         </button>
         <button
           ref={handleRef}

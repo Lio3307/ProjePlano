@@ -364,7 +364,7 @@ export function ProjectWorkspace({
           <BreadcrumbList className="flex-nowrap overflow-hidden">
             <BreadcrumbItem>
               <BreadcrumbLink render={<Link href="/dashboard" />}>
-                Dashboard
+                Workspaces
               </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
@@ -393,24 +393,21 @@ export function ProjectWorkspace({
 
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
           <div className="min-w-0">
-            <h1 className="truncate text-xl font-semibold">
+            <h1 className="text-2xl font-semibold tracking-tight wrap-anywhere">
               {project.title}
             </h1>
             {project.description ? (
-              <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+              <p className="mt-1 max-w-3xl text-sm text-muted-foreground wrap-anywhere">
                 {project.description}
               </p>
             ) : null}
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
-            <span className="rounded-full bg-primary/10 px-2 py-1 text-[0.625rem] font-medium capitalize text-primary">
+            <span className="rounded-sm bg-primary/10 px-2 py-1 text-xs font-medium capitalize text-primary">
               {project.status}
             </span>
-            <span className="rounded-full bg-muted px-2 py-1 text-[0.625rem] text-muted-foreground">
+            <span className="rounded-sm bg-muted px-2 py-1 text-xs text-muted-foreground">
               {templateName}
-            </span>
-            <span className="rounded-full border px-2 py-1 text-[0.625rem] text-muted-foreground">
-              Frontend demo
             </span>
           </div>
         </div>
@@ -523,13 +520,9 @@ function EmptyWorkState({
     <div className="h-full overflow-y-auto p-4 sm:p-6">
       <Card data-empty-work-state className="mx-auto max-w-xl">
         <CardHeader>
-          <CardTitle>No work views yet</CardTitle>
+          <CardTitle className="text-lg font-semibold">No work views yet</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="max-w-prose text-muted-foreground">
-            Add a Board to organize project tasks, or use the + menu for a
-            Table or Calendar view.
-          </p>
           <Button
             type="button"
             onClick={(event) => onAddBoard(event.currentTarget)}
@@ -553,7 +546,7 @@ function MissingProjectState({ workspace }: { workspace: Workspace }) {
           <CardTitle>Project not available</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-muted-foreground">
-          <p>This project is not available in the frontend demo state.</p>
+          <p>This project is not available in the current session.</p>
           <p>
             Projects created in the browser reset after a full page reload.
           </p>

@@ -57,7 +57,7 @@ export function WorkspaceOverviewHeader({
         <BreadcrumbList className="flex-nowrap overflow-hidden">
           <BreadcrumbItem>
             <BreadcrumbLink render={<Link href="/dashboard" />}>
-              Dashboard
+              Workspaces
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
@@ -71,7 +71,7 @@ export function WorkspaceOverviewHeader({
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
-          <h1 className="text-balance text-xl font-semibold">
+          <h1 className="text-balance text-2xl font-semibold tracking-tight wrap-anywhere">
             {workspace.title}
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">

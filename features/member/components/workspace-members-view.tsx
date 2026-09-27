@@ -5,6 +5,7 @@ import { Plus, UsersRound } from "lucide-react"
 import { useShallow } from "zustand/react/shallow"
 
 import { Button } from "@/components/ui/button"
+import { useIsMobile } from "@/hooks/use-mobile"
 import {
   selectWorkspaceMembers,
   selectWorkspaceWorkItemAssignments,
@@ -18,7 +19,10 @@ import type {
 import { buildWorkspaceMemberSummaries } from "../summary"
 import { RemoveWorkspaceMemberDialog } from "./remove-workspace-member-dialog"
 import { WorkspaceMemberDialog } from "./workspace-member-dialog"
-import { WorkspaceMemberTable } from "./workspace-member-table"
+import {
+  WorkspaceMemberList,
+  WorkspaceMemberTable,
+} from "./workspace-member-table"
 
 type MemberDialogSession =
   | { key: string; mode: "create" }
@@ -58,6 +62,7 @@ export function WorkspaceMembersView({
     () => buildWorkspaceMemberSummaries(members, assignments),
     [assignments, members]
   )
+  const isMobile = useIsMobile()
   const [memberDialog, setMemberDialog] =
     useState<MemberDialogSession | null>(null)
   const [removeDialog, setRemoveDialog] =
@@ -124,14 +129,10 @@ export function WorkspaceMembersView({
           </p>
           <h1
             id="workspace-members-title"
-            className="mt-1 text-xl font-semibold"
+            className="mt-1 text-2xl font-semibold"
           >
             Members
           </h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Manage the people available for task assignment in this
-            frontend demo.
-          </p>
         </div>
 
         <Button ref={addMemberRef} type="button" onClick={openCreateDialog}>
@@ -141,11 +142,19 @@ export function WorkspaceMembersView({
       </header>
 
       {summaries.length > 0 ? (
-        <WorkspaceMemberTable
-          summaries={summaries}
-          onEdit={openEditDialog}
-          onRemove={openRemoveDialog}
-        />
+        isMobile ? (
+          <WorkspaceMemberList
+            summaries={summaries}
+            onEdit={openEditDialog}
+            onRemove={openRemoveDialog}
+          />
+        ) : (
+          <WorkspaceMemberTable
+            summaries={summaries}
+            onEdit={openEditDialog}
+            onRemove={openRemoveDialog}
+          />
+        )
       ) : (
         <div className="rounded-lg border border-dashed p-8 text-center">
           <UsersRound
@@ -153,9 +162,6 @@ export function WorkspaceMembersView({
             className="mx-auto size-5 text-muted-foreground"
           />
           <p className="mt-3 font-medium">No members yet</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Add the first member to make them available for task assignment.
-          </p>
           <Button className="mt-4" type="button" onClick={openCreateDialog}>
             <Plus aria-hidden="true" />
             Add member

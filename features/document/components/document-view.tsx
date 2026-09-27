@@ -58,16 +58,16 @@ export function DocumentView({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b px-4 py-2.5">
-        <div className="min-w-0">
-          <p className="text-[0.625rem] uppercase tracking-wide text-muted-foreground">
-            Local editor content
+      <div className="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b px-4 py-3">
+        <div className="min-w-0 flex-1 basis-56">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            Project document
           </p>
-          <h2 className="truncate text-sm font-semibold">
+          <h2 className="wrap-anywhere text-lg font-semibold">
             {resourceTitle}
           </h2>
         </div>
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           {saveState === "error" ? (
             <p role="alert" className="text-xs text-destructive">
               Save failed
@@ -83,7 +83,6 @@ export function DocumentView({
           )}
           <Button
             type="button"
-            size="sm"
             disabled={!hasChanges}
             onClick={handleSave}
           >
@@ -161,5 +160,7 @@ function getSaveMessage(
     return "Unsaved changes"
   }
 
-  return saveState === "saved" ? "Saved locally" : "Up to date"
+  return saveState === "saved"
+    ? "Saved for this session"
+    : "Saved version loaded"
 }

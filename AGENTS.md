@@ -66,8 +66,10 @@ Do not start by scanning the whole repository.
 ### 5. Match the existing codebase
 
 - Match current directory ownership, naming, formatting, import style, component APIs, Tailwind tokens, and TypeScript patterns.
-- Prefer existing components and utilities over duplicate implementations.
-- Prefer direct, readable code and focused helpers over speculative abstractions or overengineering.
+- Apply SOLID pragmatically: give each module a focused responsibility, separate domain calculations from UI composition, and pass only the typed data and callbacks each consumer needs.
+- Prefer existing components and utilities over duplicate implementations. Apply DRY to repeated behavior with real callers; keep distinct domain workflows independent.
+- Use descriptive domain names and direct control flow. Use early returns and named helpers when they make a function easier to follow; comments should explain non-obvious decisions.
+- Extract a component, helper, or file when it has a clear responsibility or actual reuse. Keep local helpers near their consumers and prefer composition over extra inheritance, wrappers, or configuration layers.
 - Keep directly affected types, callers, styles, checks, and documentation consistent with the changed contract.
 
 ### 6. Keep investigation focused
@@ -108,6 +110,7 @@ The dashboard uses a dashboard-scoped in-memory project store seeded from local 
 
 - `npm.cmd run dev` - start the Next.js development server.
 - `npm.cmd run lint` - run repository-wide ESLint.
+- `.\node_modules\.bin\tsc.cmd --noEmit --incremental false` - check TypeScript without a production build or compiler cache writes.
 - `npm.cmd run build` - create a production build.
 - `npm.cmd run start` - serve an existing production build.
 - `node --test "path/to/file.test.mjs"` - run a focused model or source-contract test.
@@ -118,20 +121,20 @@ The dashboard uses a dashboard-scoped in-memory project store seeded from local 
 ## Repository map
 
 - `app/` - App Router routes, layouts, metadata, and global styles.
-  - `app/page.tsx` - minimal root route.
+  - `app/page.tsx` - redirects to the dashboard workspace list.
   - `app/dashboard/` - shared dashboard shell, the single project-store provider boundary, and workspace overview.
   - `app/dashboard/workspaces/[workspaceId]/` - workspace detail, normalized project list, and project-creation entry point.
   - `app/dashboard/workspaces/[workspaceId]/members/` - canonical workspace member directory; the Server Component validates the workspace and composes the interactive member view.
   - `app/dashboard/workspaces/[workspaceId]/projects/[projectId]/` - canonical project route; query state selects Overview, the Work area, Board, Table, Calendar, or a Document resource.
 - `features/` - domain-owned frontend code and typed mock boundaries.
-  - `features/workspace/` - workspace types, mock data, list, and pagination.
+  - `features/workspace/` - workspace types, mock data, navigable records, and the normalized-member overview header.
   - `features/member/` - workspace-member model, deterministic mocks, derived workload summaries, form conversion, add/edit/remove dialogs, and compact Notion-style directory table.
   - `features/project/` - normalized projects, routable Work views, explicit TaskBoards, shared Kanban-label configuration, task/document relationships, ordered Document resources, seed adapters, selectors, immutable transitions, Zustand store/provider, templates, Overview, two-level query navigation, creation flows, and renderer selection.
   - `features/work-item/` - normalized Board-owned task types and validation, project-local dependency calculations, form conversion, View/Edit/Create dialog states, shared-label and project-document selectors, and shared metadata and blocker presentation.
   - `features/table/` - Notion-style editable table model, fixtures, local state hook, cell editors, and view. Table rows are not normalized project work items and do not seed the project store.
   - `features/document/` - Tiptap editor and per-resource document view with linked Board-task backlinks; editing starts from saved store HTML and saves through a typed project callback.
   - `features/kanban/` - controlled dnd-kit projection of user-created Boards and their `WorkItem` cards, Board create/edit presentation, the shared label manager, horizontal canvas behavior, and cross-Board drag interactions; its legacy mock columns are seed-adapter input only.
-  - `features/calendar/` - controlled project-wide month-grid projection over Board-owned `WorkItem` records with Board-derived stages, date utilities, Unscheduled presentation, and due-date drag interactions; its mock tasks are seed-adapter input only.
+  - `features/calendar/` - controlled project-wide month-grid and mobile-agenda projections over Board-owned `WorkItem` records with Board-derived stages, shared labels, date utilities, Unscheduled presentation, and due-date drag interactions; its mock tasks are seed-adapter input only.
 - `components/layout/` - reusable application-shell UI such as the dashboard sidebar.
 - `components/ui/` - reusable low-level UI primitives. Check all consumers before changing a shared contract.
 - `hooks/` - shared React hooks.
@@ -158,7 +161,7 @@ The dashboard uses a dashboard-scoped in-memory project store seeded from local 
 - Keep primary project areas and their Work/Document subnavigation as horizontally scrollable, connected rectangular tab strips with left/right borders and vertical separators. The root document, dashboard shell, and project workspace must remain width-contained: size the dashboard main with `w-0 min-w-0 flex-1`, do not hide horizontal overflow on its ancestors, and let only the inner Kanban Board strip scroll horizontally when Boards exceed the viewport. This keeps every Board reachable while the surrounding page chrome stays fixed to the viewport width. First-Board creation is available from the Work `+` menu and empty Work state. Once the Kanban view exists, its toolbar keeps `Set labels` immediately beside `Add board`; Board settings stay on each individual Board, and Calendar does not own Board creation. Overview lists every owned Work view and keeps Document creation with Pinned resources. The Documents subnavigation uses the shared Base UI-backed dropdown to select a canonical `resource` URL and the shared Dialog/Input/Button primitives to create a document.
 - Put domain UI, types, mock data, and feature-local state in the owning `features/<feature>/` folder.
 - Controlled feature presentation components receive records through typed props. Each Kanban Board receives only its own normalized tasks, while the Kanban view supplies the shared label catalog. Calendar and Overview receive project-wide task aggregates with Board-derived stages. The standalone Table is the explicit exception: its feature-local hook initializes editable mock rows and columns owned by `features/table`, and those rows never seed hidden `WorkItem` records.
-- Keep assignee, shared-label, project-local dependency, date-range, and project-document selection in the shared work-item experience. Existing tasks open in read-only View before explicit Edit; Create and Edit forms expose start and due dates and may link existing project documents, while new document creation is available only for an already-saved task. The dialog receives ordered workspace members, project tasks, shared labels, and Board-stage lookups through typed props; work items store only `assigneeId` and `boardId`, and project state must reject missing or cross-workspace references. Dependency candidates may belong to another Board in the same project, the current task must be excluded, cyclic additions must be disabled in the UI, and project state validation remains the final safeguard. Label IDs must resolve through the owning Kanban view's shared controlled eight-color catalog. Documents remain project-local, may be shared by tasks on different Boards, and unlinking a document must not delete its content. Kanban and Calendar receive member lookups and computed unfinished-blocker counts through typed props; their cards must not read the project store directly. Dependencies are informative in the mockup and do not prevent Board or due-date drag changes.
+- Keep assignee, shared-label, project-local dependency, date-range, and project-document selection in the shared work-item experience. Existing tasks open in read-only View before explicit Edit; Create and Edit forms expose start and due dates and may link existing project documents, while new document creation is available only for an already-saved task. In an existing task's View state, manage project documents inline beneath the Linked documents section; keep + Add Docs out of the dialog footer and do not stack a second document dialog over the task dialog. The dialog receives ordered workspace members, project tasks, shared labels, and Board-stage lookups through typed props; work items store only `assigneeId` and `boardId`, and project state must reject missing or cross-workspace references. Dependency candidates may belong to another Board in the same project, the current task must be excluded, cyclic additions must be disabled in the UI, and project state validation remains the final safeguard. Label IDs must resolve through the owning Kanban view's shared controlled eight-color catalog. Documents remain project-local, may be shared by tasks on different Boards, and unlinking a document must not delete its content. Kanban and Calendar receive member lookups and computed unfinished-blocker counts through typed props; their cards must not read the project store directly. Dependencies are informative in the mockup and do not prevent Board or due-date drag changes.
 - Put reusable application-shell UI in `components/layout`, domain-agnostic primitives in `components/ui`, genuinely cross-feature hooks in `hooks`, and framework-independent shared helpers in `lib`.
 - Keep `DialogPrimitive.Viewport` non-scrolling. Simple dialogs may use the shared popup's bounded `overflow-y-auto` fallback; long form dialogs must override the popup with `overflow-hidden p-0` and place exactly one `no-scrollbar min-h-0 flex-1 overflow-y-auto` body between shrink-free header and footer sections. This keeps scrolling inside the dialog content while its chrome and close control remain visible.
 - Keep table, document, Kanban, and Calendar internals inside their respective features. `features/project/components/project-work-view.tsx` renders the standalone Table branch and is the store-connected bridge for the controlled Kanban and Calendar renderers; `features/project` owns normalized Work-view, TaskBoard, task, label, and document state but must not absorb feature presentation implementation. Task ordering is scoped by concrete `boardId`; Calendar and Overview may aggregate tasks project-wide, while document views show exact-Board backlinks for linked tasks.
@@ -166,6 +169,8 @@ The dashboard uses a dashboard-scoped in-memory project store seeded from local 
 - Keep `PaginationLink` as a direct anchor styled with `buttonVariants`. Do not compose it through the Base UI-backed `Button`; that previously produced different server/client `data-slot` attributes and a hydration mismatch. Preserve `components/ui/pagination.test.mjs` when changing this contract.
 - Do not add speculative `api`, `services`, `repositories`, or feature folders. Create a folder only when it owns real code required by the current task.
 - Reuse current UI primitives and design tokens before creating alternatives.
+- Use Geist for prose and controls and Geist Mono for code. Keep ordinary form controls readable and primary actions at least 44 px high; compact editable-table controls retain their feature-owned scale. Keep the product UI focused on records, actions, concise labels, and state feedback. Do not add tutorial steps, onboarding panels, usage guides, or instructional paragraphs without an explicit user request.
+- Render one Calendar or Members presentation at a time on mobile so hidden duplicate task/action triggers cannot receive focus. Calendar shares month state, task callbacks, and controlled metadata between its agenda and grid. Document state lifetime in README: dashboard data resets on reload; independent Table edits reset when the view unmounts.
 
 ## Workflow by task type
 
@@ -203,7 +208,9 @@ The dashboard uses a dashboard-scoped in-memory project store seeded from local 
 ## Verification rules
 
 - Match checks to the change. A documentation-only change needs content review and diff checks; it does not prove application behavior.
+- By default, the user runs the app and performs visual/manual checks. Do not start development or production servers or launch browser QA unless the user requests agent-run runtime verification. Complete applicable static checks and report the remaining runtime gap.
 - Start with the narrowest meaningful check for affected files. Run `npm.cmd run lint` and `npm.cmd run build` when the scope or risk warrants repository-wide validation.
+- Rerun successful checks only when new edits, failures, or unresolved concerns justify it. Test meaningful behavior and contracts; avoid tests that only mirror formatting or implementation details.
 - Run `git diff --check` and inspect the final diff for unintended edits, dead artifacts, debug output, and scope drift.
 - Re-read every changed file after editing. Confirm that each explicit user requirement is represented by current evidence.
 - Never claim lint, build, tests, runtime behavior, responsive behavior, browser QA, or manual QA unless that exact check completed successfully.

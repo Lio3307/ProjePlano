@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -90,10 +89,6 @@ export function WorkspaceMemberDialog({
             <DialogTitle>
               {mode === "create" ? "Add member" : "Edit member"}
             </DialogTitle>
-            <DialogDescription>
-              Member details stay in this frontend demo until the page is
-              reloaded.
-            </DialogDescription>
           </DialogHeader>
 
           <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-5">

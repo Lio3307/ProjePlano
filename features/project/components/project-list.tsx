@@ -1,6 +1,6 @@
 "use client"
 
-import { FolderPlus } from "lucide-react"
+import { ArrowUpRight, FolderPlus } from "lucide-react"
 import Link from "next/link"
 import { useShallow } from "zustand/react/shallow"
 
@@ -35,10 +35,7 @@ export function ProjectList({ workspaceId }: ProjectListProps) {
               className="size-4 text-muted-foreground"
             />
           </span>
-          <p className="font-medium">No projects yet</p>
-          <p className="max-w-sm text-muted-foreground">
-            Create a project from a programming template or start empty.
-          </p>
+          <p className="text-base font-medium">No projects yet</p>
         </CardContent>
       </Card>
     )
@@ -59,20 +56,25 @@ export function ProjectList({ workspaceId }: ProjectListProps) {
           aria-label={"Open " + project.title}
           className="block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          <Card className="h-full transition-colors hover:bg-muted/40">
-            <CardHeader>
-              <CardTitle>{project.title}</CardTitle>
-              <CardDescription>
+          <Card className="h-full rounded-md transition-colors hover:bg-muted/40">
+            <CardHeader className="gap-2">
+              <CardTitle className="text-lg font-semibold">
+                <h3 className="wrap-anywhere">{project.title}</h3>
+              </CardTitle>
+              <CardDescription className="text-sm leading-6 wrap-anywhere">
                 {project.description || "No description yet"}
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex items-center justify-between gap-3">
-              <span className="rounded-full bg-muted px-2 py-0.5 text-[0.625rem] font-medium capitalize text-muted-foreground">
+            <CardContent className="mt-auto flex flex-wrap items-center justify-between gap-3">
+              <span className="rounded-sm bg-muted px-2 py-1 text-xs font-medium capitalize text-muted-foreground">
                 {project.status}
               </span>
-              <span className="text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {project.viewIds.length} views / {project.resourceIds.length}{" "}
                 resources
+              </span>
+              <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+                Open project <ArrowUpRight className="size-4" aria-hidden="true" />
               </span>
             </CardContent>
           </Card>

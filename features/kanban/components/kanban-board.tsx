@@ -37,14 +37,9 @@ export function KanbanBoard({
     <div className="w-full min-w-0 max-w-full space-y-4">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-2">
-          <div>
-            <h2 className="break-words text-lg font-semibold [overflow-wrap:anywhere]">
-              {board.title}
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Create only the Boards this workflow needs.
-            </p>
-          </div>
+          <h2 className="text-lg font-semibold wrap-anywhere">
+            {board.title}
+          </h2>
           <WorkItemLabelList labels={board.labels} />
         </div>
 
@@ -70,7 +65,7 @@ export function KanbanBoard({
 
       {columns.length > 0 ? (
         <div
-          className="w-full min-w-0 max-w-full snap-x snap-proximity overflow-x-auto overscroll-x-contain pb-4 sm:snap-none"
+          className="w-full min-w-0 max-w-full snap-x snap-proximity overflow-x-auto overscroll-x-contain pb-4 sm:snap-none relative"
           aria-label="Kanban Boards"
         >
           <div className="flex min-w-max items-start gap-3">
@@ -91,9 +86,6 @@ export function KanbanBoard({
       ) : (
         <div className="rounded-xl border border-dashed bg-muted/20 px-5 py-10 text-center">
           <h3 className="text-sm font-medium">No Boards yet</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Add the first Board to start organizing tasks.
-          </p>
           <Button
             type="button"
             className="mt-4"

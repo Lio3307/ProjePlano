@@ -13,6 +13,15 @@ const WORKSPACE_HREFS = [
   "/dashboard/workspaces/project-foxtrot",
 ]
 
+test("redirects the root route into Workspaces", async () => {
+  const response = await fetch(new URL("/", BASE_URL), {
+    redirect: "manual",
+  })
+
+  assert.equal(response.status, 307)
+  assert.equal(response.headers.get("location"), "/dashboard")
+})
+
 test("keeps workspace actions outside workspace navigation links", async () => {
   const html = await getHtml("/dashboard")
   const workspaceCardLinks = getWorkspaceCardLinks(html)

@@ -2,11 +2,20 @@ import {
   isValidWorkItemDate,
   type WorkItem,
 } from "../work-item/model.ts"
+import {
+  getCalendarMonthFromIsoDate,
+  type CalendarMonth,
+} from "./date-utils.ts"
 
 const TASK_DRAG_PREFIX = "calendar-task:"
 const DATE_DROP_PREFIX = "calendar-date:"
 
 export type ScheduledWorkItem = WorkItem & { dueDate: string }
+
+export type CalendarAgendaGroup = {
+  readonly isoDate: string
+  readonly workItems: readonly ScheduledWorkItem[]
+}
 
 function hasScheduledDate(
   workItem: WorkItem
@@ -32,6 +41,45 @@ export function partitionCalendarWorkItems(
   }
 
   return { scheduled, unscheduled }
+}
+
+export function groupCalendarWorkItemsByMonth(
+  workItems: readonly WorkItem[],
+  month: CalendarMonth
+): CalendarAgendaGroup[] {
+  const grouped = new Map<string, ScheduledWorkItem[]>()
+
+  for (const workItem of workItems) {
+    if (!hasScheduledDate(workItem)) {
+      continue
+    }
+
+    const taskMonth = getCalendarMonthFromIsoDate(workItem.dueDate)
+
+    if (
+      taskMonth?.year !== month.year ||
+      taskMonth.month !== month.month
+    ) {
+      continue
+    }
+
+    const existing = grouped.get(workItem.dueDate)
+
+    if (existing) {
+      existing.push(workItem)
+    } else {
+      grouped.set(workItem.dueDate, [workItem])
+    }
+  }
+
+  return [...grouped.entries()]
+    .sort(([leftDate], [rightDate]) =>
+      leftDate.localeCompare(rightDate)
+    )
+    .map(([isoDate, groupedWorkItems]) => ({
+      isoDate,
+      workItems: groupedWorkItems,
+    }))
 }
 
 export function getCalendarTaskDragId(workItemId: string) {

@@ -145,19 +145,21 @@ export function ProjectNavigation({
                   <Button
                     ref={addViewTriggerRef}
                     type="button"
-                    size="icon-sm"
+                    size="sm"
                     variant="ghost"
-                    className="rounded-none border-0"
+                    className="min-h-11 rounded-none border-0"
                     aria-label="Add work view"
                     data-add-work-view-trigger
                   />
                 }
               >
                 <Plus aria-hidden="true" />
+                Add view
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
+              <DropdownMenuContent align="start" className="w-44">
                 {!hasBoardView ? (
                   <DropdownMenuItem
+                    className="min-h-11"
                     data-add-board-menu-item
                     onClick={(event) =>
                       onAddBoard(
@@ -171,6 +173,7 @@ export function ProjectNavigation({
                 {GENERIC_PROJECT_VIEW_TYPES.map((type) => (
                   <DropdownMenuItem
                     key={type}
+                    className="min-h-11"
                     onClick={() => onAddView(type)}
                   >
                     {PROJECT_VIEW_DEFINITIONS[type].title}
@@ -221,8 +224,8 @@ function ProjectTabLink({
           size: compact ? "sm" : "default",
           variant: active ? "secondary" : "ghost",
         }),
-        "shrink-0 rounded-none border-0 px-3",
-        active && "text-foreground"
+        "min-h-11 shrink-0 rounded-none border-0 px-3",
+        active && "bg-primary/5 text-primary"
       )}
     >
       {children}

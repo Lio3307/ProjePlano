@@ -14,7 +14,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -134,17 +133,9 @@ export function NewProjectDialog({
           onSubmit={handleCreate}
         >
           <DialogHeader className="shrink-0 border-b bg-popover py-5 pl-6 pr-14">
-            <p className="text-[0.625rem] font-medium uppercase tracking-wider text-muted-foreground">
-              Step {step} of 2
-            </p>
             <DialogTitle>
               {step === 1 ? "Choose a template" : "Project details"}
             </DialogTitle>
-            <DialogDescription>
-              {step === 1
-                ? "Pick a focused starting structure for your programming project."
-                : "Name the project and review the frontend-only structure."}
-            </DialogDescription>
           </DialogHeader>
 
           <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-5">
@@ -174,7 +165,7 @@ export function NewProjectDialog({
                         <span className="font-heading text-sm font-medium">
                           {template.name}
                         </span>
-                        <span className="text-xs/relaxed text-muted-foreground">
+                        <span className="text-sm/relaxed text-muted-foreground">
                           {template.description}
                         </span>
                         <span className="mt-auto text-xs/relaxed text-muted-foreground">
@@ -190,7 +181,7 @@ export function NewProjectDialog({
                 <div className="space-y-2">
                   <label
                     htmlFor="project-name"
-                    className="text-xs font-medium"
+                    className="text-sm font-medium"
                   >
                     Project name
                   </label>
@@ -204,17 +195,14 @@ export function NewProjectDialog({
                     placeholder="Developer portal"
                     onChange={(event) => setName(event.target.value)}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Required. You can use the same name for separate projects.
-                  </p>
                 </div>
 
                 <div className="space-y-2">
                   <label
                     htmlFor="project-description"
-                    className="text-xs font-medium"
+                    className="text-sm font-medium"
                   >
-                    Description
+                    Description (optional)
                   </label>
                   <Textarea
                     id="project-description"
@@ -230,11 +218,8 @@ export function NewProjectDialog({
                     <CardHeader>
                       <CardTitle>{selectedTemplate.name}</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-2">
+                    <CardContent className="space-y-2 text-sm">
                       <p>{getTemplateSummary(selectedTemplate)}</p>
-                      <p className="text-muted-foreground">
-                        Frontend demo data resets after a full page reload.
-                      </p>
                     </CardContent>
                   </Card>
                 ) : null}
@@ -244,7 +229,6 @@ export function NewProjectDialog({
                     {error}
                   </p>
                 ) : null}
-
               </div>
             )}
           </div>

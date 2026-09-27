@@ -36,7 +36,7 @@ const STATUS_LABELS: Record<WorkspaceMemberStatus, string> = {
   inactive: "Inactive",
 }
 
-type WorkspaceMemberTableProps = {
+type WorkspaceMemberPresentationProps = {
   summaries: readonly WorkspaceMemberSummary[]
   onEdit: (member: WorkspaceMember, trigger: HTMLButtonElement) => void
   onRemove: (member: WorkspaceMember, trigger: HTMLButtonElement) => void
@@ -46,7 +46,7 @@ export function WorkspaceMemberTable({
   summaries,
   onEdit,
   onRemove,
-}: WorkspaceMemberTableProps) {
+}: WorkspaceMemberPresentationProps) {
   return (
     <div className="rounded-lg border bg-card">
       <Table className="min-w-[48rem]">
@@ -99,6 +99,7 @@ export function WorkspaceMemberTable({
                   member={summary.member}
                   onEdit={onEdit}
                   onRemove={onRemove}
+                  compact
                 />
               </TableCell>
             </TableRow>
@@ -109,14 +110,77 @@ export function WorkspaceMemberTable({
   )
 }
 
+export function WorkspaceMemberList({
+  summaries,
+  onEdit,
+  onRemove,
+}: WorkspaceMemberPresentationProps) {
+  return (
+    <ul
+      aria-label="Workspace members"
+      className="divide-y rounded-lg border bg-card"
+    >
+      {summaries.map((summary) => (
+        <li key={summary.member.id} className="space-y-3 p-4">
+          <div className="flex items-start gap-3">
+            <span
+              aria-hidden="true"
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
+            >
+              {summary.member.initials}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">
+                {summary.member.name}
+              </p>
+              <p className="break-all text-xs text-muted-foreground">
+                {summary.member.email}
+              </p>
+            </div>
+            <MemberActions
+              member={summary.member}
+              onEdit={onEdit}
+              onRemove={onRemove}
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <MemberBadge>{ROLE_LABELS[summary.member.role]}</MemberBadge>
+            <MemberBadge muted={summary.member.status === "inactive"}>
+              {STATUS_LABELS[summary.member.status]}
+            </MemberBadge>
+          </div>
+
+          <dl className="grid grid-cols-2 gap-2 rounded-md bg-muted/45 p-3 text-xs">
+            <div>
+              <dt className="text-muted-foreground">Active tasks</dt>
+              <dd className="mt-1 font-medium tabular-nums">
+                {summary.activeTaskCount}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Projects</dt>
+              <dd className="mt-1 font-medium tabular-nums">
+                {summary.projectCount}
+              </dd>
+            </div>
+          </dl>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function MemberActions({
   member,
   onEdit,
   onRemove,
+  compact = false,
 }: {
   member: WorkspaceMember
-  onEdit: WorkspaceMemberTableProps["onEdit"]
-  onRemove: WorkspaceMemberTableProps["onRemove"]
+  onEdit: WorkspaceMemberPresentationProps["onEdit"]
+  onRemove: WorkspaceMemberPresentationProps["onRemove"]
+  compact?: boolean
 }) {
   const triggerRef = useRef<HTMLButtonElement>(null)
 
@@ -128,7 +192,7 @@ function MemberActions({
             ref={triggerRef}
             type="button"
             variant="ghost"
-            size="icon-sm"
+            size={compact ? "icon-sm" : "icon"}
             aria-label={"Open actions for " + member.name}
           />
         }
@@ -175,8 +239,8 @@ function MemberBadge({
     <span
       className={
         muted
-          ? "inline-flex rounded-full bg-muted px-2 py-0.5 text-[0.625rem] font-medium text-muted-foreground"
-          : "inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[0.625rem] font-medium text-primary"
+          ? "inline-flex rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
+          : "inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
       }
     >
       {children}

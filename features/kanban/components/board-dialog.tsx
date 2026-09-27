@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -113,10 +112,6 @@ export function BoardDialog({
             <DialogTitle>
               {mode === "create" ? "Create board" : "Board settings"}
             </DialogTitle>
-            <DialogDescription>
-              Configure one Board container. Labels are managed separately
-              for the whole Kanban view.
-            </DialogDescription>
           </DialogHeader>
 
           <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-5">

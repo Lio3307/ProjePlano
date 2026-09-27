@@ -10,7 +10,10 @@ import {
 
 import { Card } from "@/components/ui/card"
 import type { WorkspaceMember } from "@/features/member/model"
-import type { BoardLabel } from "@/features/project/board"
+import {
+  resolveBoardLabels,
+  type BoardLabel,
+} from "@/features/project/board"
 import { WorkItemBlockedBadge } from "@/features/work-item/components/work-item-blocked-badge"
 import {
   WorkItemAssignee,
@@ -53,11 +56,7 @@ export function KanbanCard({
     collisionPriority: 1,
   })
   const progress = getWorkItemChecklistProgress(workItem.checklist)
-  const resolvedLabels = workItem.labelIds.flatMap((labelId) => {
-    const label = labels.find((candidate) => candidate.id === labelId)
-
-    return label ? [label] : []
-  })
+  const resolvedLabels = resolveBoardLabels(labels, workItem.labelIds)
 
   return (
     <div

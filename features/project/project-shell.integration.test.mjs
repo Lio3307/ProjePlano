@@ -18,7 +18,8 @@ test("renders Overview as the default and invalid-view fallback", async () => {
     assert.equal(html.includes('data-project-workspace="2"'), true)
     assert.equal(html.includes('data-project-selection="overview"'), true)
     assert.equal(html.includes("Sprint Board"), true)
-    assert.equal(html.includes("Frontend demo"), true)
+    assert.equal(html.includes("Progress"), true)
+    assert.equal(html.includes("data-overview-work-views"), true)
     assert.equal(
       anchors.some((anchor) => anchor.includes("?view=timeline")),
       false
@@ -100,7 +101,7 @@ test("renders an owned Document and an explicit missing-resource state", async (
     documentHtml.includes('data-project-selection="document"'),
     true
   )
-  assert.equal(documentHtml.includes("Local editor content"), true)
+  assert.equal(documentHtml.includes("Project document"), true)
   assert.equal(documentHtml.includes("API Design"), true)
   assert.equal(documentHtml.includes("Endpoint guidelines"), true)
   assert.equal(documentHtml.includes("Decision log"), true)

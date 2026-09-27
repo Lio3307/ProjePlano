@@ -17,6 +17,17 @@ export type BoardLabel = {
   color: BoardLabelColor
 }
 
+export function resolveBoardLabels(
+  labels: readonly BoardLabel[],
+  labelIds: readonly string[]
+): BoardLabel[] {
+  return labelIds.flatMap((labelId) => {
+    const label = labels.find((candidate) => candidate.id === labelId)
+
+    return label ? [label] : []
+  })
+}
+
 export function isBoardLabelColor(value: string): value is BoardLabelColor {
   return BOARD_LABEL_COLORS.some((color) => color === value)
 }

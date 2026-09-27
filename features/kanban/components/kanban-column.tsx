@@ -104,7 +104,7 @@ export function KanbanColumn({
           ))
         ) : (
           <div className="flex min-h-24 items-center justify-center rounded-lg border border-dashed border-foreground/15 bg-background/50 px-4 text-center text-xs text-muted-foreground">
-            Drop tasks here
+            No tasks yet
           </div>
         )}
       </div>

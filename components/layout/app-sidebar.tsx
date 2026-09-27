@@ -21,6 +21,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import { selectProjectsByWorkspaceId } from "@/features/project/selectors"
 import { useProjectStore } from "@/features/project/store-provider"
@@ -36,6 +37,7 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ workspaces }: AppSidebarProps) {
+  const { setOpenMobile } = useSidebar()
   const pathname = usePathname()
   const pathnameWorkspaceId = getPathnameWorkspaceId(pathname)
   const workspace = pathnameWorkspaceId
@@ -59,7 +61,11 @@ export function AppSidebar({ workspaces }: AppSidebarProps) {
               size="lg"
               tooltip="ProjePlano"
               render={
-                <Link href="/dashboard" aria-label="ProjePlano dashboard" />
+                <Link
+                  href="/dashboard"
+                  aria-label="ProjePlano dashboard"
+                  onClick={() => setOpenMobile(false)}
+                />
               }
             >
               <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-xs font-semibold text-sidebar-primary-foreground">
@@ -69,8 +75,8 @@ export function AppSidebar({ workspaces }: AppSidebarProps) {
                 <span className="truncate text-sm font-semibold">
                   ProjePlano
                 </span>
-                <span className="truncate text-[10px] text-sidebar-foreground/60">
-                  Project workspace
+                <span className="truncate text-xs text-muted-foreground">
+                  A place for your next build
                 </span>
               </span>
             </SidebarMenuButton>
@@ -84,7 +90,7 @@ export function AppSidebar({ workspaces }: AppSidebarProps) {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarNavigationItem
-                title="Overview"
+                title="Workspaces"
                 url="/dashboard"
                 icon={LayoutDashboard}
                 isActive={pathname === "/dashboard"}
@@ -110,6 +116,11 @@ export function AppSidebar({ workspaces }: AppSidebarProps) {
                   icon={UsersRound}
                   isActive={pathname === workspace.url + "/members"}
                 />
+              </SidebarMenu>
+            </SidebarGroupContent>
+            <SidebarGroupLabel className="mt-4">Projects</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
                 {projects.map((project) => {
                   const url =
                     "/dashboard/workspaces/" +
@@ -155,15 +166,19 @@ function SidebarNavigationItem({
   title: string
   url: string
 }) {
+  const { setOpenMobile } = useSidebar()
+
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
+        className="min-h-11 data-active:bg-primary/5 data-active:text-primary"
         tooltip={title}
         isActive={isActive}
         render={
           <Link
             href={url}
             aria-current={isActive ? "page" : undefined}
+            onClick={() => setOpenMobile(false)}
           />
         }
       >

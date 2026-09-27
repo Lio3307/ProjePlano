@@ -28,8 +28,8 @@ const documentsFieldSourceUrl = new URL(
   "./components/work-item-documents-field.tsx",
   import.meta.url
 )
-const documentDialogSourceUrl = new URL(
-  "./components/work-item-document-dialog.tsx",
+const documentManagerSourceUrl = new URL(
+  "./components/work-item-document-manager.tsx",
   import.meta.url
 )
 const projectWorkViewSourceUrl = new URL(
@@ -75,14 +75,14 @@ test("keeps project-store ownership outside the shared dialog", async () => {
     detailsSource,
     labelsSource,
     documentsSource,
-    documentDialogSource,
+    documentManagerSource,
   ] =
     await Promise.all([
       readFile(dialogSourceUrl, "utf8"),
       readFile(detailsSourceUrl, "utf8"),
       readFile(labelsFieldSourceUrl, "utf8"),
       readFile(documentsFieldSourceUrl, "utf8"),
-      readFile(documentDialogSourceUrl, "utf8"),
+      readFile(documentManagerSourceUrl, "utf8"),
     ])
 
   assert.doesNotMatch(
@@ -90,7 +90,7 @@ test("keeps project-store ownership outside the shared dialog", async () => {
       detailsSource +
       labelsSource +
       documentsSource +
-      documentDialogSource,
+      documentManagerSource,
     /useProjectStore|project\/store/
   )
   assert.match(source, /role="alert"/)
@@ -155,10 +155,12 @@ test("uses controlled Board labels and project documents", async () => {
 })
 
 test("uses a View-first existing-task state machine", async () => {
-  const [dialogSource, detailsSource] = await Promise.all([
-    readFile(dialogSourceUrl, "utf8"),
-    readFile(detailsSourceUrl, "utf8"),
-  ])
+  const [dialogSource, detailsSource, documentManagerSource] =
+    await Promise.all([
+      readFile(dialogSourceUrl, "utf8"),
+      readFile(detailsSourceUrl, "utf8"),
+      readFile(documentManagerSourceUrl, "utf8"),
+    ])
   const formUsage = dialogSource.match(/<WorkItemForm[\s\S]*?\/>/)?.[0]
   const handleCancelStart = dialogSource.indexOf(
     "function handleCancel()"
@@ -181,7 +183,7 @@ test("uses a View-first existing-task state machine", async () => {
     /\{mode === "view" &&\s*existingTaskScreen === "edit" &&\s*workItem \? \([\s\S]*?\) : null\}/
   )?.[0]
   const viewFooterSource = footerSource.match(
-    /\) : \(\s*<>[\s\S]*?>\s*Close\s*<\/Button>[\s\S]*?>\s*Add document\s*<\/Button>[\s\S]*?>\s*Edit task\s*<\/Button>[\s\S]*?<\/>/
+    /\) : \(\s*<>[\s\S]*?>\s*Close\s*<\/Button>[\s\S]*?>\s*Edit task\s*<\/Button>[\s\S]*?<\/>/
   )?.[0]
 
   assert.match(dialogSource, /mode: "create" \| "view"/)
@@ -200,6 +202,7 @@ test("uses a View-first existing-task state machine", async () => {
     1
   )
   assert.ok(viewFooterSource)
+  assert.doesNotMatch(viewFooterSource, /Add document|Add Docs/)
   assert.doesNotMatch(viewFooterSource, />\s*Delete\s*</)
   assert.ok(editDeleteSource)
   assert.match(editDeleteSource, />\s*Delete\s*</)
@@ -210,49 +213,43 @@ test("uses a View-first existing-task state machine", async () => {
   assert.match(detailsSource, /Due date/)
   assert.match(detailsSource, /Estimate/)
   assert.match(detailsSource, /Checklist/)
-  assert.match(detailsSource, /Linked documents/)
+  assert.match(documentManagerSource, /Linked documents/)
   assert.match(detailsSource, /WorkItemLabelList/)
 })
 
-test("manages existing-task documents through a focused dialog", async () => {
-  const [dialogSource, documentDialogSource] = await Promise.all([
-    readFile(dialogSourceUrl, "utf8"),
-    readFile(documentDialogSourceUrl, "utf8"),
-  ])
+test("manages existing-task documents inline below linked documents", async () => {
+  const [dialogSource, detailsSource, documentManagerSource] =
+    await Promise.all([
+      readFile(dialogSourceUrl, "utf8"),
+      readFile(detailsSourceUrl, "utf8"),
+      readFile(documentManagerSourceUrl, "utf8"),
+    ])
 
-  assert.match(dialogSource, /<WorkItemDocumentDialog/)
-  assert.match(documentDialogSource, /<Dialog/)
-  assert.match(documentDialogSource, /type="checkbox"/)
-  assert.match(documentDialogSource, /onLink/)
-  assert.match(documentDialogSource, /onUnlink/)
-  assert.match(documentDialogSource, /onCreateAndLink/)
-  assert.match(documentDialogSource, /Create and link/)
-  assert.match(documentDialogSource, /role="alert"/)
-  assert.match(
-    documentDialogSource,
-    /flex max-w-lg flex-col overflow-hidden p-0/
+  assert.doesNotMatch(
+    dialogSource,
+    /WorkItemDocumentDialog|work-item-document-dialog|documentDialogOpen/
   )
-  assert.equal(
-    documentDialogSource.match(/overflow-y-auto/g)?.length,
-    1
-  )
-  assert.match(documentDialogSource, /<DialogHeader[^>]*shrink-0/)
-  assert.match(documentDialogSource, /<DialogFooter[^>]*shrink-0/)
-  assert.match(
-    documentDialogSource,
-    /className="no-scrollbar min-h-0 flex-1 overflow-y-auto/
-  )
-  assert.match(documentDialogSource, /finalFocus=\{finalFocus\}/)
+  assert.match(detailsSource, /<WorkItemDocumentManager/)
+  assert.doesNotMatch(documentManagerSource, /<Dialog/)
+  assert.match(documentManagerSource, />\s*Linked documents\s*</)
+  assert.match(documentManagerSource, /<Plus/)
+  assert.match(documentManagerSource, />\s*Add Docs\s*</)
+  assert.match(documentManagerSource, /aria-expanded=\{isExpanded\}/)
+  assert.match(documentManagerSource, /aria-controls=\{panelId\}/)
+  assert.match(documentManagerSource, /type="checkbox"/)
+  assert.match(documentManagerSource, /onLink/)
+  assert.match(documentManagerSource, /onUnlink/)
+  assert.match(documentManagerSource, /onCreateAndLink/)
+  assert.match(documentManagerSource, /Create and link/)
+  assert.match(documentManagerSource, /role="alert"/)
 
-  const headerIndex = documentDialogSource.indexOf("<DialogHeader")
-  const scrollIndex = documentDialogSource.indexOf(
-    'className="no-scrollbar min-h-0 flex-1 overflow-y-auto'
+  const emptyStateIndex = documentManagerSource.indexOf(
+    "No linked documents."
   )
-  const footerIndex = documentDialogSource.indexOf("<DialogFooter")
+  const addDocsIndex = documentManagerSource.indexOf("Add Docs")
 
-  assert.ok(headerIndex >= 0)
-  assert.ok(scrollIndex > headerIndex)
-  assert.ok(footerIndex > scrollIndex)
+  assert.ok(emptyStateIndex >= 0)
+  assert.ok(addDocsIndex > emptyStateIndex)
 })
 
 test("focuses specific task validation and relationship feedback", async () => {

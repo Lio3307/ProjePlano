@@ -42,7 +42,7 @@ test("renders the editable Notion-style Table without the shared task action", a
   assert.equal(html.includes("data-new-work-item-trigger"), false)
   assert.equal(html.includes('aria-label="Column name"'), true)
   assert.equal(html.includes('aria-label="Add column"'), true)
-  assert.equal(html.includes("New"), true)
+  assert.equal(html.includes("Add row"), true)
   assert.equal(html.includes("Design review"), true)
 })
 

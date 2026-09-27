@@ -19,20 +19,20 @@ export function BoardForm({ value, onChange }: BoardFormProps) {
 
   return (
     <div className="space-y-5">
-      <label className="grid gap-1.5 text-xs font-medium">
+      <label className="grid gap-1.5 text-sm font-medium">
         Board name
         <Input
           required
           autoFocus
           autoComplete="off"
           value={value.title}
-          placeholder="Todo"
+          placeholder="Development"
           onChange={(event) => setField("title", event.target.value)}
         />
       </label>
 
-      <label className="grid gap-1.5 text-xs font-medium">
-        Description
+      <label className="grid gap-1.5 text-sm font-medium">
+        Description (optional)
         <Textarea
           value={value.description}
           placeholder="What belongs on this Board?"

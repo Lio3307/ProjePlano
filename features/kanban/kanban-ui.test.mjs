@@ -2,6 +2,8 @@ import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 import test from "node:test"
 
+import { resolveBoardLabels } from "../project/board.ts"
+
 const componentUrl = new URL("./components/", import.meta.url)
 const dashboardLayoutUrl = new URL(
   "../../app/dashboard/layout.tsx",
@@ -169,8 +171,24 @@ test("resolves Board label IDs before rendering colored labels", async () => {
     readFile(workItemMetaUrl, "utf8"),
   ])
 
-  assert.match(card, /workItem\.labelIds\.flatMap/)
-  assert.match(card, /return label \? \[label\] : \[\]/)
+  const labels = [
+    { id: "design", name: "Design", color: "blue" },
+    { id: "urgent", name: "Urgent", color: "red" },
+  ]
+  const resolvedLabels = resolveBoardLabels(labels, [
+    "urgent",
+    "missing",
+    "design",
+  ])
+
+  assert.deepEqual(resolvedLabels, [labels[1], labels[0]])
+  assert.equal(resolvedLabels[0], labels[1])
+  assert.equal(resolvedLabels[1], labels[0])
+  assert.deepEqual(resolveBoardLabels(labels, []), [])
+  assert.match(
+    card,
+    /const resolvedLabels = resolveBoardLabels\(labels, workItem\.labelIds\)/
+  )
   assert.match(card, /<WorkItemLabelList labels=\{resolvedLabels\}/)
   assert.match(meta, /labels: readonly BoardLabel\[\]/)
   assert.match(meta, /BOARD_LABEL_STYLES\[label\.color\]/)

@@ -3,7 +3,6 @@ import {
   AlertTriangle,
   ArrowUpRight,
   CalendarClock,
-  CheckCircle2,
   FileText,
   Plus,
 } from "lucide-react"
@@ -21,12 +20,6 @@ import type { ProjectOverviewSummary } from "../overview"
 import { getProjectViewHref } from "../query-state"
 import type { SupportedProjectView } from "../view-definitions"
 
-const DEMO_ACTIVITY = [
-  "Project workspace is ready",
-  "Template structure is available",
-  "Frontend planning data is local",
-]
-
 type ProjectOverviewProps = {
   workspaceId: string
   projectId: string
@@ -43,7 +36,7 @@ export function ProjectOverview({
   onAddDocument,
 }: ProjectOverviewProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card size="sm">
           <CardHeader>
@@ -66,8 +59,8 @@ export function ProjectOverview({
                 style={{ width: summary.progressPercentage + "%" }}
               />
             </div>
-            <p className="text-muted-foreground">
-              {summary.completedWorkItems} of {summary.totalWorkItems} complete
+            <p className="text-sm text-muted-foreground">
+              {summary.completedWorkItems} of {summary.totalWorkItems} tasks complete
             </p>
           </CardContent>
         </Card>
@@ -112,10 +105,57 @@ export function ProjectOverview({
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        <Card className="min-w-0">
           <CardHeader>
-            <CardTitle>Pinned resources</CardTitle>
+            <CardTitle className="text-lg font-semibold">
+              <h2>Work views</h2>
+            </CardTitle>
+          </CardHeader>
+          <CardContent data-overview-work-views>
+            {workViews.length > 0 ? (
+              <ul className="divide-y rounded-md border">
+                {workViews.map((view) => (
+                  <li key={view.id}>
+                    <Button
+                      nativeButton={false}
+                      variant="ghost"
+                      className="h-auto min-h-11 w-full justify-between rounded-none px-3 py-3 whitespace-normal text-left"
+                      render={
+                        <Link
+                          href={getProjectViewHref(
+                            workspaceId,
+                            projectId,
+                            view.type,
+                            { workViewId: view.id }
+                          )}
+                        />
+                      }
+                    >
+                      <span className="min-w-0 font-medium wrap-anywhere">
+                        {view.title}
+                      </span>
+                      <ArrowUpRight
+                        aria-hidden="true"
+                        className="text-muted-foreground"
+                      />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted-foreground">
+                No work views yet
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="min-w-0">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">
+              <h2>Pinned resources</h2>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {summary.pinnedDocuments.length > 0 ? (
@@ -125,7 +165,7 @@ export function ProjectOverview({
                     key={document.id}
                     nativeButton={false}
                     variant="outline"
-                    className="w-full justify-start"
+                    className="h-auto min-h-11 w-full justify-start whitespace-normal text-left wrap-anywhere"
                     render={
                       <Link
                         href={getProjectViewHref(
@@ -157,67 +197,7 @@ export function ProjectOverview({
             </Button>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Demo activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-3">
-              {DEMO_ACTIVITY.map((activity) => (
-                <li key={activity} className="flex items-start gap-2">
-                  <CheckCircle2
-                    aria-hidden="true"
-                    className="mt-0.5 size-4 text-primary"
-                  />
-                  <span>{activity}</span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Work views</CardTitle>
-        </CardHeader>
-        <CardContent data-overview-work-views>
-          {workViews.length > 0 ? (
-            <ul className="divide-y rounded-md border">
-              {workViews.map((view) => (
-                <li key={view.id}>
-                  <Button
-                    nativeButton={false}
-                    variant="ghost"
-                    className="h-auto w-full justify-between rounded-none px-3 py-2.5"
-                    render={
-                      <Link
-                        href={getProjectViewHref(
-                          workspaceId,
-                          projectId,
-                          view.type,
-                          { workViewId: view.id }
-                        )}
-                      />
-                    }
-                  >
-                    {view.title}
-                    <ArrowUpRight
-                      aria-hidden="true"
-                      className="text-muted-foreground"
-                    />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground">
-              No work views yet. Open Work and use + to add one.
-            </p>
-          )}
-        </CardContent>
-      </Card>
     </div>
   )
 }

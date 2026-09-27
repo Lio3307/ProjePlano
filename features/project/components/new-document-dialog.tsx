@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -80,14 +79,10 @@ export function NewDocumentDialog({
         <form onSubmit={handleSubmit} className="space-y-5">
           <DialogHeader>
             <DialogTitle>New document</DialogTitle>
-            <DialogDescription>
-              Add another document to this project. Its content stays local
-              and resets when the page is reloaded.
-            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2">
-            <label htmlFor="document-name" className="text-xs font-medium">
+            <label htmlFor="document-name" className="text-sm font-medium">
               Document name
             </label>
             <Input

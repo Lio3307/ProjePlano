@@ -11,14 +11,9 @@ export function WorkspaceProjects({
   return (
     <section aria-labelledby="workspace-projects-title" className="space-y-4">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <div>
-          <h2 id="workspace-projects-title" className="font-semibold">
-            Projects
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Plan programming work with views and project resources.
-          </p>
-        </div>
+        <h2 id="workspace-projects-title" className="text-lg font-semibold">
+          Projects
+        </h2>
         <NewProjectDialog workspaceId={workspaceId} />
       </div>
       <ProjectList workspaceId={workspaceId} />

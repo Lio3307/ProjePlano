@@ -41,7 +41,7 @@ interface WorkItemFormProps {
 }
 
 const CONTROL_CLASS =
-  "h-7 w-full rounded-md border border-input bg-input/20 px-2 text-xs/relaxed outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
+  "h-11 w-full rounded-md border border-input bg-background px-3 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30"
 
 export function WorkItemForm({
   value,
@@ -96,227 +96,272 @@ export function WorkItemForm({
 
   return (
     <div className="space-y-5">
-      <label className="grid gap-1.5 text-xs font-medium">
-        Title
-        <Input
-          required
-          autoFocus
-          autoComplete="off"
-          value={value.title}
-          disabled={disabled}
-          onChange={(event) => setField("title", event.target.value)}
-        />
-      </label>
+      <section
+        aria-labelledby="work-item-details-fields"
+        className="space-y-4"
+      >
+        <h3
+          id="work-item-details-fields"
+          className="text-sm font-semibold"
+        >
+          Task details
+        </h3>
 
-      <label className="grid gap-1.5 text-xs font-medium">
-        Description
-        <Textarea
-          value={value.description}
-          disabled={disabled}
-          placeholder="What needs to be done?"
-          onChange={(event) =>
-            setField("description", event.target.value)
-          }
-        />
-      </label>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-1.5 text-xs font-medium">
-          Type
-          <select
-            className={CONTROL_CLASS}
-            value={value.type}
-            disabled={disabled}
-            onChange={(event) => {
-              const type = WORK_ITEM_TYPES.find(
-                (candidate) => candidate === event.target.value
-              )
-
-              if (type) {
-                setField("type", type)
-              }
-            }}
-          >
-            {WORK_ITEM_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {WORK_ITEM_TYPE_LABELS[type]}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="grid gap-1.5 text-xs font-medium">
-          Priority
-          <select
-            className={CONTROL_CLASS}
-            value={value.priority}
-            disabled={disabled}
-            onChange={(event) => {
-              const priority = WORK_ITEM_PRIORITIES.find(
-                (candidate) => candidate === event.target.value
-              )
-
-              if (priority) {
-                setField("priority", priority)
-              }
-            }}
-          >
-            {WORK_ITEM_PRIORITIES.map((priority) => (
-              <option key={priority} value={priority}>
-                {WORK_ITEM_PRIORITY_LABELS[priority]}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <WorkItemAssigneeField
-          members={workspaceMembers}
-          value={value.assigneeId}
-          disabled={disabled}
-          onChange={(assigneeId) => setField("assigneeId", assigneeId)}
-        />
-
-        <label className="grid gap-1.5 text-xs font-medium">
-          Estimate
+        <label className="grid gap-1.5 text-sm font-medium">
+          Title
           <Input
-            type="number"
-            min="0"
-            step="1"
-            inputMode="numeric"
-            value={value.estimate}
+            required
+            autoFocus
+            autoComplete="off"
+            value={value.title}
             disabled={disabled}
-            placeholder="Story points"
-            onChange={(event) => setField("estimate", event.target.value)}
+            onChange={(event) => setField("title", event.target.value)}
           />
         </label>
-      </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-1.5 text-xs font-medium">
-          Start date
-          <Input
-            type="date"
-            value={value.startDate}
+        <label className="grid gap-1.5 text-sm font-medium">
+          <span>
+            Description{" "}
+            <span className="font-normal text-muted-foreground">
+              (optional)
+            </span>
+          </span>
+          <Textarea
+            value={value.description}
             disabled={disabled}
+            placeholder="What needs to be done?"
             onChange={(event) =>
-              setField("startDate", event.target.value)
+              setField("description", event.target.value)
             }
           />
         </label>
 
-        <label className="grid gap-1.5 text-xs font-medium">
-          Due date
-          <Input
-            type="date"
-            value={value.dueDate}
-            disabled={disabled}
-            min={value.startDate || undefined}
-            onChange={(event) => setField("dueDate", event.target.value)}
-          />
-        </label>
-      </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="grid gap-1.5 text-sm font-medium">
+            Type
+            <select
+              className={CONTROL_CLASS}
+              value={value.type}
+              disabled={disabled}
+              onChange={(event) => {
+                const type = WORK_ITEM_TYPES.find(
+                  (candidate) => candidate === event.target.value
+                )
 
-      <WorkItemLabelsField
-        labels={boardLabels}
-        value={value.labelIds}
-        disabled={disabled}
-        onChange={(labelIds) => setField("labelIds", labelIds)}
-      />
-
-      <WorkItemDependenciesField
-        projectId={projectId}
-        workItemId={workItemId}
-        workItems={projectWorkItems}
-        stagesByBoardId={stagesByBoardId}
-        value={value.dependencyIds}
-        disabled={disabled}
-        onChange={(dependencyIds) =>
-          setField("dependencyIds", dependencyIds)
-        }
-      />
-
-      <WorkItemDocumentsField
-        documents={documents}
-        linkedResourceIds={value.linkedResourceIds}
-        disabled={disabled}
-        onChange={(linkedResourceIds) =>
-          setField("linkedResourceIds", linkedResourceIds)
-        }
-      />
-
-      <fieldset className="space-y-3" disabled={disabled}>
-        <legend className="text-xs font-medium">Checklist</legend>
-        <ul className="space-y-2">
-          {value.checklist.map((item) => (
-            <li
-              key={item.id}
-              className="flex items-center gap-2 rounded-lg bg-muted/50 p-2"
+                if (type) {
+                  setField("type", type)
+                }
+              }}
             >
-              <input
-                type="checkbox"
-                checked={item.completed}
-                aria-label={"Mark " + item.label + " complete"}
-                onChange={(event) =>
-                  updateChecklistItem(item.id, {
-                    completed: event.target.checked,
-                  })
-                }
-              />
-              <Input
-                value={item.label}
-                aria-label="Checklist item"
-                onChange={(event) =>
-                  updateChecklistItem(item.id, {
-                    label: event.target.value,
-                  })
-                }
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={"Remove " + item.label}
-                onClick={() =>
-                  setField(
-                    "checklist",
-                    value.checklist.filter(
-                      (candidate) => candidate.id !== item.id
-                    )
-                  )
-                }
-              >
-                <Trash2 aria-hidden="true" />
-              </Button>
-            </li>
-          ))}
-        </ul>
+              {WORK_ITEM_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {WORK_ITEM_TYPE_LABELS[type]}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <div className="flex gap-2">
-          <Input
-            value={checklistLabel}
-            placeholder="New checklist item"
-            aria-label="New checklist item"
-            onChange={(event) => setChecklistLabel(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault()
-                handleAddChecklistItem()
-              }
-            }}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!checklistLabel.trim()}
-            onClick={handleAddChecklistItem}
-          >
-            <Plus aria-hidden="true" />
-            Add
-          </Button>
+          <label className="grid gap-1.5 text-sm font-medium">
+            Priority
+            <select
+              className={CONTROL_CLASS}
+              value={value.priority}
+              disabled={disabled}
+              onChange={(event) => {
+                const priority = WORK_ITEM_PRIORITIES.find(
+                  (candidate) => candidate === event.target.value
+                )
+
+                if (priority) {
+                  setField("priority", priority)
+                }
+              }}
+            >
+              {WORK_ITEM_PRIORITIES.map((priority) => (
+                <option key={priority} value={priority}>
+                  {WORK_ITEM_PRIORITY_LABELS[priority]}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
-      </fieldset>
+      </section>
+
+      <section
+        aria-labelledby="work-item-assignment-fields"
+        className="space-y-5 border-t pt-5"
+      >
+        <h3
+          id="work-item-assignment-fields"
+          className="text-sm font-semibold"
+        >
+          Assignment and schedule
+        </h3>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <WorkItemAssigneeField
+            members={workspaceMembers}
+            value={value.assigneeId}
+            disabled={disabled}
+            onChange={(assigneeId) => setField("assigneeId", assigneeId)}
+          />
+
+          <label className="grid gap-1.5 text-xs font-medium">
+            Estimate
+            <Input
+              type="number"
+              min="0"
+              step="1"
+              inputMode="numeric"
+              value={value.estimate}
+              disabled={disabled}
+              placeholder="Story points"
+              onChange={(event) =>
+                setField("estimate", event.target.value)
+              }
+            />
+          </label>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="grid gap-1.5 text-xs font-medium">
+            Start date
+            <Input
+              type="date"
+              value={value.startDate}
+              disabled={disabled}
+              onChange={(event) =>
+                setField("startDate", event.target.value)
+              }
+            />
+          </label>
+
+          <label className="grid gap-1.5 text-xs font-medium">
+            Due date
+            <Input
+              type="date"
+              value={value.dueDate}
+              disabled={disabled}
+              min={value.startDate || undefined}
+              onChange={(event) =>
+                setField("dueDate", event.target.value)
+              }
+            />
+          </label>
+        </div>
+      </section>
+
+      <section
+        aria-labelledby="work-item-related-fields"
+        className="space-y-5 border-t pt-5"
+      >
+        <h3
+          id="work-item-related-fields"
+          className="text-sm font-semibold"
+        >
+          Related work
+        </h3>
+
+        <WorkItemLabelsField
+          labels={boardLabels}
+          value={value.labelIds}
+          disabled={disabled}
+          onChange={(labelIds) => setField("labelIds", labelIds)}
+        />
+
+        <WorkItemDependenciesField
+          projectId={projectId}
+          workItemId={workItemId}
+          workItems={projectWorkItems}
+          stagesByBoardId={stagesByBoardId}
+          value={value.dependencyIds}
+          disabled={disabled}
+          onChange={(dependencyIds) =>
+            setField("dependencyIds", dependencyIds)
+          }
+        />
+
+        <WorkItemDocumentsField
+          documents={documents}
+          linkedResourceIds={value.linkedResourceIds}
+          disabled={disabled}
+          onChange={(linkedResourceIds) =>
+            setField("linkedResourceIds", linkedResourceIds)
+          }
+        />
+
+        <fieldset className="space-y-3" disabled={disabled}>
+          <legend className="text-xs font-medium">Checklist</legend>
+          <ul className="space-y-2">
+            {value.checklist.map((item) => (
+              <li
+                key={item.id}
+                className="flex items-center gap-2 rounded-lg bg-muted/50 p-2"
+              >
+                <input
+                  type="checkbox"
+                  checked={item.completed}
+                  aria-label={"Mark " + item.label + " complete"}
+                  onChange={(event) =>
+                    updateChecklistItem(item.id, {
+                      completed: event.target.checked,
+                    })
+                  }
+                />
+                <Input
+                  value={item.label}
+                  aria-label="Checklist item"
+                  onChange={(event) =>
+                    updateChecklistItem(item.id, {
+                      label: event.target.value,
+                    })
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={"Remove " + item.label}
+                  onClick={() =>
+                    setField(
+                      "checklist",
+                      value.checklist.filter(
+                        (candidate) => candidate.id !== item.id
+                      )
+                    )
+                  }
+                >
+                  <Trash2 aria-hidden="true" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+
+          <div className="flex gap-2">
+            <Input
+              value={checklistLabel}
+              placeholder="New checklist item"
+              aria-label="New checklist item"
+              onChange={(event) => setChecklistLabel(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault()
+                  handleAddChecklistItem()
+                }
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!checklistLabel.trim()}
+              onClick={handleAddChecklistItem}
+            >
+              <Plus aria-hidden="true" />
+              Add
+            </Button>
+          </div>
+        </fieldset>
+      </section>
     </div>
   )
 }

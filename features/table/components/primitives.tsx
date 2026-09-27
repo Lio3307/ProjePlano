@@ -35,7 +35,7 @@ export function IconButton({
       className={cn(
         "flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
         reveal &&
-          "opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100",
+          "opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100 pointer-coarse:opacity-100 any-pointer-coarse:opacity-100",
         className
       )}
       {...props}

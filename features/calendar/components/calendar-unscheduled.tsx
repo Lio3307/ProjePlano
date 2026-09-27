@@ -1,6 +1,11 @@
 import type { WorkspaceMember } from "@/features/member/model"
 import {
+  resolveBoardLabels,
+  type BoardLabel,
+} from "@/features/project/board"
+import {
   WorkItemAssignee,
+  WorkItemLabelList,
   WorkItemPriorityBadge,
   WorkItemStatusBadge,
   WorkItemTypeBadge,
@@ -11,6 +16,7 @@ import type { WorkItem } from "@/features/work-item/model"
 
 interface CalendarUnscheduledProps {
   workItems: readonly WorkItem[]
+  labels: readonly BoardLabel[]
   stagesByBoardId: WorkItemStagesByBoardId
   membersById: Readonly<Record<string, WorkspaceMember>>
   blockingCountsByWorkItemId: Readonly<Record<string, number>>
@@ -19,6 +25,7 @@ interface CalendarUnscheduledProps {
 
 export function CalendarUnscheduled({
   workItems,
+  labels,
   stagesByBoardId,
   membersById,
   blockingCountsByWorkItemId,
@@ -55,7 +62,10 @@ export function CalendarUnscheduled({
                   onOpenWorkItem(workItem.id, event.currentTarget)
                 }
               >
-                <span className="min-w-40 flex-1 font-medium">
+                <WorkItemLabelList
+                  labels={resolveBoardLabels(labels, workItem.labelIds)}
+                />
+                <span className="min-w-0 basis-40 flex-1 font-medium wrap-anywhere">
                   {workItem.title}
                 </span>
                 <WorkItemStatusBadge
