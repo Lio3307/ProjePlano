@@ -10,11 +10,12 @@ import { useProjectStore } from "../store-provider"
 
 const SELECT_CLASS = "h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-base md:text-sm"
 
-export function TaskAgendaFilters({ value, onChange, matchingCount, totalCount }: {
+export function TaskAgendaFilters({ value, onChange, matchingCount, totalCount, showUndated = false }: {
   value: AgendaFilters
   onChange: (value: AgendaFilters) => void
   matchingCount: number
   totalCount: number
+  showUndated?: boolean
 }) {
   const workspaceRef = useRef<HTMLSelectElement>(null)
   const workspaces = useProjectStore(useShallow(selectWorkspaces))
@@ -61,9 +62,23 @@ export function TaskAgendaFilters({ value, onChange, matchingCount, totalCount }
           </select>
         </label>
       </div>
+      <div className="flex flex-wrap gap-4">
+        <label className="flex min-h-11 items-center gap-2 text-sm">
+          <input type="checkbox" checked={value.blockedOnly ?? false}
+            onChange={event => onChange({ ...value, blockedOnly: event.target.checked })} />
+          Blocked by dependencies
+        </label>
+        {showUndated ? (
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input type="checkbox" checked={value.undatedOnly ?? false}
+              onChange={event => onChange({ ...value, undatedOnly: event.target.checked })} />
+            No deadline
+          </label>
+        ) : null}
+      </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p role="status" aria-atomic="true" className="text-sm text-muted-foreground">{matchingCount} of {totalCount} tasks</p>
-        <Button type="button" variant="ghost" disabled={!value.workspaceId && !value.projectId && !value.priority}
+        <Button type="button" variant="ghost" disabled={!value.workspaceId && !value.projectId && !value.priority && !value.blockedOnly && !value.undatedOnly}
           onClick={() => { onChange({ workspaceId: "", projectId: "", priority: "" }); workspaceRef.current?.focus() }}>
           Clear filters
         </Button>

@@ -18,8 +18,10 @@ export function BulkTaskActions({ workItems, onApplied, onClear }: {
 }) {
   const updatePriorities = useProjectStore(state => state.updateWorkItemPriorities)
   const moveWorkItems = useProjectStore(state => state.moveWorkItems)
+  const updateLabels = useProjectStore(state => state.updateWorkItemLabels)
   const [priority, setPriority] = useState<WorkItemPriority | "">("")
   const [boardId, setBoardId] = useState("")
+  const [labelId, setLabelId] = useState("")
   const [error, setError] = useState<string | null>(null)
   const errorRef = useRef<HTMLParagraphElement>(null)
   const projectId = workItems.length > 0 && workItems.every(item => item.projectId === workItems[0].projectId)
@@ -28,6 +30,9 @@ export function BulkTaskActions({ workItems, onApplied, onClear }: {
     ? selectProjectViews(state, projectId).flatMap(view => view.type === "board" ? selectTaskBoards(state, projectId, view.id) : [])
     : []))
   const target = boards.find(board => board.id === boardId)
+  const labels = useProjectStore(useShallow(state => projectId
+    ? selectProjectViews(state, projectId).flatMap(view => view.type === "board" ? view.labels : []) : []))
+  const label = labels.find(candidate => candidate.id === labelId)
 
   function finish(success: boolean, message: string) {
     if (success) {
@@ -73,7 +78,25 @@ export function BulkTaskActions({ workItems, onApplied, onClear }: {
           </label>
           <Button type="submit" disabled={!target || workItems.every(item => item.boardId === target.id)}>Move tasks</Button>
         </form>
-        {!projectId ? <p className="w-full text-sm text-muted-foreground">Select tasks from one project to move Boards.</p> : null}
+        <div className="flex min-w-0 flex-wrap items-end gap-3">
+          <label className="grid min-w-0 gap-1.5 text-sm font-medium">
+            Label
+            <select className={SELECT_CLASS} disabled={!projectId || labels.length === 0} value={label?.id ?? ""}
+              onChange={event => { setLabelId(event.target.value); setError(null) }}>
+              <option value="">{projectId && labels.length === 0 ? "No labels available" : "Select label"}</option>
+              {labels.map(label => <option key={label.id} value={label.id}>{label.name}</option>)}
+            </select>
+          </label>
+          <Button type="button" disabled={!label || workItems.every(item => item.labelIds.includes(label.id))}
+            onClick={() => { if (label) finish(updateLabels(workItems.map(item => item.id), label.id, "add"), "Label added: " + label.name) }}>
+            Add label
+          </Button>
+          <Button type="button" variant="outline" disabled={!label || workItems.every(item => !item.labelIds.includes(label.id))}
+            onClick={() => { if (label) finish(updateLabels(workItems.map(item => item.id), label.id, "remove"), "Label removed: " + label.name) }}>
+            Remove label
+          </Button>
+        </div>
+        {!projectId ? <p className="w-full text-sm text-muted-foreground">Select tasks from one project to move Boards or change labels.</p> : null}
         <p ref={errorRef} role="alert" tabIndex={-1} className={error ? "w-full text-sm text-destructive" : "sr-only"}>{error}</p>
       </div>
     </section>

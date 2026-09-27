@@ -127,8 +127,19 @@ existing result ordering is preserved. Project options show active projects,
 grouped by workspace, including projects with no matching tasks. Changing
 workspace clears the project filter. Removed/archived selections show as
 unavailable and return no results until cleared. **Clear filters** resets these
-three dropdowns; the search text and completed-task checkbox remain unchanged.
+dropdowns and the dependency/deadline checkboxes; search text, sort order and the
+completed-task checkbox remain unchanged.
 Filters reset when leaving the page or restoring a backup and are not exported.
+
+**Blocked by dependencies** on all three pages shows tasks with unfinished
+dependencies, even when the blocking tasks are hidden by search, dates or filters.
+Each matching row shows its blocker count. Completing or reopening a dependency
+updates this projection. **No deadline** in Search tasks shows undated tasks;
+it combines with the other filters and the completed-task checkbox. Search also
+supports **Title A–Z**, **Earliest deadline** (undated tasks last), and **Highest
+priority** (urgent first), with title and task ID as stable tie-breakers. Sorting
+does not change Board order. Changing sort order clears selection; leaving the
+page or importing a backup resets it to title order.
 
 **New task** in Today/Upcoming first selects an active project and unfinished
 Board, then opens the existing Create task form. The initial deadline is today
@@ -143,7 +154,7 @@ is validated before one atomic store update: missing/completed/archived tasks,
 invalid dates, invalid references or a deadline before any selected start date
 reject the entire operation. Changing search/filter clears selection. Hidden
 tasks are excluded, and a successful update clears selection and refreshes the
-lists. There is no bulk-deadline Undo. Changes remain in memory and JSON backups;
+lists. Changes remain in memory and JSON backups;
 no automatic persistence or backend is introduced.
 
 The same visible unfinished-task selection supports **Apply priority** across
@@ -155,9 +166,25 @@ options identify Completed Boards, where moved tasks count as done. Mixed-projec
 selections disable moving but still allow priority and deadline changes. Missing,
 completed, archived or invalid tasks reject the entire batch without partial
 writes. Success clears selection and updates the lists, project progress and
-backup data. These bulk actions do not create Undo history; moving a task covered
-by an earlier completion Undo clears that stale Undo. No backup format change is
-required.
+backup data. Moving a task covered by an earlier completion Undo clears that
+stale completion Undo. No backup format change is required.
+
+**Add label** and **Remove label** apply one existing shared label to the visible
+selection within a single project, preserving other labels and task fields.
+Mixed-project selections disable label actions. Empty catalogs show an empty
+state; labels are managed through the Board's existing **Set labels** control.
+Missing/foreign labels, invalid relationships, archived projects and completed
+tasks reject the entire batch. Reapplying the same label operation changes nothing.
+
+**Undo bulk change** is available on Today, Upcoming and Search tasks for the
+latest successful bulk deadline, priority, Board or label change, across navigation.
+It restores only affected fields and keeps later edits to other fields. Board
+Undo restores original source positions, clamped to the current Board length,
+without replacing entire Board lists. If affected fields, Board stages or required
+references have changed, or restored dates would be invalid, Undo refuses the
+whole operation. A newer successful bulk action replaces the previous history;
+failed/no-op actions preserve it. Deleting an affected task or its project/workspace,
+successful backup import, reset or reload clears it. History is not exported.
 
 | Route | Purpose |
 | --- | --- |

@@ -33,6 +33,10 @@ import {
 } from "./project-state.ts"
 import { createProjectSeedState } from "./seed-data.ts"
 import {
+  captureBulkWorkItemChange, retainBulkWorkItemChange, undoBulkWorkItemChangeState,
+  type BulkWorkItemChange,
+} from "./bulk-work-item-history.ts"
+import {
   createAndLinkWorkItemDocumentState,
   createWorkItemState,
   completeWorkItemState,
@@ -45,6 +49,7 @@ import {
   updateWorkItemDateRangeState,
   updateWorkItemDueDatesState,
   updateWorkItemPrioritiesState,
+  updateWorkItemLabelsState,
   updateWorkItemState,
   unlinkWorkItemDocumentState,
   undoWorkItemCompletionState,
@@ -94,6 +99,8 @@ export type ProjectStoreActions = {
   updateWorkItemDueDates: (workItemIds: readonly string[], dueDate: string) => boolean
   updateWorkItemPriorities: (workItemIds: readonly string[], priority: WorkItemPriority) => boolean
   moveWorkItems: (workItemIds: readonly string[], targetBoardId: string) => boolean
+  updateWorkItemLabels: (workItemIds: readonly string[], labelId: string, operation: "add" | "remove") => boolean
+  undoBulkWorkItemChange: () => boolean
   linkWorkItemDocument: (
     workItemId: string,
     resourceId: string
@@ -116,6 +123,7 @@ export type ProjectStore = ProjectWorkspaceState & ProjectStoreActions & {
   dataRevision: number
   lastWorkItemDeletion: WorkItemDeletion | null
   lastWorkItemCompletion: WorkItemCompletion | null
+  lastBulkWorkItemChange: BulkWorkItemChange | null
 }
 export type ProjectStoreApi = StoreApi<ProjectStore>
 
@@ -129,6 +137,7 @@ export function createProjectStore(
     dataRevision: 0,
     lastWorkItemDeletion: null,
     lastWorkItemCompletion: null,
+    lastBulkWorkItemChange: null,
 
     createWorkspace(input) {
       const current = readProjectState(get())
@@ -155,6 +164,7 @@ export function createProjectStore(
       set({ ...next,
         lastWorkItemDeletion: deletion && next.projectsById[deletion.workItem.projectId] ? deletion : null,
         lastWorkItemCompletion: completion && next.projectsById[completion.projectId] ? completion : null,
+        lastBulkWorkItemChange: retainBulkWorkItemChange(get().lastBulkWorkItemChange, next),
       })
       return true
     },
@@ -184,6 +194,7 @@ export function createProjectStore(
       set({ ...next,
         lastWorkItemDeletion: deletion && next.projectsById[deletion.workItem.projectId] ? deletion : null,
         lastWorkItemCompletion: completion && next.projectsById[completion.projectId] ? completion : null,
+        lastBulkWorkItemChange: retainBulkWorkItemChange(get().lastBulkWorkItemChange, next),
       })
       return true
     },
@@ -195,7 +206,7 @@ export function createProjectStore(
     importBackup(text) {
       const result = parseBackup(text)
       if (!result.ok) return result
-      set({ ...cloneProjectState(result.data), dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null, lastWorkItemCompletion: null })
+      set({ ...cloneProjectState(result.data), dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null, lastWorkItemCompletion: null, lastBulkWorkItemChange: null })
       return result
     },
 
@@ -401,7 +412,7 @@ export function createProjectStore(
       const current = readProjectState(get())
       const next = updateWorkItemDueDatesState(current, workItemIds, dueDate)
       if (next === current) return false
-      set(next)
+      set({ ...next, lastBulkWorkItemChange: captureBulkWorkItemChange(current, next, workItemIds, "dueDate") })
       return true
     },
 
@@ -409,7 +420,7 @@ export function createProjectStore(
       const current = readProjectState(get())
       const next = updateWorkItemPrioritiesState(current, workItemIds, priority)
       if (next === current) return false
-      set(next)
+      set({ ...next, lastBulkWorkItemChange: captureBulkWorkItemChange(current, next, workItemIds, "priority") })
       return true
     },
 
@@ -420,7 +431,30 @@ export function createProjectStore(
       const completion = get().lastWorkItemCompletion
       const completedTaskMoved = completion &&
         next.workItemsById[completion.workItemId]?.boardId !== current.workItemsById[completion.workItemId]?.boardId
-      set({ ...next, lastWorkItemCompletion: completedTaskMoved ? null : completion })
+      set({ ...next, lastWorkItemCompletion: completedTaskMoved ? null : completion,
+        lastBulkWorkItemChange: captureBulkWorkItemChange(current, next, workItemIds, "boardId"),
+      })
+      return true
+    },
+
+    updateWorkItemLabels(workItemIds, labelId, operation) {
+      const current = readProjectState(get())
+      const next = updateWorkItemLabelsState(current, workItemIds, labelId, operation)
+      if (next === current) return false
+      set({ ...next, lastBulkWorkItemChange: captureBulkWorkItemChange(current, next, workItemIds, "labelIds") })
+      return true
+    },
+
+    undoBulkWorkItemChange() {
+      const change = get().lastBulkWorkItemChange
+      if (!change) return false
+      const current = readProjectState(get())
+      const next = undoBulkWorkItemChangeState(current, change)
+      if (next === current) return false
+      const completion = get().lastWorkItemCompletion
+      const completedTaskMoved = completion &&
+        next.workItemsById[completion.workItemId]?.boardId !== current.workItemsById[completion.workItemId]?.boardId
+      set({ ...next, lastBulkWorkItemChange: null, lastWorkItemCompletion: completedTaskMoved ? null : completion })
       return true
     },
 
@@ -486,6 +520,7 @@ export function createProjectStore(
       const completion = get().lastWorkItemCompletion
       set({ ...next, lastWorkItemDeletion: deletion,
         lastWorkItemCompletion: completion?.workItemId === workItemId ? null : completion,
+        lastBulkWorkItemChange: retainBulkWorkItemChange(get().lastBulkWorkItemChange, next),
       })
       return true
     },
@@ -501,7 +536,7 @@ export function createProjectStore(
     },
 
     resetDemo() {
-      set({ ...cloneProjectState(baseline), dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null, lastWorkItemCompletion: null })
+      set({ ...cloneProjectState(baseline), dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null, lastWorkItemCompletion: null, lastBulkWorkItemChange: null })
     },
   }))
 }

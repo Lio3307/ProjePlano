@@ -1,4 +1,5 @@
 import { isValidWorkItemDate, type WorkItem, type WorkItemStatus } from "../work-item/model.ts"
+import { getBlockingDependencyCounts } from "../work-item/dependencies.ts"
 import type { Workspace } from "../workspace/types"
 import type {
   ProjectDocumentResource,
@@ -43,16 +44,21 @@ export type AgendaFilters = {
   workspaceId: string
   projectId: string
   priority: WorkItem["priority"] | ""
+  undatedOnly?: boolean
+  blockedOnly?: boolean
 }
 
 export function filterWorkspaceWorkItems(
   items: readonly WorkspaceWorkItem[],
-  filters: AgendaFilters
+  filters: AgendaFilters,
+  blockingCounts: Readonly<Record<string, number>> = {}
 ) {
   return items.filter(({ workspace, project, workItem }) =>
     (!filters.workspaceId || workspace.id === filters.workspaceId) &&
     (!filters.projectId || project.id === filters.projectId) &&
-    (!filters.priority || workItem.priority === filters.priority)
+    (!filters.priority || workItem.priority === filters.priority) &&
+    (!filters.undatedOnly || workItem.dueDate === null) &&
+    (!filters.blockedOnly || (blockingCounts[workItem.id] ?? 0) > 0)
   )
 }
 
@@ -61,6 +67,30 @@ const PRIORITY_ORDER: Record<WorkItem["priority"], number> = {
   high: 1,
   medium: 2,
   low: 3,
+}
+
+export type SearchTaskOrder = "title" | "deadline" | "priority"
+
+export function sortSearchWorkItems(items: readonly WorkspaceWorkItem[], order: SearchTaskOrder) {
+  return [...items].sort((a, b) => {
+    const primary = order === "priority"
+      ? PRIORITY_ORDER[a.workItem.priority] - PRIORITY_ORDER[b.workItem.priority]
+      : order === "deadline"
+        ? (a.workItem.dueDate ?? "9999-99-99").localeCompare(b.workItem.dueDate ?? "9999-99-99") : 0
+    return primary || a.workItem.title.localeCompare(b.workItem.title) || a.workItem.id.localeCompare(b.workItem.id)
+  })
+}
+
+const blockingCountsCache = new WeakMap<ProjectWorkspaceState, Record<string, number>>()
+
+export function selectWorkspaceBlockingCounts(state: ProjectWorkspaceState) {
+  const cached = blockingCountsCache.get(state)
+  if (cached) return cached
+  const items = selectWorkspaceWorkItems(state)
+  const counts = getBlockingDependencyCounts(items.map(item => item.workItem),
+    Object.fromEntries(items.map(item => [item.board.id, item.board.stage])))
+  blockingCountsCache.set(state, counts)
+  return counts
 }
 
 type ArraySelectorCache<T> = WeakMap<

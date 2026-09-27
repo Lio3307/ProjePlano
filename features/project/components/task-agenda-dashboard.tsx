@@ -14,11 +14,12 @@ import {
   WorkItemStatusBadge,
 } from "@/features/work-item/components/work-item-meta"
 import { getProjectViewHref } from "../query-state"
-import { filterWorkspaceWorkItems, selectSearchWorkItems, selectTaskBoards, selectTodayWorkItems, selectUpcomingWorkItems, type AgendaFilters, type WorkspaceWorkItem } from "../selectors"
+import { filterWorkspaceWorkItems, selectSearchWorkItems, selectTaskBoards, selectTodayWorkItems, selectUpcomingWorkItems, selectWorkspaceBlockingCounts, sortSearchWorkItems, type SearchTaskOrder, type AgendaFilters, type WorkspaceWorkItem } from "../selectors"
 import { useProjectStore } from "../store-provider"
 import { useLocalToday } from "../use-local-today"
 import { ProjectWorkItemDialog } from "./project-work-item-dialog"
 import { BulkTaskActions } from "./bulk-task-actions"
+import { BulkTaskUndo } from "./bulk-task-undo"
 import { TaskAgendaFilters } from "./task-agenda-filters"
 import { QuickCreateTask } from "./quick-create-task"
 
@@ -56,6 +57,7 @@ export function TaskAgendaDashboard({ mode }: { mode: AgendaMode }) {
 function AgendaTasks({ today, mode }: { today: string; mode: AgendaMode }) {
   const [query, setQuery] = useState("")
   const [includeCompleted, setIncludeCompleted] = useState(false)
+  const [searchOrder, setSearchOrder] = useState<SearchTaskOrder>("title")
   const [filters, setFilters] = useState<AgendaFilters>({ workspaceId: "", projectId: "", priority: "" })
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(() => new Set())
   const [bulkMessage, setBulkMessage] = useState<string | null>(null)
@@ -64,7 +66,9 @@ function AgendaTasks({ today, mode }: { today: string; mode: AgendaMode }) {
     ? selectTodayWorkItems(state, today)
     : mode === "upcoming" ? selectUpcomingWorkItems(state, today)
     : selectSearchWorkItems(state, query, includeCompleted))
-  const items = filterWorkspaceWorkItems(unfilteredItems, filters)
+  const blockingCounts = useProjectStore(selectWorkspaceBlockingCounts)
+  const filteredItems = filterWorkspaceWorkItems(unfilteredItems, filters, blockingCounts)
+  const items = mode === "search" ? sortSearchWorkItems(filteredItems, searchOrder) : filteredItems
   const selectableItems = items.filter(item => item.board.stage !== "done")
   const selectedItems = selectableItems.filter(item => selectedIds.has(item.workItem.id))
   const completion = useProjectStore(state => state.lastWorkItemCompletion)
@@ -156,10 +160,28 @@ function AgendaTasks({ today, mode }: { today: string; mode: AgendaMode }) {
             }} />
             Include completed tasks
           </label>
+          <label className="grid min-w-0 gap-1.5 text-sm font-medium">
+            Sort by
+            <select className="h-11 rounded-md border border-input bg-background px-3 text-base md:text-sm" value={searchOrder}
+              onChange={event => {
+                const value = event.target.value
+                if (value === "title" || value === "deadline" || value === "priority") setSearchOrder(value)
+                setSelectedIds(new Set())
+              }}>
+              <option value="title">Title A–Z</option>
+              <option value="deadline">Earliest deadline</option>
+              <option value="priority">Highest priority</option>
+            </select>
+          </label>
         </div>
       ) : null}
-      <TaskAgendaFilters value={filters} matchingCount={items.length} totalCount={unfilteredItems.length}
+      <TaskAgendaFilters value={filters} showUndated={mode === "search"} matchingCount={items.length} totalCount={unfilteredItems.length}
         onChange={value => { setFilters(value); setSelectedIds(new Set()); setBulkMessage(null) }} />
+      <BulkTaskUndo onUndone={() => {
+        setSelectedIds(new Set())
+        setBulkMessage("Bulk change undone.")
+        requestAnimationFrame(() => bulkStatusRef.current?.focus())
+      }} />
       <div className={completion || undoneTitle ? "flex flex-wrap items-center gap-3 rounded-lg border bg-muted/40 p-4" : "sr-only"}>
         <p ref={statusRef} role="status" aria-atomic="true" tabIndex={-1} className="min-w-0 flex-1 break-words text-sm">
           {completion ? "Task completed: " + completion.title : undoneTitle ? "Task reopened: " + undoneTitle : ""}
@@ -190,7 +212,7 @@ function AgendaTasks({ today, mode }: { today: string; mode: AgendaMode }) {
           {unfilteredItems.length > 0 ? "No tasks match these filters." : "No tasks due in the next 7 days."}
         </p>
       ) : sections.map(section => (
-        <TaskSection key={section.id} {...section} selectedIds={selectedIds} onToggleSelection={toggleTaskSelection}
+        <TaskSection key={section.id} {...section} blockingCounts={blockingCounts} selectedIds={selectedIds} onToggleSelection={toggleTaskSelection}
           onOpenTask={openTask} onCompleteTask={completeTask} />
       ))}
       {selectedTask ? (
@@ -215,6 +237,7 @@ function TaskSection({
   onCompleteTask,
   selectedIds,
   onToggleSelection,
+  blockingCounts,
 }: {
   id: string
   title: string
@@ -224,6 +247,7 @@ function TaskSection({
   onCompleteTask: (workItemId: string, targetBoardId: string) => void
   selectedIds: ReadonlySet<string>
   onToggleSelection: (workItemId: string) => void
+  blockingCounts: Readonly<Record<string, number>>
 }) {
   return (
     <section aria-labelledby={id} className="space-y-3">
@@ -264,6 +288,9 @@ function TaskSection({
                 <div className="flex flex-wrap items-center gap-2">
                   <WorkItemStatusBadge status={board.stage} />
                   <WorkItemPriorityBadge priority={workItem.priority} />
+                  {(blockingCounts[workItem.id] ?? 0) > 0 ? (
+                    <span className="text-xs text-muted-foreground">Blocked by {blockingCounts[workItem.id]} tasks</span>
+                  ) : null}
                   <span className="text-xs text-muted-foreground">
                     {workItem.dueDate ? <>Due <time dateTime={workItem.dueDate}>{formatWorkItemDate(workItem.dueDate)}</time></> : "No due date"}
                   </span>

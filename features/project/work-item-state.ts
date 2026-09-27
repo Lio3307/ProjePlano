@@ -342,6 +342,33 @@ export function moveWorkItemsState(
   return next
 }
 
+export function updateWorkItemLabelsState(
+  state: ProjectWorkspaceState,
+  workItemIds: readonly string[],
+  labelId: string,
+  operation: "add" | "remove"
+) {
+  if (workItemIds.length === 0 || (operation !== "add" && operation !== "remove")) return state
+  const projectId = state.workItemsById[workItemIds[0]]?.projectId
+  const workItemsById = { ...state.workItemsById }
+  let changed = false
+  for (const id of new Set(workItemIds)) {
+    const item = state.workItemsById[id]
+    const board = item ? state.taskBoardsById[item.boardId] : undefined
+    const view = board ? state.projectViewsById[board.viewId] : undefined
+    if (!item || item.projectId !== projectId || !board || board.stage === "done" ||
+      state.projectsById[item.projectId]?.archived || view?.type !== "board" ||
+      !view.labels.some(label => label.id === labelId) ||
+      !isValidWorkItem(item) || !hasValidReferences(state, item)) return state
+    const hasLabel = item.labelIds.includes(labelId)
+    if (hasLabel === (operation === "add")) continue
+    workItemsById[id] = { ...item, labelIds: operation === "add"
+      ? [...item.labelIds, labelId] : item.labelIds.filter(id => id !== labelId) }
+    changed = true
+  }
+  return changed ? { ...state, workItemsById } : state
+}
+
 export function linkWorkItemDocumentState(
   state: ProjectWorkspaceState,
   workItemId: string,
