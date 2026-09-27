@@ -2,7 +2,7 @@
 
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import type { TaskBoardFormValue } from "../form"
+import { setTaskBoardCompleted, type TaskBoardFormValue } from "../form"
 
 type BoardFormProps = {
   value: TaskBoardFormValue
@@ -40,6 +40,18 @@ export function BoardForm({ value, onChange }: BoardFormProps) {
             setField("description", event.target.value)
           }
         />
+      </label>
+      <label className="flex min-h-11 cursor-pointer items-start gap-3 text-sm">
+        <input
+          type="checkbox"
+          className="mt-1 size-4 accent-primary"
+          checked={value.stage === "done"}
+          onChange={(event) => onChange(setTaskBoardCompleted(value, event.target.checked))}
+        />
+        <span className="grid gap-1">
+          <span className="font-medium">Completed board</span>
+          <span className="text-muted-foreground">Tasks in this Board count as completed.</span>
+        </span>
       </label>
     </div>
   )

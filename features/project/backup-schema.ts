@@ -15,6 +15,7 @@ import type {
   ProjectTimelineView, ProjectViewConfig, ProjectWorkspaceState,
 } from "./model"
 import type { TaskBoard } from "./task-board"
+import type { Workspace } from "../workspace/types"
 
 const isDate = (value: unknown): value is string =>
   isString(value) && isValidWorkItemDate(value)
@@ -23,10 +24,15 @@ const isTitle = (value: unknown): value is string =>
 const isLabel = objectOf<BoardLabel>({
   id: isId, name: isTitle, color: oneOf(...BOARD_LABEL_COLORS),
 })
-const isProject = objectOf<ProjectRecord>({
+const projectShape = {
   id: isId, workspaceId: isId, title: isTitle, description: isString,
   templateId: nullable(isString), status: oneOf("planned", "active", "paused", "completed"),
   viewIds: uniqueIds, resourceIds: uniqueIds, milestoneIds: uniqueIds,
+}
+const isProject = objectOf<ProjectRecord>({ ...projectShape, archived: isBoolean })
+const isLegacyProject = objectOf<Omit<ProjectRecord, "archived">>(projectShape)
+const isWorkspace = objectOf<Workspace>({
+  id: isId, title: isTitle, description: isString, createdAt: isDate,
 })
 const viewBase = {
   id: isId, projectId: isId, title: isTitle, visibleFieldIds: uniqueIds,
@@ -75,9 +81,22 @@ const isTaskShape = objectOf<WorkItem>({
 const isTask = (value: unknown): value is WorkItem =>
   isTaskShape(value) && isValidWorkItem(value)
 
-export const isProjectSnapshot = objectOf<ProjectWorkspaceState>({
-  projectIdsByWorkspaceId: recordOf(uniqueIds), projectsById: recordOf(isProject),
+const snapshotShape = {
+  projectIdsByWorkspaceId: recordOf(uniqueIds),
   projectViewsById: recordOf(isView), taskBoardsById: recordOf(isBoard),
   workItemsById: recordOf(isTask), resourcesById: recordOf(isResource),
   milestonesById: recordOf(isMilestone), tablesByViewId: isTableMap,
+}
+
+export const isProjectSnapshot = objectOf<ProjectWorkspaceState>({
+  ...snapshotShape, workspaceIds: uniqueIds, workspacesById: recordOf(isWorkspace),
+  projectsById: recordOf(isProject),
+})
+
+type LegacyProjectSnapshot = Omit<ProjectWorkspaceState, "workspaceIds" | "workspacesById" | "projectsById"> & {
+  projectsById: Record<string, Omit<ProjectRecord, "archived">>
+}
+
+export const isLegacyProjectSnapshot = objectOf<LegacyProjectSnapshot>({
+  ...snapshotShape, projectsById: recordOf(isLegacyProject),
 })

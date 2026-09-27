@@ -6,6 +6,13 @@ import {
 
 export type TaskBoardFormValue = EditableTaskBoardFields
 
+export function setTaskBoardCompleted(
+  value: TaskBoardFormValue,
+  completed: boolean
+): TaskBoardFormValue {
+  return { ...value, stage: completed ? "done" : value.stage === "done" ? "todo" : value.stage }
+}
+
 export function createTaskBoardFormValue(
   board: TaskBoard | null
 ): TaskBoardFormValue {

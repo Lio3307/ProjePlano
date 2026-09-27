@@ -8,9 +8,9 @@ test("exports a versioned backup and restores all data without store actions", (
   assert.equal(typeof source.getState().exportBackup, "function")
   const backup = source.getState().exportBackup()
   const payload = JSON.parse(backup)
-  assert.equal(payload.schemaVersion, 1)
+  assert.equal(payload.schemaVersion, 2)
   assert.equal(payload.app, "projeplano")
-  assert.ok(payload.workspaces.length > 0)
+  assert.ok(payload.data.workspaceIds.length > 0)
   assert.equal("resetDemo" in payload.data, false)
   const target = createProjectStore()
   assert.equal(target.getState().importBackup(backup).ok, true)
@@ -44,7 +44,13 @@ test("invalid imports never replace existing records or actions", () => {
 })
 
 const invalidBackups = {
-  "unknown version": backup => { backup.schemaVersion = 2 },
+  "unknown version": backup => { backup.schemaVersion = 999 },
+  "missing workspace record": backup => { delete backup.data.workspacesById["project-alpha"] },
+  "duplicate workspace": backup => { backup.data.workspaceIds.push(backup.data.workspaceIds[0]) },
+  "unlisted workspace": backup => { backup.data.workspaceIds.pop() },
+  "mismatched workspace ID": backup => { backup.data.workspacesById["project-alpha"].id = "wrong" },
+  "invalid workspace date": backup => { backup.data.workspacesById["project-alpha"].createdAt = "2026-02-30" },
+  "invalid archive value": backup => { backup.data.projectsById["2"].archived = "yes" },
   "foreign workspace": backup => { backup.data.projectsById["2"].workspaceId = "missing" },
   "orphan view": backup => { backup.data.projectsById["2"].viewIds = [] },
   "mismatched identity": backup => { backup.data.projectsById["2"].id = "wrong" },

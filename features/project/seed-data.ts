@@ -1,4 +1,5 @@
 import { INITIAL_CALENDAR_TASKS } from "../calendar/mock-data.ts"
+import { WORKSPACES } from "../workspace/mock-data.ts"
 import { INITIAL_KANBAN_COLUMNS } from "../kanban/mock-data.ts"
 import { createTableSnapshot } from "../table/snapshot.ts"
 import type {
@@ -52,6 +53,7 @@ export function createProjectSeedState(): ProjectWorkspaceState {
       description: "",
       templateId: null,
       status: "active",
+      archived: false,
       viewIds: views.map((view) => view.id),
       resourceIds: projectResources.map((resource) => resource.id),
       milestoneIds: [],
@@ -63,6 +65,8 @@ export function createProjectSeedState(): ProjectWorkspaceState {
   }
 
   return {
+    workspaceIds: WORKSPACES.map(workspace => workspace.id),
+    workspacesById: indexById(structuredClone(WORKSPACES)),
     tablesByViewId: Object.fromEntries(
       projectViews.filter(view => view.type === "table")
         .map(view => [view.id, createTableSnapshot()])

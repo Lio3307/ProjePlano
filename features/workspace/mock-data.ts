@@ -38,7 +38,3 @@ export const WORKSPACES: Workspace[] = [
     createdAt: "2026-03-12",
   },
 ]
-
-export function getWorkspaceById(id: string) {
-  return WORKSPACES.find((workspace) => workspace.id === id)
-}

@@ -32,11 +32,26 @@ Open [localhost:3000](http://localhost:3000). The root route opens Workspaces.
 
 A project has at most one Board Work view. Its Boards share a label catalog.
 Tasks derive status from their owning Board's stage; renaming a Board does not
-change the stage. Task dependencies can cross Boards within a project. Documents
+change the stage. Enable **Completed board** in Board creation/settings to count
+its tasks as done. Move tasks into it to complete them, or into an unfinished
+Board to reopen them. Clearing the checkbox reopens that Board as `todo`.
+Progress, overdue counts, and dependency blockers follow the same Board stage.
+Task dependencies can cross Boards within a project. Documents
 can link to several tasks; unlinking does not delete document content.
 
 Table and Calendar Work views can be repeated. Calendar projects Board-owned
 tasks and does not create its own task records.
+
+Create workspaces from **New workspace**. Workspace menus edit the name and
+description or delete the workspace after confirmation. Project menus edit the
+name, description, and status; archive/restore; or delete after confirmation.
+Archived projects appear under **Archived** in their workspace and retain their
+contents and status. They are hidden from the regular project list and sidebar.
+Project status is managed separately from task completion.
+
+Deleting a project removes all its views, Boards, tasks, documents, milestones,
+and Tables. Deleting a workspace removes all its projects as well. These actions
+have no undo; an earlier JSON backup can restore the saved snapshot.
 
 ## Routes and ownership
 
@@ -57,7 +72,7 @@ Project query parameters select the area: `view=overview`, `view=work`,
 | `components/layout/` | Dashboard navigation and shell UI |
 | `components/ui/` | Shared Base UI-backed primitives and tokens |
 | `features/project/` | Normalized store, selectors, transitions, query navigation, project composition |
-| `features/workspace/` | Workspace presentation |
+| `features/workspace/` | Workspace presentation, creation and action dialogs |
 | `features/work-item/` | Task validation, forms, View/Edit flow, relationships and shared metadata |
 | `features/kanban/`, `features/calendar/` | Controlled task presentations and drag interactions |
 | `features/table/` | Independent editable-table state and presentation |
@@ -72,8 +87,8 @@ never create hidden normalized tasks.
 ## JSON backups
 
 Use **Backup** in the dashboard header to export or import a JSON file.
-The file contains `app`, `schemaVersion`, `exportedAt`, fixed workspace definitions,
-and all saved project data, including Board order, task relationships, labels,
+The file contains `app`, `schemaVersion`, `exportedAt`, and `data`.
+Data includes workspace records/order, project archive flags, Board order, task relationships, labels,
 document HTML, and Table columns, rows, status options, and attachments.
 
 Import first validates the entire file and shows record counts. **Replace data**
@@ -81,13 +96,14 @@ then replaces all current dashboard data and discards unsaved drafts; it does
 not merge. Export current data from the confirmation dialog if you want to keep
 it. Cancel and invalid input leave the current data untouched. Imports return
 to Workspaces and remount editors so old drafts cannot overwrite restored data.
-Only version 1 with this app's fixed workspace definitions is supported.
+Exports use schema version 2. Version 1 backups with the original workspace
+definitions are also accepted: import migrates those workspaces into the store
+and marks legacy projects as unarchived before validating all relationships.
 
 There is no automatic save across reloads. Export before reloading or closing
 the page, and import the file to resume work. Documents still require **Save**
-before export; unfinished forms and unsaved document drafts are excluded. Workspace
-definitions remain the app's fixed fixtures, since workspace editing is not
-implemented.
+before export; unfinished forms and unsaved document drafts are excluded.
+Created/edited workspaces and archived projects are included in version 2 backups.
 
 Table uploads embed file bytes in the backup, with a 2 MiB limit per file and
 10 MiB per selection. JSON files are limited to 20 MiB. Reduce attachments if the

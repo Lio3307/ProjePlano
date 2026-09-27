@@ -1,10 +1,5 @@
 "use client"
 
-import {
-  EllipsisVertical,
-  Pencil,
-  Trash2,
-} from "lucide-react"
 import Link from "next/link"
 
 import {
@@ -15,14 +10,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { WorkspaceActions } from "./workspace-actions"
 import type { Workspace } from "../types"
 
 type WorkspaceOverviewHeaderProps = {
@@ -69,43 +57,9 @@ export function WorkspaceOverviewHeader({
         </div>
 
         <div className="flex min-w-0 items-center justify-between gap-2 sm:justify-start lg:shrink-0">
-          <WorkspaceActionsMenu workspace={workspace} />
+          <WorkspaceActions workspace={workspace} />
         </div>
       </div>
     </header>
-  )
-}
-
-function WorkspaceActionsMenu({
-  workspace,
-}: {
-  workspace: Workspace
-}) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label={"Open actions for " + workspace.title}
-          />
-        }
-      >
-        <EllipsisVertical aria-hidden="true" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuItem disabled>
-          <Pencil aria-hidden="true" />
-          Edit workspace
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" disabled>
-          <Trash2 aria-hidden="true" />
-          Delete workspace
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
   )
 }

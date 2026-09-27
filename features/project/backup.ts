@@ -1,7 +1,7 @@
 import { isRecord, isString } from "../../lib/json-validation.ts"
 import { WORKSPACES } from "../workspace/mock-data.ts"
 import { normalizeBoardLabels } from "./board.ts"
-import { isProjectSnapshot } from "./backup-schema.ts"
+import { isLegacyProjectSnapshot, isProjectSnapshot } from "./backup-schema.ts"
 import type { ProjectWorkspaceState } from "./model"
 
 export const MAX_BACKUP_BYTES = 20 * 1024 * 1024
@@ -11,8 +11,7 @@ export type BackupResult =
 
 export function serializeBackup(data: ProjectWorkspaceState) {
   return JSON.stringify({
-    app: "projeplano", schemaVersion: 1, exportedAt: new Date().toISOString(),
-    workspaces: WORKSPACES, data,
+    app: "projeplano", schemaVersion: 2, exportedAt: new Date().toISOString(), data,
   })
 }
 
@@ -31,29 +30,43 @@ export function parseBackup(text: string): BackupResult {
   } catch {
     return { ok: false, error: "The file is not valid backup JSON." }
   }
-  if (!isRecord(value) || value.app !== "projeplano" || value.schemaVersion !== 1) {
+  if (!isRecord(value) || value.app !== "projeplano" ||
+    (value.schemaVersion !== 1 && value.schemaVersion !== 2)) {
     return { ok: false, error: "This ProjePlano backup format or version is not supported." }
   }
-  if (!isString(value.exportedAt) || !Number.isFinite(Date.parse(value.exportedAt)) ||
-    JSON.stringify(value.workspaces) !== JSON.stringify(WORKSPACES)) {
+  if (!isString(value.exportedAt) || !Number.isFinite(Date.parse(value.exportedAt))) {
     return { ok: false, error: "Backup metadata or workspace definitions do not match this app version." }
   }
-  if (!isProjectSnapshot(value.data)) {
+  let data: unknown = value.data
+  if (value.schemaVersion === 1) {
+    if (JSON.stringify(value.workspaces) !== JSON.stringify(WORKSPACES) || !isLegacyProjectSnapshot(data)) {
+      return { ok: false, error: "The version 1 backup contains invalid workspace definitions or records." }
+    }
+    data = {
+      ...data,
+      workspaceIds: WORKSPACES.map(workspace => workspace.id),
+      workspacesById: Object.fromEntries(WORKSPACES.map(workspace => [workspace.id, { ...workspace }])),
+      projectsById: Object.fromEntries(Object.entries(data.projectsById).map(([id, project]) => [id, { ...project, archived: false }])),
+    }
+  }
+  if (!isProjectSnapshot(data)) {
     return { ok: false, error: "The backup contains invalid records or Table data." }
   }
-  if (!hasValidRelationships(value.data)) {
+  if (!hasValidRelationships(data)) {
     return { ok: false, error: "The backup contains missing, duplicate, or conflicting record relationships." }
   }
-  return { ok: true, data: value.data, exportedAt: value.exportedAt }
+  return { ok: true, data, exportedAt: value.exportedAt }
 }
 
 function hasValidRelationships(state: ProjectWorkspaceState) {
   const { projectsById: projects, projectViewsById: views, taskBoardsById: boards,
     workItemsById: tasks, resourcesById: resources, milestonesById: milestones } = state
-  for (const records of [projects, views, boards, tasks, resources, milestones]) {
+  for (const records of [state.workspacesById, projects, views, boards, tasks, resources, milestones]) {
     if (Object.entries(records).some(([id, record]) => id !== record.id)) return false
   }
-  const workspaceIds = new Set(WORKSPACES.map(workspace => workspace.id))
+  const workspaceIds = new Set(state.workspaceIds)
+  if (workspaceIds.size !== Object.keys(state.workspacesById).length ||
+    !state.workspaceIds.every(id => Object.hasOwn(state.workspacesById, id))) return false
   const indexedProjects = new Set<string>()
   for (const [workspaceId, ids] of Object.entries(state.projectIdsByWorkspaceId)) {
     if (!workspaceIds.has(workspaceId)) return false

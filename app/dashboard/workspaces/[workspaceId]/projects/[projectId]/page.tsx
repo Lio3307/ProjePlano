@@ -1,9 +1,6 @@
-import { notFound } from "next/navigation"
-
 import { ProjectWorkspace } from "@/features/project/components/project-workspace"
 import { getLocalDateKey } from "@/features/project/overview"
 import type { ProjectQueryValue } from "@/features/project/query-state"
-import { getWorkspaceById } from "@/features/workspace/mock-data"
 
 interface ProjectPageProps {
   params: Promise<{
@@ -25,15 +22,10 @@ export default async function ProjectPage({
     params,
     searchParams,
   ])
-  const workspace = getWorkspaceById(workspaceId)
-
-  if (!workspace) {
-    notFound()
-  }
 
   return (
     <ProjectWorkspace
-      workspace={workspace}
+      workspaceId={workspaceId}
       projectId={projectId}
       today={getLocalDateKey(new Date())}
       viewQuery={query.view}

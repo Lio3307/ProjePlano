@@ -36,6 +36,14 @@ const resolvedWorkItemCache: ArraySelectorCache<ResolvedWorkItem> =
 const documentLinkedWorkItemCache: ArraySelectorCache<DocumentLinkedWorkItem> =
   new WeakMap()
 
+export function selectWorkspaces(state: ProjectWorkspaceState) {
+  return state.workspaceIds.flatMap(id => state.workspacesById[id] ? [state.workspacesById[id]] : [])
+}
+
+export function selectWorkspaceById(state: ProjectWorkspaceState, workspaceId: string) {
+  return Object.hasOwn(state.workspacesById, workspaceId) ? state.workspacesById[workspaceId] : null
+}
+
 export function selectProjectById(
   state: ProjectWorkspaceState,
   projectId: string

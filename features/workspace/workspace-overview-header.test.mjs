@@ -1,54 +1,35 @@
 import assert from "node:assert/strict"
-import { existsSync, readFileSync } from "node:fs"
+import { readFileSync } from "node:fs"
 import test from "node:test"
 
-const headerSource = readSource(
-  "./components/workspace-overview-header.tsx"
-)
-const pageSource = readSource(
-  "../../app/dashboard/workspaces/[workspaceId]/page.tsx"
-)
+const readSource = path => readFileSync(new URL(path, import.meta.url), "utf8")
+const header = readSource("./components/workspace-overview-header.tsx")
+const detail = readSource("./components/workspace-detail.tsx")
+const page = readSource("../../app/dashboard/workspaces/[workspaceId]/page.tsx")
+const projectPage = readSource("../../app/dashboard/workspaces/[workspaceId]/projects/[projectId]/page.tsx")
+const actions = readSource("./components/workspace-actions.tsx")
 
-test("keeps the workspace route server-owned and delegates its header", () => {
-  assert.doesNotMatch(pageSource, /^"use client"/)
-  assert.match(
-    pageSource,
-    /import \{ WorkspaceOverviewHeader \} from "@\/features\/workspace\/components\/workspace-overview-header"/
-  )
-  assert.match(
-    pageSource,
-    /<WorkspaceOverviewHeader workspace=\{workspace\} \/>/
-  )
-  assert.match(
-    pageSource,
-    /className="min-w-0 space-y-6 p-4 sm:p-6"/
-  )
-  assert.match(pageSource, /if \(!workspace\) notFound\(\)/)
-  assert.doesNotMatch(pageSource, /CircleUserRound|EllipsisVertical/)
+test("keeps route parameters server-owned and resolves mutable workspaces from the session", () => {
+  for (const source of [page, projectPage]) {
+    assert.doesNotMatch(source, /^"use client"/)
+    assert.doesNotMatch(source, /getWorkspaceById|notFound/)
+    assert.match(source, /workspaceId={workspaceId}/)
+  }
+  assert.ok(detail.includes("selectWorkspaceById(state, workspaceId)"))
+  assert.ok(detail.includes("if (!workspace) return <MissingWorkspaceState"))
+  assert.match(detail, /<WorkspaceOverviewHeader workspace={workspace}/)
+  assert.match(detail, /<WorkspaceProjects workspaceId={workspace.id}/)
 })
 
-test("exposes honest workspace actions without member access", () => {
-  assert.match(headerSource, /<DropdownMenu>/)
-  assert.match(headerSource, /<DropdownMenuTrigger/)
-  assert.match(headerSource, /<DropdownMenuContent align="end"/)
-  assert.doesNotMatch(headerSource, /Manage members|WorkspaceMemberPreview|useProjectStore/)
-  assert.match(
-    headerSource,
-    /<DropdownMenuItem disabled>[\s\S]*?Edit workspace/
-  )
-  assert.match(headerSource, /<DropdownMenuSeparator \/>/)
-  assert.match(
-    headerSource,
-    /<DropdownMenuItem[^>]*variant="destructive"[^>]*disabled>/
-  )
-  assert.match(headerSource, /Delete workspace/)
-  assert.match(
-    headerSource,
-    /aria-label=\{"Open actions for " \+ workspace\.title\}/
-  )
+test("shares functional workspace actions between cards and the header without member access", () => {
+  const list = readSource("./components/workspace-list.tsx")
+  for (const source of [header, list]) {
+    assert.match(source, /<WorkspaceActions workspace={workspace}/)
+    assert.doesNotMatch(source, /Manage members|WorkspaceMemberPreview/)
+  }
+  assert.match(actions, /state.updateWorkspace/)
+  assert.match(actions, /state.deleteWorkspace/)
+  assert.match(actions, /<DeleteRecordDialog/)
+  assert.match(actions, /<RecordDetailsDialog/)
+  assert.doesNotMatch(actions, /DropdownMenuItem disabled/)
 })
-
-function readSource(relativePath) {
-  const file = new URL(relativePath, import.meta.url)
-  return existsSync(file) ? readFileSync(file, "utf8") : ""
-}

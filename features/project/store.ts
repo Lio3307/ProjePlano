@@ -1,4 +1,10 @@
 import { createStore, type StoreApi } from "zustand/vanilla"
+import type { Workspace } from "../workspace/types"
+import {
+  createWorkspaceState, updateWorkspaceState, deleteWorkspaceState,
+  updateProjectState, setProjectArchivedState, deleteProjectState,
+  type WorkspaceDetails, type ProjectDetails,
+} from "./lifecycle.ts"
 
 import type {
   EditableWorkItemFields,
@@ -40,6 +46,12 @@ import {
 } from "./work-item-state.ts"
 
 export type ProjectStoreActions = {
+  createWorkspace: (input: Workspace) => boolean
+  updateWorkspace: (id: string, details: WorkspaceDetails) => boolean
+  deleteWorkspace: (id: string) => boolean
+  updateProject: (id: string, details: ProjectDetails) => boolean
+  setProjectArchived: (id: string, archived: boolean) => boolean
+  deleteProject: (id: string) => boolean
   exportBackup: () => string
   importBackup: (text: string) => BackupResult
   updateTable: (viewId: string, update: (current: TableSnapshot) => TableSnapshot) => boolean
@@ -98,6 +110,54 @@ export function createProjectStore(
   return createStore<ProjectStore>()((set, get) => ({
     ...cloneProjectState(baseline),
     dataRevision: 0,
+
+    createWorkspace(input) {
+      const current = readProjectState(get())
+      const next = createWorkspaceState(current, input)
+      if (next === current) return false
+      set(next)
+      return true
+    },
+
+    updateWorkspace(id, details) {
+      const current = readProjectState(get())
+      const next = updateWorkspaceState(current, id, details)
+      if (next === current) return false
+      set(next)
+      return true
+    },
+
+    deleteWorkspace(id) {
+      const current = readProjectState(get())
+      const next = deleteWorkspaceState(current, id)
+      if (next === current) return false
+      set(next)
+      return true
+    },
+
+    updateProject(id, details) {
+      const current = readProjectState(get())
+      const next = updateProjectState(current, id, details)
+      if (next === current) return false
+      set(next)
+      return true
+    },
+
+    setProjectArchived(id, archived) {
+      const current = readProjectState(get())
+      const next = setProjectArchivedState(current, id, archived)
+      if (next === current) return false
+      set(next)
+      return true
+    },
+
+    deleteProject(id) {
+      const current = readProjectState(get())
+      const next = deleteProjectState(current, id)
+      if (next === current) return false
+      set(next)
+      return true
+    },
 
     exportBackup() {
       return serializeBackup(readProjectState(get()))
@@ -349,6 +409,8 @@ export function createProjectStore(
 
 function readProjectState(store: ProjectStore): ProjectWorkspaceState {
   return {
+    workspaceIds: store.workspaceIds,
+    workspacesById: store.workspacesById,
     tablesByViewId: store.tablesByViewId,
     projectIdsByWorkspaceId: store.projectIdsByWorkspaceId,
     projectsById: store.projectsById,

@@ -1,4 +1,5 @@
 import type { WorkItem } from "../work-item/model"
+import type { Workspace } from "../workspace/types"
 import type { BoardLabel } from "./board"
 import type { TaskBoard } from "./task-board"
 import type { TableSnapshot } from "../table/snapshot"
@@ -12,6 +13,7 @@ export type ProjectRecord = {
   description: string
   templateId: string | null
   status: ProjectStatus
+  archived: boolean
   viewIds: string[]
   resourceIds: string[]
   milestoneIds: string[]
@@ -75,6 +77,8 @@ export type Milestone = {
 }
 
 export type ProjectWorkspaceState = {
+  workspaceIds: string[]
+  workspacesById: Record<string, Workspace>
   tablesByViewId: Record<string, TableSnapshot>
   projectIdsByWorkspaceId: Record<string, string[]>
   projectsById: Record<string, ProjectRecord>

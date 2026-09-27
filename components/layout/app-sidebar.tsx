@@ -22,20 +22,11 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { selectProjectsByWorkspaceId } from "@/features/project/selectors"
+import { selectProjectsByWorkspaceId, selectWorkspaces } from "@/features/project/selectors"
 import { useProjectStore } from "@/features/project/store-provider"
 
-export interface SidebarWorkspace {
-  id: string
-  title: string
-  url: string
-}
-
-interface AppSidebarProps {
-  workspaces: readonly SidebarWorkspace[]
-}
-
-export function AppSidebar({ workspaces }: AppSidebarProps) {
+export function AppSidebar() {
+  const workspaces = useProjectStore(useShallow(selectWorkspaces))
   const { setOpenMobile } = useSidebar()
   const pathname = usePathname()
   const pathnameWorkspaceId = getPathnameWorkspaceId(pathname)
@@ -47,7 +38,7 @@ export function AppSidebar({ workspaces }: AppSidebarProps) {
   const workspaceId = workspace?.id ?? ""
   const projects = useProjectStore(
     useShallow((state) =>
-      selectProjectsByWorkspaceId(state, workspaceId)
+      selectProjectsByWorkspaceId(state, workspaceId).filter(project => !project.archived)
     )
   )
 
@@ -105,9 +96,9 @@ export function AppSidebar({ workspaces }: AppSidebarProps) {
               <SidebarMenu>
                 <SidebarNavigationItem
                   title="Workspace overview"
-                  url={workspace.url}
+                  url={"/dashboard/workspaces/" + workspace.id}
                   icon={FolderKanban}
-                  isActive={pathname === workspace.url}
+                  isActive={pathname === "/dashboard/workspaces/" + workspace.id}
                 />
               </SidebarMenu>
             </SidebarGroupContent>

@@ -77,7 +77,7 @@ export function createProjectFromTemplateState(
 
   if (
     input.id.trim().length === 0 ||
-    input.workspaceId.trim().length === 0 ||
+    !Object.hasOwn(state.workspacesById, input.workspaceId) ||
     !template ||
     title.length === 0 ||
     state.projectsById[input.id]
@@ -111,6 +111,7 @@ export function createProjectFromTemplateState(
     description,
     templateId: template.id,
     status: "planned",
+    archived: false,
     viewIds: views.map((view) => view.id),
     resourceIds: document ? [document.id] : [],
     milestoneIds: [],

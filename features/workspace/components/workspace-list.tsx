@@ -1,12 +1,6 @@
-import {
-  ArrowUpRight,
-  EllipsisVertical,
-  Pencil,
-  Trash2,
-} from "lucide-react"
+import { ArrowUpRight } from "lucide-react"
 import Link from "next/link"
 
-import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -14,12 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { WorkspaceActions } from "./workspace-actions"
 import type { Workspace } from "../types"
 
 type WorkspaceListProps = {
@@ -70,28 +59,7 @@ export function WorkspaceList({ workspaces }: WorkspaceListProps) {
           </Link>
 
           <div className="absolute top-2 right-2 z-10">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={"Open actions for " + workspace.title}
-                  />
-                }
-              >
-                <EllipsisVertical aria-hidden="true" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem disabled>
-                  <Pencil /> Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem variant="destructive" disabled>
-                  <Trash2 /> Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <WorkspaceActions workspace={workspace} />
           </div>
         </div>
       ))}

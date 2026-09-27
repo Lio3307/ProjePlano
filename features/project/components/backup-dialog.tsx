@@ -116,6 +116,7 @@ export function BackupDialog() {
               <p className="break-all font-medium">{preview.filename}</p>
               <p className="text-muted-foreground">Exported {new Date(preview.backup.exportedAt).toLocaleString()}</p>
               <dl className="grid grid-cols-2 gap-2">
+                <dt>Workspaces</dt><dd>{preview.backup.data.workspaceIds.length}</dd>
                 <dt>Projects</dt><dd>{Object.keys(preview.backup.data.projectsById).length}</dd>
                 <dt>Tasks</dt><dd>{Object.keys(preview.backup.data.workItemsById).length}</dd>
                 <dt>Tables</dt><dd>{Object.keys(preview.backup.data.tablesByViewId).length}</dd>

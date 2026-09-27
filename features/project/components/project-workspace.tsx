@@ -27,6 +27,8 @@ import type { BoardLabel } from "@/features/project/board"
 import { useProjectStore } from "@/features/project/store-provider"
 import type { EditableTaskBoardFields } from "@/features/project/task-board"
 import type { Workspace } from "@/features/workspace/types"
+import { MissingWorkspaceState } from "@/features/workspace/components/workspace-detail"
+import { ProjectActions } from "./project-actions"
 import { buildProjectOverviewSummary } from "../overview"
 import {
   getProjectViewHref,
@@ -43,6 +45,7 @@ import {
   selectProjectResources,
   selectSupportedProjectViews,
   selectTaskBoards,
+  selectWorkspaceById,
 } from "../selectors"
 import { getProjectTemplate } from "../templates"
 import type { GenericProjectViewType } from "../project-state"
@@ -52,7 +55,7 @@ import { ProjectOverview } from "./project-overview"
 import { ProjectView } from "./project-view"
 
 type ProjectWorkspaceProps = {
-  workspace: Workspace
+  workspaceId: string
   projectId: string
   today: string
   viewQuery: ProjectQueryValue
@@ -64,14 +67,20 @@ type BoardDialogSession =
   | { key: string; mode: "create" }
   | { key: string; mode: "edit"; boardId: string }
 
-export function ProjectWorkspace({
+export function ProjectWorkspace({ workspaceId, ...props }: ProjectWorkspaceProps) {
+  const workspace = useProjectStore(state => selectWorkspaceById(state, workspaceId))
+  if (!workspace) return <MissingWorkspaceState />
+  return <ProjectWorkspaceContent key={props.projectId} workspace={workspace} {...props} />
+}
+
+function ProjectWorkspaceContent({
   workspace,
   projectId,
   today,
   viewQuery,
   workViewQuery,
   resourceQuery,
-}: ProjectWorkspaceProps) {
+}: Omit<ProjectWorkspaceProps, "workspaceId"> & { workspace: Workspace }) {
   const router = useRouter()
   const [actionError, setActionError] = useState<string | null>(null)
   const [boardDialogSession, setBoardDialogSession] =
@@ -403,6 +412,8 @@ export function ProjectWorkspace({
             ) : null}
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
+            <ProjectActions project={project} />
+            {project.archived ? <span className="self-center text-sm text-muted-foreground">Archived</span> : null}
             <span className="rounded-sm bg-primary/10 px-2 py-1 text-xs font-medium capitalize text-primary">
               {project.status}
             </span>
