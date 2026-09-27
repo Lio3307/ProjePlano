@@ -102,6 +102,18 @@ date refresh, task details/edit dialog and focus return as Today; editing a task
 out of the range updates the list without closing its dialog. Both pages share
 `features/project/components/task-agenda-dashboard.tsx` and the existing store.
 
+In Today and Upcoming, **Complete** moves a task to the end of its project's
+Completed Board. With multiple Completed Boards, choose the destination from the
+menu. With none, Complete is disabled; **Open board** remains available. Completion
+updates agenda lists, project progress and dependency blockers through Board stage.
+**Undo completion** restores the latest completed task to its original Board and
+position (or the end if that Board is now shorter), preserving subsequent edits.
+The notice is available on both agenda pages during the dashboard session. Undo
+refuses changed source/destination stages or invalid references without changing
+data. A newer completion replaces the previous Undo; moving/deleting that task,
+deleting its project/workspace, importing a backup, resetting or reloading clears
+it. Completion history is separate from deletion Undo and is not exported.
+
 | Route | Purpose |
 | --- | --- |
 | `/dashboard` | Workspaces |

@@ -31,6 +31,15 @@ export type WorkItemDeletion = {
   dependents: { id: string; dependencyIndex: number }[]
 }
 
+export type WorkItemCompletion = {
+  workItemId: string
+  title: string
+  projectId: string
+  sourceBoardId: string
+  targetBoardId: string
+  position: number
+}
+
 export function createWorkItemState(
   state: ProjectWorkspaceState,
   workItem: WorkItem
@@ -201,6 +210,33 @@ export function moveWorkItemState(
   writeOrderedItems(nextWorkItems, nextTargetItems)
 
   return { ...state, workItemsById: nextWorkItems }
+}
+
+export function completeWorkItemState(
+  state: ProjectWorkspaceState,
+  workItemId: string,
+  targetBoardId: string
+) {
+  const workItem = state.workItemsById[workItemId]
+  if (!workItem || state.projectsById[workItem.projectId]?.archived ||
+    state.taskBoardsById[workItem.boardId]?.stage === "done" ||
+    state.taskBoardsById[targetBoardId]?.stage !== "done") return state
+
+  const targetItems = getOrderedBoardItems(state.workItemsById, workItem.projectId, targetBoardId)
+  return moveWorkItemState(state, workItemId, targetBoardId, targetItems.length)
+}
+
+export function undoWorkItemCompletionState(
+  state: ProjectWorkspaceState,
+  completion: WorkItemCompletion
+) {
+  const workItem = state.workItemsById[completion.workItemId]
+  if (!workItem || workItem.projectId !== completion.projectId ||
+    workItem.boardId !== completion.targetBoardId ||
+    state.taskBoardsById[completion.targetBoardId]?.stage !== "done" ||
+    state.taskBoardsById[completion.sourceBoardId]?.stage === "done") return state
+
+  return moveWorkItemState(state, workItem.id, completion.sourceBoardId, completion.position)
 }
 
 export function updateWorkItemDateRangeState(

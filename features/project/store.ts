@@ -34,6 +34,7 @@ import { createProjectSeedState } from "./seed-data.ts"
 import {
   createAndLinkWorkItemDocumentState,
   createWorkItemState,
+  completeWorkItemState,
   deleteWorkItemState,
   linkWorkItemDocumentState,
   moveWorkItemState,
@@ -42,9 +43,11 @@ import {
   updateWorkItemDateRangeState,
   updateWorkItemState,
   unlinkWorkItemDocumentState,
+  undoWorkItemCompletionState,
   type CreateAndLinkWorkItemDocumentInput,
   type WorkItemDetailsPatch,
   type WorkItemDeletion,
+  type WorkItemCompletion,
 } from "./work-item-state.ts"
 
 export type ProjectStoreActions = {
@@ -97,12 +100,15 @@ export type ProjectStoreActions = {
   ) => boolean
   deleteWorkItem: (workItemId: string) => boolean
   undoDeleteWorkItem: () => boolean
+  completeWorkItem: (workItemId: string, targetBoardId: string) => boolean
+  undoCompleteWorkItem: () => boolean
   resetDemo: () => void
 }
 
 export type ProjectStore = ProjectWorkspaceState & ProjectStoreActions & {
   dataRevision: number
   lastWorkItemDeletion: WorkItemDeletion | null
+  lastWorkItemCompletion: WorkItemCompletion | null
 }
 export type ProjectStoreApi = StoreApi<ProjectStore>
 
@@ -115,6 +121,7 @@ export function createProjectStore(
     ...cloneProjectState(baseline),
     dataRevision: 0,
     lastWorkItemDeletion: null,
+    lastWorkItemCompletion: null,
 
     createWorkspace(input) {
       const current = readProjectState(get())
@@ -137,7 +144,11 @@ export function createProjectStore(
       const next = deleteWorkspaceState(current, id)
       if (next === current) return false
       const deletion = get().lastWorkItemDeletion
-      set({ ...next, lastWorkItemDeletion: deletion && next.projectsById[deletion.workItem.projectId] ? deletion : null })
+      const completion = get().lastWorkItemCompletion
+      set({ ...next,
+        lastWorkItemDeletion: deletion && next.projectsById[deletion.workItem.projectId] ? deletion : null,
+        lastWorkItemCompletion: completion && next.projectsById[completion.projectId] ? completion : null,
+      })
       return true
     },
 
@@ -162,7 +173,11 @@ export function createProjectStore(
       const next = deleteProjectState(current, id)
       if (next === current) return false
       const deletion = get().lastWorkItemDeletion
-      set({ ...next, lastWorkItemDeletion: deletion && next.projectsById[deletion.workItem.projectId] ? deletion : null })
+      const completion = get().lastWorkItemCompletion
+      set({ ...next,
+        lastWorkItemDeletion: deletion && next.projectsById[deletion.workItem.projectId] ? deletion : null,
+        lastWorkItemCompletion: completion && next.projectsById[completion.projectId] ? completion : null,
+      })
       return true
     },
 
@@ -173,7 +188,7 @@ export function createProjectStore(
     importBackup(text) {
       const result = parseBackup(text)
       if (!result.ok) return result
-      set({ ...cloneProjectState(result.data), dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null })
+      set({ ...cloneProjectState(result.data), dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null, lastWorkItemCompletion: null })
       return result
     },
 
@@ -331,7 +346,30 @@ export function createProjectStore(
         return false
       }
 
-      set(next)
+      const completion = get().lastWorkItemCompletion
+      set({ ...next, lastWorkItemCompletion: completion?.workItemId === workItemId ? null : completion })
+      return true
+    },
+
+    completeWorkItem(workItemId, targetBoardId) {
+      const current = readProjectState(get())
+      const next = completeWorkItemState(current, workItemId, targetBoardId)
+      if (next === current) return false
+      const workItem = current.workItemsById[workItemId]
+      set({ ...next, lastWorkItemCompletion: {
+        workItemId, targetBoardId, title: workItem.title, projectId: workItem.projectId,
+        sourceBoardId: workItem.boardId, position: workItem.position,
+      } })
+      return true
+    },
+
+    undoCompleteWorkItem() {
+      const completion = get().lastWorkItemCompletion
+      if (!completion) return false
+      const current = readProjectState(get())
+      const next = undoWorkItemCompletionState(current, completion)
+      if (next === current) return false
+      set({ ...next, lastWorkItemCompletion: null })
       return true
     },
 
@@ -411,7 +449,10 @@ export function createProjectStore(
           return dependencyIndex < 0 ? [] : [{ id: item.id, dependencyIndex }]
         }),
       }
-      set({ ...next, lastWorkItemDeletion: deletion })
+      const completion = get().lastWorkItemCompletion
+      set({ ...next, lastWorkItemDeletion: deletion,
+        lastWorkItemCompletion: completion?.workItemId === workItemId ? null : completion,
+      })
       return true
     },
 
@@ -426,7 +467,7 @@ export function createProjectStore(
     },
 
     resetDemo() {
-      set({ ...cloneProjectState(baseline), dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null })
+      set({ ...cloneProjectState(baseline), dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null, lastWorkItemCompletion: null })
     },
   }))
 }
