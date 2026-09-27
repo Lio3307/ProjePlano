@@ -2,6 +2,7 @@
 
 import {
   CalendarDays,
+  CalendarRange,
   FolderKanban,
   LayoutDashboard,
 } from "lucide-react"
@@ -91,6 +92,12 @@ export function AppSidebar() {
                 url="/dashboard/today"
                 icon={CalendarDays}
                 isActive={pathname === "/dashboard/today"}
+              />
+              <SidebarNavigationItem
+                title="Upcoming"
+                url="/dashboard/upcoming"
+                icon={CalendarRange}
+                isActive={pathname === "/dashboard/upcoming"}
               />
             </SidebarMenu>
           </SidebarGroupContent>

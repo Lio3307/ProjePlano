@@ -94,10 +94,19 @@ Lists update from the shared in-memory store. The local date refreshes within a
 minute of midnight and when the tab regains focus or visibility. Table rows and
 project status do not determine task completion.
 
+**Upcoming** lists unfinished tasks due tomorrow through seven days from today,
+across all workspaces and unarchived projects. It groups tasks by due date,
+earliest first, then priority and task ID within each date. Today, overdue,
+undated tasks and completed Boards are excluded. It uses the same browser-local
+date refresh, task details/edit dialog and focus return as Today; editing a task
+out of the range updates the list without closing its dialog. Both pages share
+`features/project/components/task-agenda-dashboard.tsx` and the existing store.
+
 | Route | Purpose |
 | --- | --- |
 | `/dashboard` | Workspaces |
 | `/dashboard/today` | Due-today and overdue tasks across projects |
+| `/dashboard/upcoming` | Tasks due tomorrow through the next seven days |
 | `/dashboard/workspaces/[workspaceId]` | Workspace overview and projects |
 | `/dashboard/workspaces/[workspaceId]/projects/[projectId]` | Project shell |
 
@@ -124,7 +133,7 @@ typed records and callbacks; they do not read the store themselves. Table owns
 its data model and editing actions; snapshots live in the dashboard store and
 never create hidden normalized tasks.
 `features/project/components/project-work-item-dialog.tsx` connects the shared
-task dialog to live project records and store actions for Board, Calendar and Today.
+task dialog to live project records and store actions for Board, Calendar, Today and Upcoming.
 
 ## JSON backups
 

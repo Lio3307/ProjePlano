@@ -148,7 +148,7 @@ test("Today caches by snapshot and local date, including empty results", () => {
 })
 
 test("Today opens a shared task dialog independently of its filtered rows", () => {
-  const source = readFileSync(new URL("./components/today-dashboard.tsx", import.meta.url), "utf8")
+  const source = readFileSync(new URL("./components/task-agenda-dashboard.tsx", import.meta.url), "utf8")
   assert.match(source, /<ProjectWorkItemDialog/)
   assert.match(source, /projectId=\{selectedTask\.projectId\}/)
   assert.match(source, /workItemId: selectedTask\.workItemId/)

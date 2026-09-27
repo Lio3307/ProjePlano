@@ -11,28 +11,32 @@ import {
   WorkItemStatusBadge,
 } from "@/features/work-item/components/work-item-meta"
 import { getProjectViewHref } from "../query-state"
-import { selectTodayWorkItems, type TodayWorkItem } from "../selectors"
+import { selectTodayWorkItems, selectUpcomingWorkItems, type DatedWorkItem } from "../selectors"
 import { useProjectStore } from "../store-provider"
 import { useLocalToday } from "../use-local-today"
 import { ProjectWorkItemDialog } from "./project-work-item-dialog"
 
-export function TodayDashboard() {
+type AgendaMode = "today" | "upcoming"
+
+export function TaskAgendaDashboard({ mode }: { mode: AgendaMode }) {
   const today = useLocalToday()
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
       <header className="space-y-2 border-b pb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Today</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{mode === "today" ? "Today" : "Upcoming"}</h1>
         {today ? (
           <p className="text-sm text-muted-foreground">
-            <time dateTime={today}>{formatWorkItemDate(today)}</time>
+            {mode === "today" ? (
+              <time dateTime={today}>{formatWorkItemDate(today)}</time>
+            ) : "Next 7 days"}
             <span aria-hidden="true"> · </span>
             All workspaces
           </p>
         ) : null}
       </header>
       {today ? (
-        <TodayTasks today={today} />
+        <AgendaTasks key={mode} mode={mode} today={today} />
       ) : (
         <p role="status" className="text-sm text-muted-foreground">Loading tasks…</p>
       )}
@@ -40,15 +44,24 @@ export function TodayDashboard() {
   )
 }
 
-function TodayTasks({ today }: { today: string }) {
-  const items = useProjectStore(state => selectTodayWorkItems(state, today))
+function AgendaTasks({ today, mode }: { today: string; mode: AgendaMode }) {
+  const items = useProjectStore(state => mode === "today"
+    ? selectTodayWorkItems(state, today)
+    : selectUpcomingWorkItems(state, today))
   const [selectedTask, setSelectedTask] = useState<{
     key: string; projectId: string; workItemId: string
   } | null>(null)
   const triggerRef = useRef<HTMLElement | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
-  const overdue = items.filter(item => item.workItem.dueDate < today)
-  const dueToday = items.filter(item => item.workItem.dueDate === today)
+  const sections = mode === "today" ? [
+    { id: "overdue-tasks", title: "Overdue", items: items.filter(item => item.workItem.dueDate < today), emptyMessage: "No overdue tasks." },
+    { id: "due-today-tasks", title: "Due today", items: items.filter(item => item.workItem.dueDate === today), emptyMessage: "No tasks due today." },
+  ] : Array.from(new Set(items.map(item => item.workItem.dueDate)), date => ({
+    id: "due-" + date,
+    title: formatWorkItemDate(date),
+    items: items.filter(item => item.workItem.dueDate === date),
+    emptyMessage: "",
+  }))
 
   function openTask(projectId: string, workItemId: string, trigger: HTMLElement) {
     triggerRef.current = trigger
@@ -64,21 +77,14 @@ function TodayTasks({ today }: { today: string }) {
   }
 
   return (
-    <div ref={listRef} role="region" tabIndex={-1} aria-label="Today's tasks" className="space-y-8">
-      <TodayTaskSection
-        id="overdue-tasks"
-        title="Overdue"
-        items={overdue}
-        emptyMessage="No overdue tasks."
-        onOpenTask={openTask}
-      />
-      <TodayTaskSection
-        id="due-today-tasks"
-        title="Due today"
-        items={dueToday}
-        emptyMessage="No tasks due today."
-        onOpenTask={openTask}
-      />
+    <div ref={listRef} role="region" tabIndex={-1} aria-label={mode === "today" ? "Today's tasks" : "Upcoming tasks"} className="space-y-8">
+      {sections.length === 0 ? (
+        <p className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+          No tasks due in the next 7 days.
+        </p>
+      ) : sections.map(section => (
+        <DatedTaskSection key={section.id} {...section} onOpenTask={openTask} />
+      ))}
       {selectedTask ? (
         <ProjectWorkItemDialog
           key={selectedTask.key}
@@ -92,7 +98,7 @@ function TodayTasks({ today }: { today: string }) {
   )
 }
 
-function TodayTaskSection({
+function DatedTaskSection({
   id,
   title,
   items,
@@ -101,7 +107,7 @@ function TodayTaskSection({
 }: {
   id: string
   title: string
-  items: readonly TodayWorkItem[]
+  items: readonly DatedWorkItem[]
   emptyMessage: string
   onOpenTask: (projectId: string, workItemId: string, trigger: HTMLElement) => void
 }) {

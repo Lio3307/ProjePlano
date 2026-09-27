@@ -28,7 +28,7 @@ export type ResolvedWorkItem = {
   stage: WorkItemStatus
 }
 
-export type TodayWorkItem = {
+export type DatedWorkItem = {
   workItem: WorkItem & { dueDate: string }
   board: TaskBoard
   project: ProjectRecord
@@ -51,23 +51,45 @@ const resolvedWorkItemCache: ArraySelectorCache<ResolvedWorkItem> =
   new WeakMap()
 const documentLinkedWorkItemCache: ArraySelectorCache<DocumentLinkedWorkItem> =
   new WeakMap()
-const todayWorkItemCache: ArraySelectorCache<TodayWorkItem> = new WeakMap()
+const datedWorkItemCache: ArraySelectorCache<DatedWorkItem> = new WeakMap()
 
 export function selectTodayWorkItems(
   state: ProjectWorkspaceState,
   today: string
-): TodayWorkItem[] {
-  return getCachedArray(todayWorkItemCache, state, today, () => {
+): DatedWorkItem[] {
+  return selectDatedWorkItems(state, today, "today")
+}
+
+export function selectUpcomingWorkItems(
+  state: ProjectWorkspaceState,
+  today: string
+): DatedWorkItem[] {
+  return selectDatedWorkItems(state, today, "upcoming")
+}
+
+function selectDatedWorkItems(
+  state: ProjectWorkspaceState,
+  today: string,
+  mode: "today" | "upcoming"
+): DatedWorkItem[] {
+  return getCachedArray(datedWorkItemCache, state, mode + ":" + today, () => {
     if (!isValidWorkItemDate(today)) return []
 
-    const items: TodayWorkItem[] = []
+    const items: DatedWorkItem[] = []
+    const todayTime = Date.parse(today)
 
     for (const workspace of selectWorkspaces(state)) {
       for (const project of selectProjectsByWorkspaceId(state, workspace.id)) {
         if (project.archived) continue
 
         for (const { workItem, board } of selectProjectResolvedWorkItems(state, project.id)) {
-          if (board.stage === "done" || !hasValidDueDate(workItem) || workItem.dueDate > today) {
+          if (board.stage === "done" || !hasValidDueDate(workItem)) {
+            continue
+          }
+
+          // ISO date-only strings use UTC, so calendar-day distance is DST-independent.
+          const daysAhead = (Date.parse(workItem.dueDate) - todayTime) / 86_400_000
+          if (mode === "today" ? daysAhead > 0 : daysAhead <= 0 || daysAhead > 7) {
             continue
           }
 
