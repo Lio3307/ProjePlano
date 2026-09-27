@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog"
 import type { BoardLabel } from "@/features/project/board"
 import {
+  createDuplicateWorkItemFormValue,
   createWorkItemFormValue,
   getEditableWorkItemFields,
   haveSameEditableWorkItemFields,
@@ -38,7 +39,7 @@ type DialogFinalFocus = ComponentProps<
   typeof DialogContent
 >["finalFocus"]
 
-type ExistingTaskScreen = "view" | "edit"
+type ExistingTaskScreen = "view" | "edit" | "duplicate"
 
 interface WorkItemDialogProps {
   mode: "create" | "view"
@@ -95,7 +96,8 @@ export function WorkItemDialog({
   const [error, setError] = useState<string | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const errorRef = useRef<HTMLParagraphElement | null>(null)
-  const isFormScreen = mode === "create" || existingTaskScreen === "edit"
+  const isCreating = mode === "create" || existingTaskScreen === "duplicate"
+  const isFormScreen = isCreating || existingTaskScreen === "edit"
 
   function focusError(message: string) {
     setError(message)
@@ -116,7 +118,7 @@ export function WorkItemDialog({
     const fields = validation.fields
 
     if (
-      mode === "view" &&
+      !isCreating &&
       workItem &&
       haveSameEditableWorkItemFields(
         getEditableWorkItemFields(workItem),
@@ -128,7 +130,7 @@ export function WorkItemDialog({
     }
 
     const saved =
-      mode === "create"
+      isCreating
         ? onCreate(fields)
         : workItem !== null && onSave(workItem.id, fields)
 
@@ -141,7 +143,7 @@ export function WorkItemDialog({
 
     setError(null)
 
-    if (mode === "create") {
+    if (isCreating) {
       onOpenChange(false)
       return
     }
@@ -159,6 +161,15 @@ export function WorkItemDialog({
     setError(null)
     setConfirmingDelete(false)
     setExistingTaskScreen("edit")
+  }
+
+  function handleDuplicate() {
+    if (!workItem) return
+
+    setDraft(createDuplicateWorkItemFormValue(workItem))
+    setError(null)
+    setConfirmingDelete(false)
+    setExistingTaskScreen("duplicate")
   }
 
   function handleCancel() {
@@ -188,7 +199,9 @@ export function WorkItemDialog({
 
   let dialogTitle = "Create task"
 
-  if (mode === "view") {
+  if (existingTaskScreen === "duplicate") {
+    dialogTitle = "Duplicate task"
+  } else if (mode === "view") {
     dialogTitle =
       existingTaskScreen === "edit"
         ? "Edit task"
@@ -222,7 +235,7 @@ export function WorkItemDialog({
                 projectId={projectId}
                 boardLabels={boardLabels}
                 documents={documents}
-                workItemId={workItem?.id ?? null}
+                workItemId={isCreating ? null : workItem?.id ?? null}
                 projectWorkItems={projectWorkItems}
                 stagesByBoardId={stagesByBoardId}
                 onChange={(value) => {
@@ -300,7 +313,7 @@ export function WorkItemDialog({
                   form="work-item-form"
                   disabled={!draft.title.trim()}
                 >
-                  {mode === "create" ? "Create task" : "Save changes"}
+                  {isCreating ? "Create task" : "Save changes"}
                 </Button>
               </div>
             </>
@@ -313,9 +326,14 @@ export function WorkItemDialog({
               >
                 Close
               </Button>
-              <Button type="button" onClick={handleStartEditing}>
-                Edit task
-              </Button>
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button type="button" variant="outline" onClick={handleDuplicate}>
+                  Duplicate
+                </Button>
+                <Button type="button" onClick={handleStartEditing}>
+                  Edit task
+                </Button>
+              </div>
             </>
           )}
         </DialogFooter>

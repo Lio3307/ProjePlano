@@ -75,6 +75,18 @@ export function createWorkItemFormValue(
   }
 }
 
+export function createDuplicateWorkItemFormValue(
+  workItem: WorkItem
+): WorkItemFormValue {
+  return {
+    ...createWorkItemFormValue(workItem),
+    startDate: "",
+    dueDate: "",
+    dependencyIds: [],
+    checklist: workItem.checklist.map((item) => ({ ...item, completed: false })),
+  }
+}
+
 export function normalizeWorkItemFormValue(
   value: WorkItemFormValue
 ): EditableWorkItemFields | null {

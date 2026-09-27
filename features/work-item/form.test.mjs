@@ -66,6 +66,37 @@ test("maps an existing work item to form strings", () => {
   assert.deepEqual(existing.linkedResourceIds, [])
 })
 
+test("duplicates a detached editable draft with fresh schedule and checklist progress", async () => {
+  const { createDuplicateWorkItemFormValue } = await import("./form.ts")
+  assert.equal(typeof createDuplicateWorkItemFormValue, "function")
+  const original = createWorkItem({
+    startDate: "2026-09-01",
+    checklist: [{ id: "check-a", label: "Verify contract", completed: true }],
+    linkedResourceIds: ["resource-notes"],
+  })
+  const before = structuredClone(original)
+  const draft = createDuplicateWorkItemFormValue(original)
+
+  assert.deepEqual(draft, {
+    ...createWorkItemFormValue(original),
+    startDate: "",
+    dueDate: "",
+    dependencyIds: [],
+    checklist: [{ id: "check-a", label: "Verify contract", completed: false }],
+  })
+  assert.equal("id" in draft, false)
+  assert.equal("boardId" in draft, false)
+  const fields = normalizeWorkItemFormValue(draft)
+  assert.ok(fields)
+  assert.equal(fields.startDate, null)
+  assert.equal(fields.dueDate, null)
+  draft.title = "Another task"
+  draft.labelIds.push("another-label")
+  draft.checklist[0].label = "Another check"
+  draft.linkedResourceIds.push("another-document")
+  assert.deepEqual(original, before)
+})
+
 test("normalizes all editable values in one conversion", () => {
   const result = normalizeWorkItemFormValue({
     title: "  Fix hydration  ",

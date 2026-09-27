@@ -458,3 +458,14 @@ test("derives task status from its Board instead of form state", async () => {
   assert.match(source, /boardStage/)
   assert.match(source, /stagesByBoardId/)
 })
+
+test("duplicates through Create with a new identity rather than saving over the source", async () => {
+  const source = await readFile(dialogSourceUrl, "utf8")
+  assert.match(source, /const isCreating = mode === "create" \|\| existingTaskScreen === "duplicate"/)
+  assert.match(source, /setDraft\(createDuplicateWorkItemFormValue\(workItem\)\)/)
+  assert.match(source, /onClick=\{handleDuplicate\}/)
+  assert.match(source, /!isCreating &&[\s\S]*?haveSameEditableWorkItemFields/)
+  assert.match(source, /isCreating\s*\? onCreate\(fields\)\s*:/)
+  assert.match(source, /workItemId=\{isCreating \? null : workItem\?\.id \?\? null\}/)
+  assert.match(source, /if \(isCreating\) \{\s*onOpenChange\(false\)/)
+})

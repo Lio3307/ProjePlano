@@ -39,6 +39,13 @@ Progress, overdue counts, and dependency blockers follow the same Board stage.
 Task dependencies can cross Boards within a project. Documents
 can link to several tasks; unlinking does not delete document content.
 
+Open a task in Board or Calendar and select **Duplicate** to prepare an editable
+copy. Title, description, type, priority, estimate, labels and document links are
+copied; checklist progress, start/due dates and dependencies are reset. **Create
+task** saves a separate task at the end of the same Board; **Cancel** returns to
+the original without saving. The copy inherits its Board's stage, including
+`done` on a completed Board. Linked documents remain shared, not duplicated.
+
 Table and Calendar Work views can be repeated. Calendar projects Board-owned
 tasks and does not create its own task records.
 
