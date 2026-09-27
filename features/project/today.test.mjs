@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 import { createElement } from "react"
 import { renderToString } from "react-dom/server"
+import { readFileSync } from "node:fs"
 
 import * as selectors from "./selectors.ts"
 import { createProjectSeedState } from "./seed-data.ts"
@@ -11,6 +12,8 @@ import {
 } from "./lifecycle.ts"
 import { getProjectViewHref } from "./query-state.ts"
 import { useLocalToday } from "./use-local-today.ts"
+import { createProjectStore } from "./store.ts"
+import { getEditableWorkItemFields } from "../work-item/form.ts"
 
 const today = "2026-09-27"
 
@@ -142,4 +145,39 @@ test("Today caches by snapshot and local date, including empty results", () => {
   const empty = select(state, "2020-01-01")
   assert.deepEqual(empty, [])
   assert.strictEqual(select(state, "2020-01-01"), empty)
+})
+
+test("Today opens a shared task dialog independently of its filtered rows", () => {
+  const source = readFileSync(new URL("./components/today-dashboard.tsx", import.meta.url), "utf8")
+  assert.match(source, /<ProjectWorkItemDialog/)
+  assert.match(source, /projectId=\{selectedTask\.projectId\}/)
+  assert.match(source, /workItemId: selectedTask\.workItemId/)
+  assert.match(source, /onClick=\{\(event\) => onOpenTask\(project\.id, workItem\.id, event\.currentTarget\)\}/)
+  assert.match(source, /data-work-item-open-trigger=\{workItem\.id\}/)
+  assert.match(source, /finalFocus=\{finalFocus\}/)
+  assert.match(source, /isConnected/)
+  assert.match(source, /return remountedTrigger \?\? listRef\.current/)
+  assert.doesNotMatch(source, /items\.find\(/)
+})
+
+test("an edited task remains available to its dialog after leaving Today", () => {
+  const store = createProjectStore()
+  const id = "work-item-2-workspace-filters"
+  assert.equal(store.getState().updateWorkItemDateRange(id, null, today), true)
+  const selected = selectors.selectTodayWorkItems(store.getState(), today).find(item => item.workItem.id === id)
+  const otherProjectTasks = selectors.selectProjectWorkItems(store.getState(), "6")
+  assert.ok(selected)
+  assert.equal(store.getState().saveWorkItem(id, {
+    ...getEditableWorkItemFields(selected.workItem), dueDate: "2026-10-01", description: "Edited from Today",
+  }), true)
+  assert.equal(selectors.selectTodayWorkItems(store.getState(), today).some(item => item.workItem.id === id), false)
+  const liveTask = selectors.selectProjectResolvedWorkItems(store.getState(), selected.project.id)
+    .find(item => item.workItem.id === id)?.workItem
+  assert.equal(liveTask.description, "Edited from Today")
+  assert.equal(liveTask.dueDate, "2026-10-01")
+  assert.equal(store.getState().saveWorkItem(id, {
+    ...getEditableWorkItemFields(liveTask), title: "Continue editing the same task",
+  }), true)
+  assert.equal(selectors.selectProjectResolvedWorkItems(store.getState(), "6").some(item => item.workItem.id === id), false)
+  assert.deepEqual(selectors.selectProjectWorkItems(store.getState(), "6"), otherProjectTasks)
 })

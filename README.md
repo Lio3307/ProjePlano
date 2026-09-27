@@ -85,6 +85,11 @@ projects, grouped into **Overdue** and **Due today** using the browser's local
 date. It excludes undated/future tasks and completed Boards. Results sort by
 oldest due date, then priority (urgent first), then task ID. Each task includes
 workspace/project/Board context and **Open board** links to its Board Work view.
+Click a task title to open its details, then **Edit task** to change dates,
+checklist or other fields directly in Today. The dialog stays open if an edit
+moves the task out of Today's date range. Duplicate, Delete and document actions
+use the same dialog as Board/Calendar. On close, focus returns to the task title
+or the Today list if that task is no longer visible.
 Lists update from the shared in-memory store. The local date refreshes within a
 minute of midnight and when the tab regains focus or visibility. Table rows and
 project status do not determine task completion.
@@ -118,6 +123,8 @@ The dashboard layout mounts one `ProjectStoreProvider`. Feature cards receive
 typed records and callbacks; they do not read the store themselves. Table owns
 its data model and editing actions; snapshots live in the dashboard store and
 never create hidden normalized tasks.
+`features/project/components/project-work-item-dialog.tsx` connects the shared
+task dialog to live project records and store actions for Board, Calendar and Today.
 
 ## JSON backups
 

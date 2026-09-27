@@ -50,9 +50,10 @@ test("adds a task from each exact user-created Board", async () => {
 
 test("carries the concrete Board ID into a task create session", async () => {
   const source = await readFile(projectWorkViewUrl, "utf8")
+  const dialogSource = await readFile(new URL("../project/components/project-work-item-dialog.tsx", import.meta.url), "utf8")
 
   assert.match(
-    source,
+    dialogSource,
     /mode: "create"; boardId: string/
   )
   assert.match(
@@ -60,10 +61,12 @@ test("carries the concrete Board ID into a task create session", async () => {
     /function openCreateDialog\(\s*boardId: string,\s*trigger: HTMLElement\s*\)/
   )
   assert.match(
-    source,
-    /taskBoard\.id === dialogSession\.boardId/
+    dialogSource,
+    /dialogSession\.mode === "create" \? dialogSession\.boardId/
   )
-  assert.match(source, /boardId: dialogBoard\.id/)
+  assert.match(dialogSource, /selectTaskBoard\(state, projectId, boardId\)/)
+  assert.match(dialogSource, /boardId: dialogBoard\.id/)
+  assert.match(source, /session=\{dialogSession\}/)
   assert.match(source, /onAddTask=\{openCreateDialog\}/)
 })
 

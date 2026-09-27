@@ -285,7 +285,10 @@ test("focuses specific task validation and relationship feedback", async () => {
 })
 
 test("keeps live task lookup, project-local options, URLs, and IDs in the project bridge", async () => {
-  const source = await readFile(projectWorkViewSourceUrl, "utf8")
+  const source = (await Promise.all([
+    readFile(projectWorkViewSourceUrl, "utf8"),
+    readFile(new URL("../project/components/project-work-item-dialog.tsx", import.meta.url), "utf8"),
+  ])).join("\n")
 
   assert.match(source, /mode: "create"; boardId: string/)
   assert.match(source, /mode: "view"; workItemId: string/)

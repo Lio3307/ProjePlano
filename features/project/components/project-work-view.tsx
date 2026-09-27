@@ -6,29 +6,19 @@ import { useShallow } from "zustand/react/shallow"
 import { CalendarView } from "@/features/calendar/components/calendar-view"
 import { KanbanView } from "@/features/kanban/components/kanban-view"
 import { TableView } from "@/features/table/components/table-view"
-import { WorkItemDialog } from "@/features/work-item/components/work-item-dialog"
 import { WorkItemFiltersToolbar } from "@/features/work-item/components/work-item-filters"
 import { createWorkItemFilters, filterWorkItems } from "@/features/work-item/filters"
-import type { WorkItemDocumentOption } from "@/features/work-item/components/work-item-documents-field"
-import type { EditableWorkItemFields } from "@/features/work-item/model"
 import {
-  selectBoardWorkItems,
-  selectProjectById,
-  selectProjectDocumentResources,
   selectProjectResolvedWorkItems,
   selectSupportedProjectViews,
   selectTaskBoards,
 } from "../selectors"
-import { getProjectViewHref } from "../query-state"
+import { ProjectWorkItemDialog, type DialogSession } from "./project-work-item-dialog"
 import { useProjectStore } from "../store-provider"
 import type {
   SupportedProjectView,
   SupportedProjectViewType,
 } from "../view-definitions"
-
-type DialogSession =
-  | { key: string; mode: "create"; boardId: string }
-  | { key: string; mode: "view"; workItemId: string }
 
 interface ProjectWorkViewProps {
   projectId: string
@@ -92,10 +82,6 @@ function SharedWorkItemView({
   onEditBoard,
   onSetLabels,
 }: SharedWorkItemViewProps) {
-  const project = useProjectStore((state) =>
-    selectProjectById(state, projectId)
-  )
-  const workspaceId = project?.workspaceId ?? ""
   const projectViews = useProjectStore(
     useShallow((state) => selectSupportedProjectViews(state, projectId))
   )
@@ -114,30 +100,14 @@ function SharedWorkItemView({
       )
     )
   )
-  const projectDocuments = useProjectStore(
-    useShallow((state) =>
-      selectProjectDocumentResources(state, projectId)
-    )
-  )
   const {
-    createWorkItem,
-    saveWorkItem,
     moveWorkItem,
     updateWorkItemDateRange,
-    linkWorkItemDocument,
-    unlinkWorkItemDocument,
-    createAndLinkWorkItemDocument,
     deleteWorkItem,
   } = useProjectStore(
     useShallow((state) => ({
-      createWorkItem: state.createWorkItem,
-      saveWorkItem: state.saveWorkItem,
       moveWorkItem: state.moveWorkItem,
       updateWorkItemDateRange: state.updateWorkItemDateRange,
-      linkWorkItemDocument: state.linkWorkItemDocument,
-      unlinkWorkItemDocument: state.unlinkWorkItemDocument,
-      createAndLinkWorkItemDocument:
-        state.createAndLinkWorkItemDocument,
       deleteWorkItem: state.deleteWorkItem,
     }))
   )
@@ -172,50 +142,6 @@ function SharedWorkItemView({
     ),
     [workItems, stagesByBoardId, filters]
   )
-  const dialogResolvedWorkItem =
-    dialogSession?.mode === "view"
-      ? (resolvedWorkItems.find(
-          ({ workItem }) => workItem.id === dialogSession.workItemId
-        ) ?? null)
-      : null
-  const dialogBoard =
-    dialogSession?.mode === "create"
-      ? (taskBoards.find(
-          (taskBoard) => taskBoard.id === dialogSession.boardId
-        ) ?? null)
-      : (dialogResolvedWorkItem?.board ?? null)
-  const dialogBoardView = dialogBoard
-    ? (boardViews.find(
-        (boardView) => boardView.id === dialogBoard.viewId
-      ) ?? null)
-    : null
-  const dialogWorkItem = dialogResolvedWorkItem?.workItem ?? null
-  const dialogSessionIsAvailable =
-    dialogSession?.mode === "create"
-      ? dialogBoard !== null
-      : dialogWorkItem !== null
-  const dialogBoardId = dialogBoard?.id ?? ""
-  const dialogBoardWorkItems = useProjectStore(
-    useShallow((state) =>
-      dialogBoardId
-        ? selectBoardWorkItems(state, projectId, dialogBoardId)
-        : []
-    )
-  )
-  const documents = useMemo<WorkItemDocumentOption[]>(
-    () =>
-      projectDocuments.map((document) => ({
-        id: document.id,
-        title: document.title,
-        href: getProjectViewHref(
-          workspaceId,
-          projectId,
-          "documents",
-          { resourceId: document.id }
-        ),
-      })),
-    [projectDocuments, projectId, workspaceId]
-  )
 
   function openCreateDialog(boardId: string, trigger: HTMLElement) {
     dialogTriggerRef.current = trigger
@@ -243,37 +169,6 @@ function SharedWorkItemView({
       key: crypto.randomUUID(),
       mode: "view",
       workItemId: workItem.id,
-    })
-  }
-
-  function createTask(fields: EditableWorkItemFields) {
-    if (!dialogBoard) {
-      return false
-    }
-
-    return createWorkItem({
-      id: "work-item-" + crypto.randomUUID(),
-      projectId,
-      boardId: dialogBoard.id,
-      ...fields,
-      position: dialogBoardWorkItems.length,
-      milestoneId: null,
-      customFields: {},
-    })
-  }
-
-  function handleCreateAndLinkDocument(
-    workItemId: string,
-    title: string
-  ) {
-    return createAndLinkWorkItemDocument({
-      id:
-        "resource-" +
-        projectId +
-        "-document-" +
-        crypto.randomUUID(),
-      workItemId,
-      title,
     })
   }
 
@@ -429,35 +324,18 @@ function SharedWorkItemView({
         />
       )}
 
-      {dialogSession && dialogSessionIsAvailable && dialogBoard ? (
-        <WorkItemDialog
+      {dialogSession ? (
+        <ProjectWorkItemDialog
           key={dialogSession.key}
-          mode={dialogSession.mode}
-          open
+          session={dialogSession}
           projectId={projectId}
-          boardTitle={dialogBoard.title}
-          boardStage={dialogBoard.stage}
-          boardLabels={dialogBoardView?.labels ?? []}
-          projectWorkItems={workItems}
-          stagesByBoardId={stagesByBoardId}
-          documents={documents}
-          workItem={
-            dialogSession.mode === "view"
-              ? dialogWorkItem
-              : null
-          }
           finalFocus={finalFocus}
           onOpenChange={(open) => {
             if (!open) {
               setDialogSession(null)
             }
           }}
-          onCreate={createTask}
-          onSave={saveWorkItem}
           onDelete={deleteTask}
-          onLinkDocument={linkWorkItemDocument}
-          onUnlinkDocument={unlinkWorkItemDocument}
-          onCreateAndLinkDocument={handleCreateAndLinkDocument}
         />
       ) : null}
     </div>

@@ -2,6 +2,7 @@
 
 import { ArrowUpRight } from "lucide-react"
 import Link from "next/link"
+import { useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -13,6 +14,7 @@ import { getProjectViewHref } from "../query-state"
 import { selectTodayWorkItems, type TodayWorkItem } from "../selectors"
 import { useProjectStore } from "../store-provider"
 import { useLocalToday } from "../use-local-today"
+import { ProjectWorkItemDialog } from "./project-work-item-dialog"
 
 export function TodayDashboard() {
   const today = useLocalToday()
@@ -40,23 +42,52 @@ export function TodayDashboard() {
 
 function TodayTasks({ today }: { today: string }) {
   const items = useProjectStore(state => selectTodayWorkItems(state, today))
+  const [selectedTask, setSelectedTask] = useState<{
+    key: string; projectId: string; workItemId: string
+  } | null>(null)
+  const triggerRef = useRef<HTMLElement | null>(null)
+  const listRef = useRef<HTMLDivElement>(null)
   const overdue = items.filter(item => item.workItem.dueDate < today)
   const dueToday = items.filter(item => item.workItem.dueDate === today)
 
+  function openTask(projectId: string, workItemId: string, trigger: HTMLElement) {
+    triggerRef.current = trigger
+    setSelectedTask({ key: crypto.randomUUID(), projectId, workItemId })
+  }
+
+  function finalFocus() {
+    if (triggerRef.current?.isConnected) return triggerRef.current
+    const remountedTrigger = Array.from(
+      listRef.current?.querySelectorAll<HTMLElement>("[data-work-item-open-trigger]") ?? []
+    ).find(trigger => trigger.dataset.workItemOpenTrigger === selectedTask?.workItemId)
+    return remountedTrigger ?? listRef.current
+  }
+
   return (
-    <div className="space-y-8">
+    <div ref={listRef} role="region" tabIndex={-1} aria-label="Today's tasks" className="space-y-8">
       <TodayTaskSection
         id="overdue-tasks"
         title="Overdue"
         items={overdue}
         emptyMessage="No overdue tasks."
+        onOpenTask={openTask}
       />
       <TodayTaskSection
         id="due-today-tasks"
         title="Due today"
         items={dueToday}
         emptyMessage="No tasks due today."
+        onOpenTask={openTask}
       />
+      {selectedTask ? (
+        <ProjectWorkItemDialog
+          key={selectedTask.key}
+          projectId={selectedTask.projectId}
+          session={{ key: selectedTask.key, mode: "view", workItemId: selectedTask.workItemId }}
+          finalFocus={finalFocus}
+          onOpenChange={open => { if (!open) setSelectedTask(null) }}
+        />
+      ) : null}
     </div>
   )
 }
@@ -66,11 +97,13 @@ function TodayTaskSection({
   title,
   items,
   emptyMessage,
+  onOpenTask,
 }: {
   id: string
   title: string
   items: readonly TodayWorkItem[]
   emptyMessage: string
+  onOpenTask: (projectId: string, workItemId: string, trigger: HTMLElement) => void
 }) {
   return (
     <section aria-labelledby={id} className="space-y-3">
@@ -89,7 +122,16 @@ function TodayTaskSection({
           {items.map(({ workItem, board, project, workspace }) => (
             <li key={workItem.id} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
               <div className="min-w-0 flex-1 space-y-2">
-                <h3 className="break-words text-sm font-medium">{workItem.title}</h3>
+                <h3 className="text-sm font-medium">
+                  <button
+                    type="button"
+                    className="min-h-11 max-w-full rounded-sm text-left break-words hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+                    data-work-item-open-trigger={workItem.id}
+                    onClick={(event) => onOpenTask(project.id, workItem.id, event.currentTarget)}
+                  >
+                    {workItem.title}
+                  </button>
+                </h3>
                 <p className="break-words text-xs text-muted-foreground">
                   {workspace.title} / {project.title} / {board.title}
                 </p>
