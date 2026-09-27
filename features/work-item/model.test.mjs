@@ -17,7 +17,6 @@ function createWorkItem(overrides = {}) {
     description: "Create the shared project composition boundary.",
     type: "feature",
     priority: "medium",
-    assigneeId: "member-project-alpha-maya-chen",
     startDate: "2026-09-02",
     dueDate: "2026-09-08",
     estimate: 3,
@@ -61,7 +60,7 @@ test("accepts a complete shared work item", () => {
   assert.equal(isValidWorkItem(item), true)
   assert.equal("status" in item, false)
   assert.equal(
-    isValidWorkItem(createWorkItem({ assigneeId: null, estimate: null })),
+    isValidWorkItem(createWorkItem({ estimate: null })),
     true
   )
 })
@@ -81,14 +80,6 @@ test("rejects invalid identity, scheduling, estimate, and position fields", () =
   assert.equal(isValidWorkItem(createWorkItem({ estimate: -1 })), false)
   assert.equal(isValidWorkItem(createWorkItem({ estimate: 1.5 })), false)
   assert.equal(isValidWorkItem(createWorkItem({ position: 1.5 })), false)
-  assert.equal(
-    isValidWorkItem(createWorkItem({ assigneeId: " member-a" })),
-    false
-  )
-  assert.equal(
-    isValidWorkItem(createWorkItem({ assigneeId: " " })),
-    false
-  )
   assert.equal(isValidWorkItem(createWorkItem({ boardId: " " })), false)
   assert.equal(
     isValidWorkItem(createWorkItem({ boardId: " board-a" })),

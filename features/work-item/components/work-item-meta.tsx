@@ -1,7 +1,6 @@
 import type { ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
-import type { WorkspaceMember } from "@/features/member/model"
 import type {
   BoardLabel,
   BoardLabelColor,
@@ -169,34 +168,6 @@ export function WorkItemLabelList({
         </li>
       ))}
     </ul>
-  )
-}
-
-export function WorkItemAssignee({
-  assignee,
-  showName = false,
-}: {
-  assignee: WorkspaceMember | null
-  showName?: boolean
-}) {
-  if (!assignee) {
-    return <span className="text-muted-foreground">Unassigned</span>
-  }
-
-  return (
-    <span className="inline-flex items-center gap-2">
-      <span
-        className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary"
-        aria-hidden="true"
-      >
-        {assignee.initials}
-      </span>
-      {showName ? (
-        <span>{assignee.name}</span>
-      ) : (
-        <span className="sr-only">Assigned to {assignee.name}</span>
-      )}
-    </span>
   )
 }
 

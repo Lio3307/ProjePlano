@@ -11,7 +11,7 @@ test("loads TypeScript test imports without module-type warnings", () => {
     [
       "--input-type=module",
       "--eval",
-      "import('./features/member/model.ts')",
+      "import('./features/work-item/model.ts')",
     ],
     {
       cwd: PROJECT_ROOT,

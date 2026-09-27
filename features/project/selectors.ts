@@ -1,4 +1,3 @@
-import type { WorkspaceMember } from "../member/model.ts"
 import type { WorkItem, WorkItemStatus } from "../work-item/model.ts"
 import type {
   ProjectDocumentResource,
@@ -27,19 +26,11 @@ export type ResolvedWorkItem = {
   stage: WorkItemStatus
 }
 
-export type WorkspaceWorkItemAssignment = {
-  projectId: string
-  assigneeId: string | null
-  stage: WorkItemStatus
-}
-
 type ArraySelectorCache<T> = WeakMap<
   ProjectWorkspaceState,
   Map<string, T[]>
 >
 
-const workspaceAssignmentCache: ArraySelectorCache<WorkspaceWorkItemAssignment> =
-  new WeakMap()
 const resolvedWorkItemCache: ArraySelectorCache<ResolvedWorkItem> =
   new WeakMap()
 const documentLinkedWorkItemCache: ArraySelectorCache<DocumentLinkedWorkItem> =
@@ -72,54 +63,6 @@ export function selectProjectsByWorkspaceId(
     const project = state.projectsById[projectId]
     return project && project.workspaceId === workspaceId ? [project] : []
   })
-}
-
-export function selectWorkspaceMembers(
-  state: ProjectWorkspaceState,
-  workspaceId: string
-) {
-  const memberIds = state.memberIdsByWorkspaceId[workspaceId] ?? []
-
-  return memberIds.flatMap((memberId) => {
-    const member = state.membersById[memberId]
-
-    return member?.workspaceId === workspaceId ? [member] : []
-  })
-}
-
-export function selectWorkspaceMembersById(
-  state: ProjectWorkspaceState,
-  workspaceId: string
-) {
-  const membersById: Record<string, WorkspaceMember> = {}
-
-  for (const member of selectWorkspaceMembers(state, workspaceId)) {
-    membersById[member.id] = member
-  }
-
-  return membersById
-}
-
-export function selectWorkspaceWorkItemAssignments(
-  state: ProjectWorkspaceState,
-  workspaceId: string
-): WorkspaceWorkItemAssignment[] {
-  return getCachedArray(
-    workspaceAssignmentCache,
-    state,
-    workspaceId,
-    () =>
-      selectProjectsByWorkspaceId(state, workspaceId).flatMap(
-        (project) =>
-          selectProjectResolvedWorkItems(state, project.id).map(
-            ({ workItem, stage }) => ({
-              projectId: workItem.projectId,
-              assigneeId: workItem.assigneeId,
-              stage,
-            })
-          )
-      )
-  )
 }
 
 export function selectProjectViews(

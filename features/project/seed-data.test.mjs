@@ -4,10 +4,6 @@ import test from "node:test"
 import { INITIAL_CALENDAR_TASKS } from "../calendar/mock-data.ts"
 import { INITIAL_KANBAN_COLUMNS } from "../kanban/mock-data.ts"
 import {
-  WORKSPACE_MEMBER_IDS,
-  WORKSPACE_MEMBERS,
-} from "../member/mock-data.ts"
-import {
   isValidWorkItem,
   wouldCreateDependencyCycle,
 } from "../work-item/model.ts"
@@ -31,10 +27,6 @@ test("creates one normalized container for every current project", () => {
   assert.equal(Object.keys(state.projectViewsById).length, 5)
   assert.equal(Object.keys(state.resourcesById).length, 4)
   assert.equal(Object.keys(state.milestonesById).length, 0)
-  assert.equal(Object.keys(state.membersById).length, WORKSPACE_MEMBERS.length)
-  assert.deepEqual(state.memberIdsByWorkspaceId["project-beta"], [
-    WORKSPACE_MEMBER_IDS.sari,
-  ])
 })
 
 test("maps each legacy renderer to its first view or resource", () => {
@@ -136,10 +128,6 @@ test("converts every current task fixture for its owning project", () => {
     state.workItemsById["work-item-6-launch-kickoff"].dueDate,
     "2026-09-01"
   )
-  assert.equal(
-    state.workItemsById["work-item-2-audit-onboarding"].assigneeId,
-    WORKSPACE_MEMBER_IDS.mayaChen
-  )
   assert.deepEqual(
     state.workItemsById["work-item-2-workspace-filters"].dependencyIds,
     ["work-item-2-audit-onboarding"]
@@ -191,13 +179,6 @@ test("keeps every normalized relationship inside its owning project", () => {
       )
     }
 
-    if (workItem.assigneeId) {
-      assert.equal(
-        state.membersById[workItem.assigneeId]?.workspaceId,
-        project.workspaceId
-      )
-    }
-
     for (const dependencyId of workItem.dependencyIds) {
       assert.equal(
         state.workItemsById[dependencyId]?.projectId,
@@ -224,7 +205,6 @@ test("returns a fresh object graph for every seed request", () => {
   first.projectsById["2"].viewIds.push("mutated-view")
   first.workItemsById[workItemId].title = "Mutated title"
   first.workItemsById[workItemId].labelIds.push("mutated-label")
-  first.membersById[WORKSPACE_MEMBER_IDS.mayaChen].name = "Mutated name"
 
   assert.deepEqual(second.projectsById["2"].viewIds, ["view-2-board"])
   assert.equal(
@@ -235,10 +215,6 @@ test("returns a fresh object graph for every seed request", () => {
     "view-2-board-label-1",
     "view-2-board-label-2",
   ])
-  assert.equal(
-    second.membersById[WORKSPACE_MEMBER_IDS.mayaChen].name,
-    "Maya Chen"
-  )
 })
 
 test("builds deterministic Board label catalogs in first-seen order", () => {

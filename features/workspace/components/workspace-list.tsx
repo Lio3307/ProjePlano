@@ -3,7 +3,6 @@ import {
   EllipsisVertical,
   Pencil,
   Trash2,
-  UsersRound,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -56,9 +55,12 @@ export function WorkspaceList({ workspaces }: WorkspaceListProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-3">
-                <p className="text-xs text-muted-foreground">
-                  Created by {workspace.author}
-                </p>
+                <time
+                  dateTime={workspace.createdAt}
+                  className="text-xs text-muted-foreground"
+                >
+                  Created {workspace.createdAt}
+                </time>
                 <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
                   Open workspace
                   <ArrowUpRight className="size-4" aria-hidden="true" />
@@ -82,13 +84,6 @@ export function WorkspaceList({ workspaces }: WorkspaceListProps) {
                 <EllipsisVertical aria-hidden="true" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  render={
-                    <Link href={`/dashboard/workspaces/${workspace.id}/members`} />
-                  }
-                >
-                  <UsersRound aria-hidden="true" /> Manage members
-                </DropdownMenuItem>
                 <DropdownMenuItem disabled>
                   <Pencil /> Edit
                 </DropdownMenuItem>

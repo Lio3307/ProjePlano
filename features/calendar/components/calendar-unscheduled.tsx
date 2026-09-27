@@ -1,10 +1,8 @@
-import type { WorkspaceMember } from "@/features/member/model"
 import {
   resolveBoardLabels,
   type BoardLabel,
 } from "@/features/project/board"
 import {
-  WorkItemAssignee,
   WorkItemLabelList,
   WorkItemPriorityBadge,
   WorkItemStatusBadge,
@@ -18,7 +16,6 @@ interface CalendarUnscheduledProps {
   workItems: readonly WorkItem[]
   labels: readonly BoardLabel[]
   stagesByBoardId: WorkItemStagesByBoardId
-  membersById: Readonly<Record<string, WorkspaceMember>>
   blockingCountsByWorkItemId: Readonly<Record<string, number>>
   onOpenWorkItem: (workItemId: string, trigger: HTMLElement) => void
 }
@@ -27,7 +24,6 @@ export function CalendarUnscheduled({
   workItems,
   labels,
   stagesByBoardId,
-  membersById,
   blockingCountsByWorkItemId,
   onOpenWorkItem,
 }: CalendarUnscheduledProps) {
@@ -75,13 +71,6 @@ export function CalendarUnscheduled({
                 <WorkItemPriorityBadge priority={workItem.priority} />
                 <WorkItemBlockedBadge
                   count={blockingCountsByWorkItemId[workItem.id] ?? 0}
-                />
-                <WorkItemAssignee
-                  assignee={
-                    workItem.assigneeId
-                      ? (membersById[workItem.assigneeId] ?? null)
-                      : null
-                  }
                 />
               </button>
             </li>

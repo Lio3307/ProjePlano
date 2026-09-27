@@ -27,42 +27,11 @@ test("keeps the workspace route server-owned and delegates its header", () => {
   assert.doesNotMatch(pageSource, /CircleUserRound|EllipsisVertical/)
 })
 
-test("reads normalized members and limits the visual preview", () => {
-  assert.match(headerSource, /^"use client"/)
-  assert.match(headerSource, /selectWorkspaceMembers/)
-  assert.match(headerSource, /useProjectStore/)
-  assert.match(headerSource, /useShallow/)
-  assert.doesNotMatch(headerSource, /WORKSPACE_MEMBERS|member\/mock-data/)
-  assert.match(headerSource, /const MEMBER_PREVIEW_LIMIT = 5/)
-  assert.match(
-    headerSource,
-    /members\.slice\(0, MEMBER_PREVIEW_LIMIT\)/
-  )
-  assert.match(
-    headerSource,
-    /members\.length - visibleMembers\.length/
-  )
-  assert.match(headerSource, /member\.status === "inactive"/)
-  assert.match(headerSource, /No members yet/)
-  assert.match(headerSource, /const previewNames/)
-  assert.match(headerSource, /Preview: \$\{previewNames\}/)
-  assert.match(headerSource, /aria-label=\{accessibleLabel\}/)
-  assert.match(headerSource, /data-workspace-overview-header=/)
-})
-
-test("links member access and exposes honest workspace actions", () => {
-  assert.match(
-    headerSource,
-    /"\/dashboard\/workspaces\/" \+ workspace\.id \+ "\/members"/
-  )
+test("exposes honest workspace actions without member access", () => {
   assert.match(headerSource, /<DropdownMenu>/)
   assert.match(headerSource, /<DropdownMenuTrigger/)
   assert.match(headerSource, /<DropdownMenuContent align="end"/)
-  assert.match(headerSource, /Manage members/)
-  assert.match(
-    headerSource,
-    /<DropdownMenuItem render=\{<Link href=\{membersHref\} \/>\}>/
-  )
+  assert.doesNotMatch(headerSource, /Manage members|WorkspaceMemberPreview|useProjectStore/)
   assert.match(
     headerSource,
     /<DropdownMenuItem disabled>[\s\S]*?Edit workspace/

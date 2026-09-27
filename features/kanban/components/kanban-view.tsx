@@ -2,7 +2,6 @@
 
 import { DragDropProvider } from "@dnd-kit/react"
 
-import type { WorkspaceMember } from "@/features/member/model"
 import type { ProjectBoardView } from "@/features/project/model"
 import type { TaskBoard } from "@/features/project/task-board"
 import { getBlockingDependencyCounts } from "@/features/work-item/dependencies"
@@ -18,7 +17,6 @@ interface KanbanViewProps {
   workItems: readonly WorkItem[]
   board: ProjectBoardView
   boards: readonly TaskBoard[]
-  membersById: Readonly<Record<string, WorkspaceMember>>
   onOpenWorkItem: (
     workItemId: string,
     trigger: HTMLElement
@@ -38,7 +36,6 @@ export function KanbanView({
   workItems,
   board,
   boards,
-  membersById,
   onOpenWorkItem,
   onMoveWorkItem,
   onAddTask,
@@ -84,7 +81,6 @@ export function KanbanView({
       <KanbanBoard
         columns={records}
         board={board}
-        membersById={membersById}
         blockingCountsByWorkItemId={blockingCountsByWorkItemId}
         onOpenWorkItem={onOpenWorkItem}
         onAddTask={onAddTask}

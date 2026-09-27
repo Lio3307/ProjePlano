@@ -17,7 +17,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import type { WorkspaceMember } from "@/features/member/model"
 import type { BoardLabel } from "@/features/project/board"
 import {
   createWorkItemFormValue,
@@ -50,7 +49,6 @@ interface WorkItemDialogProps {
   boardLabels: readonly BoardLabel[]
   projectWorkItems: readonly WorkItem[]
   stagesByBoardId: WorkItemStagesByBoardId
-  workspaceMembers: readonly WorkspaceMember[]
   documents: readonly WorkItemDocumentOption[]
   workItem: WorkItem | null
   finalFocus: DialogFinalFocus
@@ -78,7 +76,6 @@ export function WorkItemDialog({
   boardLabels,
   projectWorkItems,
   stagesByBoardId,
-  workspaceMembers,
   documents,
   workItem,
   finalFocus,
@@ -137,7 +134,7 @@ export function WorkItemDialog({
 
     if (!saved) {
       focusError(
-        "The task could not be saved because a selected assignee, label, dependency, or document is no longer valid."
+        "The task could not be saved because a selected label, dependency, or document is no longer valid."
       )
       return
     }
@@ -228,7 +225,6 @@ export function WorkItemDialog({
                 workItemId={workItem?.id ?? null}
                 projectWorkItems={projectWorkItems}
                 stagesByBoardId={stagesByBoardId}
-                workspaceMembers={workspaceMembers}
                 onChange={(value) => {
                   setDraft(value)
                   setError(null)
@@ -244,7 +240,6 @@ export function WorkItemDialog({
               boardLabels={boardLabels}
               projectWorkItems={projectWorkItems}
               stagesByBoardId={stagesByBoardId}
-              workspaceMembers={workspaceMembers}
               documents={documents}
               onLinkDocument={onLinkDocument}
               onUnlinkDocument={onUnlinkDocument}

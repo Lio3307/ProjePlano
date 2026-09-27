@@ -18,9 +18,6 @@ import {
   selectProjectWorkItems,
   selectTaskBoard,
   selectTaskBoards,
-  selectWorkspaceMembers,
-  selectWorkspaceMembersById,
-  selectWorkspaceWorkItemAssignments,
 } from "./selectors.ts"
 
 test("selects workspace projects in their explicit order", () => {
@@ -33,47 +30,6 @@ test("selects workspace projects in their explicit order", () => {
     ["1", "2", "3", "4", "5", "6"]
   )
   assert.equal(selectProjectById(state, "2")?.title, "Sprint Board")
-})
-
-test("selects ordered members only from their workspace", () => {
-  const state = createProjectSeedState()
-  const members = selectWorkspaceMembers(state, "project-alpha")
-  const membersById = selectWorkspaceMembersById(
-    state,
-    "project-alpha"
-  )
-
-  assert.equal(members[0].name, "Aurelio")
-  assert.equal(members.some((member) => member.name === "Maya Chen"), true)
-  assert.equal(members.some((member) => member.name === "Sari"), false)
-  assert.deepEqual(Object.keys(membersById), members.map((member) => member.id))
-  assert.deepEqual(selectWorkspaceMembers(state, "missing"), [])
-})
-
-test("selects work items through their owning workspace", () => {
-  const state = createProjectSeedState()
-  const assignments = selectWorkspaceWorkItemAssignments(
-    state,
-    "project-alpha"
-  )
-
-  assert.equal(assignments.length > 0, true)
-  assert.equal(
-    assignments.every(
-      (assignment) =>
-        state.projectsById[assignment.projectId].workspaceId ===
-        "project-alpha"
-    ),
-    true
-  )
-  assert.equal(
-    assignments.every((assignment) => assignment.stage.length > 0),
-    true
-  )
-  assert.deepEqual(
-    selectWorkspaceWorkItemAssignments(state, "missing"),
-    []
-  )
 })
 
 test("resolves ordered views, resources, and milestones by project", () => {
@@ -346,10 +302,6 @@ test("caches nested derived results for one immutable store snapshot", () => {
   const state = createProjectSeedState()
 
   const resolvedWorkItems = selectProjectResolvedWorkItems(state, "2")
-  const assignments = selectWorkspaceWorkItemAssignments(
-    state,
-    "project-alpha"
-  )
   const documentLinks = selectDocumentLinkedWorkItems(
     state,
     "1",
@@ -359,10 +311,6 @@ test("caches nested derived results for one immutable store snapshot", () => {
   assert.strictEqual(
     selectProjectResolvedWorkItems(state, "2"),
     resolvedWorkItems
-  )
-  assert.strictEqual(
-    selectWorkspaceWorkItemAssignments(state, "project-alpha"),
-    assignments
   )
   assert.strictEqual(
     selectDocumentLinkedWorkItems(

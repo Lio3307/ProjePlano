@@ -12,7 +12,6 @@ function createWorkItem() {
     description: "Exercise the vanilla action boundary.",
     type: "chore",
     priority: "low",
-    assigneeId: null,
     startDate: null,
     dueDate: "2026-09-22",
     estimate: 1,
@@ -102,7 +101,6 @@ test("notifies once for an atomic save and never for a no-op", () => {
     description: item.description,
     type: item.type,
     priority: item.priority,
-    assigneeId: item.assigneeId,
     startDate: item.startDate,
     dueDate: item.dueDate,
     estimate: item.estimate,
@@ -127,23 +125,15 @@ test("notifies once for an atomic save and never for a no-op", () => {
 test("resets to the store's private baseline without dropping actions", () => {
   const store = createProjectStore()
   const itemId = "work-item-2-audit-onboarding"
-  const memberId = "member-project-alpha-maya-chen"
 
   store.getState().updateWorkItem(itemId, { title: "Temporary title" })
-  store.getState().removeWorkspaceMember(memberId)
   store.getState().resetDemo()
 
   assert.equal(
     store.getState().workItemsById[itemId].title,
     "Audit the onboarding flow"
   )
-  assert.equal(store.getState().membersById[memberId].name, "Maya Chen")
-  assert.equal(
-    store.getState().workItemsById[itemId].assigneeId,
-    memberId
-  )
   assert.equal(typeof store.getState().createWorkItem, "function")
-  assert.equal(typeof store.getState().createWorkspaceMember, "function")
   assert.equal(typeof store.getState().createFirstTaskBoard, "function")
   assert.equal(typeof store.getState().addTaskBoard, "function")
   assert.equal(typeof store.getState().updateTaskBoard, "function")
@@ -237,53 +227,6 @@ test("preserves shared label IDs when a Board is edited", () => {
     store.getState().projectViewsById[board.viewId].labels,
     labelsBefore
   )
-})
-
-test("delegates member actions and notifies once per accepted transition", () => {
-  const store = createProjectStore()
-  const memberId = "member-project-alpha-raka-putra"
-  const input = {
-    id: memberId,
-    workspaceId: "project-alpha",
-    fields: {
-      name: "Raka Putra",
-      email: "raka.putra@example.com",
-      role: "editor",
-      status: "active",
-    },
-  }
-  let notifications = 0
-  const unsubscribe = store.subscribe(() => {
-    notifications += 1
-  })
-
-  assert.equal(store.getState().createWorkspaceMember(input), true)
-  assert.equal(notifications, 1)
-  assert.equal(store.getState().createWorkspaceMember(input), false)
-  assert.equal(notifications, 1)
-
-  const fields = {
-    ...input.fields,
-    name: "Raka Wijaya",
-  }
-  assert.equal(
-    store.getState().updateWorkspaceMember({ memberId, fields }),
-    true
-  )
-  assert.equal(store.getState().membersById[memberId].initials, "RW")
-  assert.equal(notifications, 2)
-  assert.equal(
-    store.getState().updateWorkspaceMember({ memberId, fields }),
-    false
-  )
-  assert.equal(notifications, 2)
-
-  assert.equal(store.getState().removeWorkspaceMember(memberId), true)
-  assert.equal(notifications, 3)
-  assert.equal(store.getState().removeWorkspaceMember(memberId), false)
-  assert.equal(notifications, 3)
-
-  unsubscribe()
 })
 
 test("delegates atomic project, view, and document actions", () => {

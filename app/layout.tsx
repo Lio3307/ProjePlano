@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "ProjePlano — Plan your project",
   description:
-    "Organize your projects, tasks, people, and documents in one workspace.",
+    "Organize your projects, tasks, and documents in one workspace.",
 }
 
 export default function RootLayout({

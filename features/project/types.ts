@@ -5,5 +5,4 @@ export type Project = {
   workspaceId: string
   title: string
   type: ProjectType
-  author: string
 }

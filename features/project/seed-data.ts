@@ -1,6 +1,5 @@
 import { INITIAL_CALENDAR_TASKS } from "../calendar/mock-data.ts"
 import { INITIAL_KANBAN_COLUMNS } from "../kanban/mock-data.ts"
-import { WORKSPACE_MEMBERS } from "../member/mock-data.ts"
 import type {
   WorkItem,
   WorkItemStatus,
@@ -29,7 +28,6 @@ const CALENDAR_DEPENDENCIES: Readonly<Record<string, readonly string[]>> = {
 }
 
 export function createProjectSeedState(): ProjectWorkspaceState {
-  const members = WORKSPACE_MEMBERS.map((member) => ({ ...member }))
   const projectRecords: ProjectRecord[] = []
   const projectViews: ProjectViewConfig[] = []
   const taskBoards: TaskBoard[] = []
@@ -64,8 +62,6 @@ export function createProjectSeedState(): ProjectWorkspaceState {
   }
 
   return {
-    memberIdsByWorkspaceId: groupMemberIdsByWorkspace(members),
-    membersById: indexById(members),
     projectIdsByWorkspaceId: groupProjectIdsByWorkspace(PROJECTS),
     projectsById: indexById(projectRecords),
     projectViewsById: indexById(projectViews),
@@ -271,7 +267,6 @@ function createKanbanWorkItems(
         description: card.description,
         type: "feature" as const,
         priority: card.priority,
-        assigneeId: card.assigneeId,
         startDate: null,
         dueDate: card.dueDate,
         estimate: null,
@@ -308,7 +303,6 @@ function createCalendarWorkItems(
     description: task.description,
     type: "feature",
     priority: task.priority,
-    assigneeId: task.assigneeId,
     startDate: null,
     dueDate: task.dueDate,
     estimate: null,
@@ -435,19 +429,6 @@ function groupProjectIdsByWorkspace(projects: Project[]) {
   for (const project of projects) {
     const projectIds = grouped[project.workspaceId] ?? []
     grouped[project.workspaceId] = [...projectIds, project.id]
-  }
-
-  return grouped
-}
-
-function groupMemberIdsByWorkspace(
-  members: ReadonlyArray<{ id: string; workspaceId: string }>
-) {
-  const grouped: Record<string, string[]> = {}
-
-  for (const member of members) {
-    const memberIds = grouped[member.workspaceId] ?? []
-    grouped[member.workspaceId] = [...memberIds, member.id]
   }
 
   return grouped

@@ -221,7 +221,7 @@ test("shows Board card dates, documents, and existing task signals", async () =>
   assert.match(card, /WorkItemPriorityBadge/)
   assert.match(card, /WorkItemBlockedBadge/)
   assert.match(card, /getWorkItemChecklistProgress/)
-  assert.match(card, /WorkItemAssignee/)
+  assert.doesNotMatch(card, /WorkItemAssignee/)
   assert.equal(card.match(/\[overflow-wrap:anywhere\]/g)?.length, 2)
   assert.equal(card.match(/<button/g)?.length, 2)
   assert.match(card, /ref=\{handleRef\}/)

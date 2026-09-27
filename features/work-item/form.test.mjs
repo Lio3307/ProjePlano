@@ -17,7 +17,6 @@ function createWorkItem(overrides = {}) {
     description: "One source for every view.",
     type: "feature",
     priority: "medium",
-    assigneeId: "member-project-alpha-maya-chen",
     startDate: null,
     dueDate: "2026-09-18",
     estimate: 3,
@@ -48,7 +47,6 @@ test("creates independent defaults", () => {
   assert.equal(first.type, "feature")
   assert.equal("status" in first, false)
   assert.equal(first.priority, "medium")
-  assert.equal(first.assigneeId, "")
   assert.equal(first.startDate, "")
   assert.equal(first.dueDate, "")
   assert.deepEqual(first.labelIds, [])
@@ -60,10 +58,6 @@ test("creates independent defaults", () => {
 test("maps an existing work item to form strings", () => {
   const existing = createWorkItemFormValue(createWorkItem())
 
-  assert.equal(
-    existing.assigneeId,
-    "member-project-alpha-maya-chen"
-  )
   assert.equal(existing.estimate, "3")
   assert.equal(existing.startDate, "")
   assert.equal(existing.dueDate, "2026-09-18")
@@ -78,7 +72,6 @@ test("normalizes all editable values in one conversion", () => {
     description: "  Keep render deterministic.  ",
     type: "bug",
     priority: "urgent",
-    assigneeId: "member-project-alpha-maya-chen",
     startDate: "2026-09-18",
     dueDate: "2026-09-21",
     estimate: "5",
@@ -105,7 +98,6 @@ test("normalizes all editable values in one conversion", () => {
     description: "Keep render deterministic.",
     type: "bug",
     priority: "urgent",
-    assigneeId: "member-project-alpha-maya-chen",
     startDate: "2026-09-18",
     dueDate: "2026-09-21",
     estimate: 5,
@@ -126,7 +118,6 @@ test("maps blank optional fields to null", () => {
     description: "",
     type: "feature",
     priority: "medium",
-    assigneeId: null,
     startDate: null,
     dueDate: null,
     estimate: null,

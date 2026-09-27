@@ -11,7 +11,6 @@ export type WorkItemFormValue = {
   description: string
   type: WorkItem["type"]
   priority: WorkItem["priority"]
-  assigneeId: string
   startDate: string
   dueDate: string
   estimate: string
@@ -48,7 +47,6 @@ export function createWorkItemFormValue(
       description: "",
       type: "feature",
       priority: "medium",
-      assigneeId: "",
       startDate: "",
       dueDate: "",
       estimate: "",
@@ -64,7 +62,6 @@ export function createWorkItemFormValue(
     description: workItem.description,
     type: workItem.type,
     priority: workItem.priority,
-    assigneeId: workItem.assigneeId ?? "",
     startDate: workItem.startDate ?? "",
     dueDate: workItem.dueDate ?? "",
     estimate:
@@ -91,7 +88,6 @@ export function validateWorkItemFormValue(
 ): WorkItemFormValidationResult {
   const title = value.title.trim()
   const description = value.description.trim()
-  const assigneeId = value.assigneeId.trim() || null
   const startDate = value.startDate.trim() || null
   const dueDate = value.dueDate.trim() || null
   const estimateText = value.estimate.trim()
@@ -190,7 +186,6 @@ export function validateWorkItemFormValue(
       description,
       type: value.type,
       priority: value.priority,
-      assigneeId,
       startDate,
       dueDate,
       estimate,
@@ -210,7 +205,6 @@ export function getEditableWorkItemFields(
     description: workItem.description,
     type: workItem.type,
     priority: workItem.priority,
-    assigneeId: workItem.assigneeId,
     startDate: workItem.startDate,
     dueDate: workItem.dueDate,
     estimate: workItem.estimate,

@@ -1,7 +1,6 @@
 import type { ReactNode } from "react"
 import { CheckCircle2, Circle } from "lucide-react"
 
-import type { WorkspaceMember } from "@/features/member/model"
 import {
   resolveBoardLabels,
   type BoardLabel,
@@ -11,7 +10,6 @@ import type { WorkItemStagesByBoardId } from "../dependencies"
 import type { WorkItemDocumentOption } from "./work-item-documents-field"
 import { WorkItemDocumentManager } from "./work-item-document-manager"
 import {
-  WorkItemAssignee,
   WorkItemLabelList,
   WorkItemPriorityBadge,
   WorkItemStatusBadge,
@@ -27,7 +25,6 @@ interface WorkItemDetailsProps {
   boardLabels: readonly BoardLabel[]
   projectWorkItems: readonly WorkItem[]
   stagesByBoardId: WorkItemStagesByBoardId
-  workspaceMembers: readonly WorkspaceMember[]
   documents: readonly WorkItemDocumentOption[]
   onLinkDocument: (workItemId: string, resourceId: string) => boolean
   onUnlinkDocument: (workItemId: string, resourceId: string) => boolean
@@ -44,17 +41,11 @@ export function WorkItemDetails({
   boardLabels,
   projectWorkItems,
   stagesByBoardId,
-  workspaceMembers,
   documents,
   onLinkDocument,
   onUnlinkDocument,
   onCreateAndLinkDocument,
 }: WorkItemDetailsProps) {
-  const assignee = workItem.assigneeId
-    ? (workspaceMembers.find(
-        (member) => member.id === workItem.assigneeId
-      ) ?? null)
-    : null
   const labels = resolveBoardLabels(boardLabels, workItem.labelIds)
   const workItemsById = Object.fromEntries(
     projectWorkItems.map((candidate) => [candidate.id, candidate])
@@ -79,9 +70,6 @@ export function WorkItemDetails({
         </Detail>
         <Detail label="Priority">
           <WorkItemPriorityBadge priority={workItem.priority} />
-        </Detail>
-        <Detail label="Assignee">
-          <WorkItemAssignee assignee={assignee} showName />
         </Detail>
         <Detail label="Estimate">
           {workItem.estimate === null

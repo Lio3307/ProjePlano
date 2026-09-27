@@ -2,7 +2,6 @@
 
 import { useDroppable } from "@dnd-kit/react"
 
-import type { WorkspaceMember } from "@/features/member/model"
 import type { BoardLabel } from "@/features/project/board"
 import type { WorkItemStagesByBoardId } from "@/features/work-item/dependencies"
 import { cn } from "@/lib/utils"
@@ -21,7 +20,6 @@ interface CalendarDayProps {
   tasks: ScheduledWorkItem[]
   labels: readonly BoardLabel[]
   stagesByBoardId: WorkItemStagesByBoardId
-  membersById: Readonly<Record<string, WorkspaceMember>>
   blockingCountsByWorkItemId: Readonly<Record<string, number>>
   onOpenWorkItem: (workItemId: string, trigger: HTMLElement) => void
 }
@@ -31,7 +29,6 @@ export function CalendarDay({
   tasks,
   labels,
   stagesByBoardId,
-  membersById,
   blockingCountsByWorkItemId,
   onOpenWorkItem,
 }: CalendarDayProps) {
@@ -72,11 +69,6 @@ export function CalendarDay({
             workItem={task}
             labels={labels}
             status={stagesByBoardId[task.boardId]}
-            assignee={
-              task.assigneeId
-                ? (membersById[task.assigneeId] ?? null)
-                : null
-            }
             blockingCount={blockingCountsByWorkItemId[task.id] ?? 0}
             onOpen={onOpenWorkItem}
           />

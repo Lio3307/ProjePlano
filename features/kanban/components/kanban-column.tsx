@@ -4,7 +4,6 @@ import { useDroppable } from "@dnd-kit/react"
 import { Plus, Settings2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import type { WorkspaceMember } from "@/features/member/model"
 import type { BoardLabel } from "@/features/project/board"
 import { WorkItemStatusBadge } from "@/features/work-item/components/work-item-meta"
 import { cn } from "@/lib/utils"
@@ -17,7 +16,6 @@ import { KanbanCard } from "./kanban-card"
 interface KanbanColumnProps {
   column: KanbanBoardRecord
   labels: readonly BoardLabel[]
-  membersById: Readonly<Record<string, WorkspaceMember>>
   blockingCountsByWorkItemId: Readonly<Record<string, number>>
   onOpenWorkItem: (
     workItemId: string,
@@ -30,7 +28,6 @@ interface KanbanColumnProps {
 export function KanbanColumn({
   column,
   labels,
-  membersById,
   blockingCountsByWorkItemId,
   onOpenWorkItem,
   onAddTask,
@@ -93,11 +90,6 @@ export function KanbanColumn({
               key={workItem.id}
               workItem={workItem}
               labels={labels}
-              assignee={
-                workItem.assigneeId
-                  ? (membersById[workItem.assigneeId] ?? null)
-                  : null
-              }
               blockingCount={blockingCountsByWorkItemId[workItem.id] ?? 0}
               onOpen={onOpenWorkItem}
             />

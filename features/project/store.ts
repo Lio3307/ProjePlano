@@ -6,13 +6,6 @@ import type {
 } from "../work-item/model"
 import type { ProjectWorkspaceState } from "./model"
 import {
-  createWorkspaceMemberState,
-  removeWorkspaceMemberState,
-  updateWorkspaceMemberState,
-  type CreateWorkspaceMemberInput,
-  type UpdateWorkspaceMemberInput,
-} from "./member-state.ts"
-import {
   addProjectDocumentState,
   addProjectViewState,
   addTaskBoardState,
@@ -45,9 +38,6 @@ import {
 } from "./work-item-state.ts"
 
 export type ProjectStoreActions = {
-  createWorkspaceMember: (input: CreateWorkspaceMemberInput) => boolean
-  updateWorkspaceMember: (input: UpdateWorkspaceMemberInput) => boolean
-  removeWorkspaceMember: (memberId: string) => boolean
   createProjectFromTemplate: (input: CreateProjectInput) => boolean
   addProjectView: (input: CreateProjectViewInput) => boolean
   createFirstTaskBoard: (input: CreateFirstTaskBoardInput) => boolean
@@ -100,42 +90,6 @@ export function createProjectStore(
 
   return createStore<ProjectStore>()((set, get) => ({
     ...cloneProjectState(baseline),
-
-    createWorkspaceMember(input) {
-      const current = readProjectState(get())
-      const next = createWorkspaceMemberState(current, input)
-
-      if (next === current) {
-        return false
-      }
-
-      set(next)
-      return true
-    },
-
-    updateWorkspaceMember(input) {
-      const current = readProjectState(get())
-      const next = updateWorkspaceMemberState(current, input)
-
-      if (next === current) {
-        return false
-      }
-
-      set(next)
-      return true
-    },
-
-    removeWorkspaceMember(memberId) {
-      const current = readProjectState(get())
-      const next = removeWorkspaceMemberState(current, memberId)
-
-      if (next === current) {
-        return false
-      }
-
-      set(next)
-      return true
-    },
 
     createProjectFromTemplate(input) {
       const current = readProjectState(get())
@@ -367,8 +321,6 @@ export function createProjectStore(
 
 function readProjectState(store: ProjectStore): ProjectWorkspaceState {
   return {
-    memberIdsByWorkspaceId: store.memberIdsByWorkspaceId,
-    membersById: store.membersById,
     projectIdsByWorkspaceId: store.projectIdsByWorkspaceId,
     projectsById: store.projectsById,
     projectViewsById: store.projectViewsById,

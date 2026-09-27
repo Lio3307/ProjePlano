@@ -1,10 +1,11 @@
 # ProjePlano
 
-A project planning interface for developers. Workspaces group projects and people;
+A personal project planning interface for developers. Workspaces group projects;
 projects bring tasks, Work views, and documents together.
 
-This is a frontend prototype. Dashboard data stays in memory while navigating
-and resets after a full page reload. There is no backend, account system,
+This is a single-user frontend prototype without members or task assignees.
+Dashboard data stays in memory while navigating and resets after a full page
+reload. There is no backend, account system,
 invitation delivery, or realtime collaboration.
 
 ## Run locally
@@ -41,7 +42,6 @@ tasks and does not create its own task records.
 | --- | --- |
 | `/dashboard` | Workspaces |
 | `/dashboard/workspaces/[workspaceId]` | Workspace overview and projects |
-| `/dashboard/workspaces/[workspaceId]/members` | Workspace member directory |
 | `/dashboard/workspaces/[workspaceId]/projects/[projectId]` | Project shell |
 
 Project query parameters select the area: `view=overview`, `view=work`,
@@ -55,7 +55,7 @@ Project query parameters select the area: `view=overview`, `view=work`,
 | `components/layout/` | Dashboard navigation and shell UI |
 | `components/ui/` | Shared Base UI-backed primitives and tokens |
 | `features/project/` | Normalized store, selectors, transitions, query navigation, project composition |
-| `features/workspace/`, `features/member/` | Workspace presentation and member management |
+| `features/workspace/` | Workspace presentation |
 | `features/work-item/` | Task validation, forms, View/Edit flow, relationships and shared metadata |
 | `features/kanban/`, `features/calendar/` | Controlled task presentations and drag interactions |
 | `features/table/` | Independent editable-table state and presentation |
@@ -64,8 +64,7 @@ Project query parameters select the area: `view=overview`, `view=work`,
 
 The dashboard layout mounts one `ProjectStoreProvider`. Feature cards receive
 typed records and callbacks; they do not read the store themselves. Table owns
-its local data and never seeds hidden normalized tasks. Member removal clears
-related assignments atomically; roles are descriptive, not permissions.
+its local data and never seeds hidden normalized tasks.
 
 Read [AGENTS.md](AGENTS.md) before changing code. This repository uses Next.js
 16.2.12: consult its installed guides in `node_modules/next/dist/docs/` before
@@ -101,5 +100,5 @@ node --test @integrationTests
 
 Live-HTML checks use `http://localhost:3000`; supported tests can override it with
 `DASHBOARD_TEST_URL`. These checks do not prove browser interaction. Check mobile
-navigation, dialog focus/scrolling, task and member forms, document saves, date
+navigation, dialog focus/scrolling, task forms, document saves, date
 edits, dragging, and table editing in a browser when changing those surfaces.

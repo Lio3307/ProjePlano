@@ -1,5 +1,4 @@
 import type { CalendarMonth } from "./date-utils"
-import { WORKSPACE_MEMBER_IDS } from "../member/mock-data.ts"
 import type { WorkItem, WorkItemStatus } from "../work-item/model"
 
 type CalendarSeedTask = Omit<
@@ -9,7 +8,6 @@ type CalendarSeedTask = Omit<
     | "title"
     | "description"
     | "priority"
-    | "assigneeId"
     | "dueDate"
     | "checklist"
   >,
@@ -34,7 +32,6 @@ export const INITIAL_CALENDAR_TASKS: CalendarSeedTask[] = [
     dueDate: "2026-09-01",
     status: "done",
     priority: "high",
-    assigneeId: WORKSPACE_MEMBER_IDS.mayaChen,
     labels: ["Planning", "Launch"],
     checklist: [
       {
@@ -57,7 +54,6 @@ export const INITIAL_CALENDAR_TASKS: CalendarSeedTask[] = [
     dueDate: "2026-09-02",
     status: "review",
     priority: "medium",
-    assigneeId: WORKSPACE_MEMBER_IDS.nadiaPutri,
     labels: ["Research", "Product"],
     checklist: [
       {
@@ -80,7 +76,6 @@ export const INITIAL_CALENDAR_TASKS: CalendarSeedTask[] = [
     dueDate: "2026-09-04",
     status: "in-progress",
     priority: "medium",
-    assigneeId: WORKSPACE_MEMBER_IDS.rafiAkbar,
     labels: ["Docs", "Launch"],
     checklist: [
       {
@@ -103,7 +98,6 @@ export const INITIAL_CALENDAR_TASKS: CalendarSeedTask[] = [
     dueDate: "2026-09-08",
     status: "todo",
     priority: "high",
-    assigneeId: WORKSPACE_MEMBER_IDS.dinaMahesa,
     labels: ["Meeting", "Launch"],
     checklist: [
       {
@@ -126,7 +120,6 @@ export const INITIAL_CALENDAR_TASKS: CalendarSeedTask[] = [
     dueDate: "2026-09-12",
     status: "todo",
     priority: "high",
-    assigneeId: WORKSPACE_MEMBER_IDS.hadiPratama,
     labels: ["Quality"],
     checklist: [
       {
@@ -154,7 +147,6 @@ export const INITIAL_CALENDAR_TASKS: CalendarSeedTask[] = [
     dueDate: "2026-09-18",
     status: "todo",
     priority: "medium",
-    assigneeId: WORKSPACE_MEMBER_IDS.sintaLestari,
     labels: ["Design", "Launch"],
     checklist: [
       {
@@ -177,7 +169,6 @@ export const INITIAL_CALENDAR_TASKS: CalendarSeedTask[] = [
     dueDate: "2026-09-24",
     status: "todo",
     priority: "high",
-    assigneeId: WORKSPACE_MEMBER_IDS.bimaSantoso,
     labels: ["Quality", "Product"],
     checklist: [
       {
@@ -200,7 +191,6 @@ export const INITIAL_CALENDAR_TASKS: CalendarSeedTask[] = [
     dueDate: "2026-09-30",
     status: "todo",
     priority: "low",
-    assigneeId: WORKSPACE_MEMBER_IDS.farahWijaya,
     labels: ["Planning"],
     checklist: [
       {

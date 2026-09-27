@@ -40,10 +40,6 @@ const dependencyFieldSourceUrl = new URL(
   "./components/work-item-dependencies-field.tsx",
   import.meta.url
 )
-const assigneeFieldSourceUrl = new URL(
-  "./components/work-item-assignee-field.tsx",
-  import.meta.url
-)
 const blockedBadgeSourceUrl = new URL(
   "./components/work-item-blocked-badge.tsx",
   import.meta.url
@@ -283,7 +279,7 @@ test("focuses specific task validation and relationship feedback", async () => {
   assert.ok(rejectedSaveSource)
   assert.match(
     rejectedSaveSource,
-    /selected assignee, label, dependency, or document is no longer valid/
+    /selected label, dependency, or document is no longer valid/
   )
   assert.match(rejectedSaveSource, /focusError/)
 })
@@ -396,23 +392,6 @@ test("captures a deterministic surviving control before deleting a task", async 
     source,
     /deleteFallbackRef\.current\?\.isConnected[\s\S]*return deleteFallbackRef\.current/
   )
-})
-
-test("uses a controlled workspace-member assignee picker", async () => {
-  const [dialogSource, formSource, assigneeSource] =
-    await Promise.all([
-      readFile(dialogSourceUrl, "utf8"),
-      readFile(formSourceUrl, "utf8"),
-      readFile(assigneeFieldSourceUrl, "utf8"),
-    ])
-
-  assert.match(dialogSource, /workspaceMembers/)
-  assert.match(formSource, /<WorkItemAssigneeField/)
-  assert.match(assigneeSource, /DropdownMenuRadioGroup/)
-  assert.match(assigneeSource, /DropdownMenuRadioItem/)
-  assert.match(assigneeSource, /Unassigned/)
-  assert.match(assigneeSource, /member\.status === "active"/)
-  assert.doesNotMatch(assigneeSource, /useProjectStore|project\/store/)
 })
 
 test("creates checklist IDs only from the add handler", async () => {

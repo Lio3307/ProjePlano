@@ -43,7 +43,6 @@ test("creates fresh deterministic view records", () => {
       "title",
       "type",
       "priority",
-      "assignee",
       "dueDate",
       "labels",
       "checklist",

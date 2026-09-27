@@ -16,8 +16,6 @@ import {
   selectProjectResolvedWorkItems,
   selectSupportedProjectViews,
   selectTaskBoards,
-  selectWorkspaceMembers,
-  selectWorkspaceMembersById,
 } from "../selectors"
 import { getProjectViewHref } from "../query-state"
 import { useProjectStore } from "../store-provider"
@@ -110,16 +108,6 @@ function SharedWorkItemView({
   const projectDocuments = useProjectStore(
     useShallow((state) =>
       selectProjectDocumentResources(state, projectId)
-    )
-  )
-  const workspaceMembers = useProjectStore(
-    useShallow((state) =>
-      selectWorkspaceMembers(state, workspaceId)
-    )
-  )
-  const membersById = useProjectStore(
-    useShallow((state) =>
-      selectWorkspaceMembersById(state, workspaceId)
     )
   )
   const {
@@ -394,7 +382,6 @@ function SharedWorkItemView({
           workItems={workItems}
           board={view}
           boards={activeBoards}
-          membersById={membersById}
           onOpenWorkItem={openViewDialog}
           onAddTask={openCreateDialog}
           onAddBoard={onAddBoard}
@@ -409,7 +396,6 @@ function SharedWorkItemView({
           workItems={workItems}
           labels={boardViews[0]?.labels ?? []}
           stagesByBoardId={stagesByBoardId}
-          membersById={membersById}
           todayIsoDate={today}
           onOpenWorkItem={openViewDialog}
           onMoveWorkItemDate={moveWorkItemDate}
@@ -427,7 +413,6 @@ function SharedWorkItemView({
           boardLabels={dialogBoardView?.labels ?? []}
           projectWorkItems={workItems}
           stagesByBoardId={stagesByBoardId}
-          workspaceMembers={workspaceMembers}
           documents={documents}
           workItem={
             dialogSession.mode === "view"

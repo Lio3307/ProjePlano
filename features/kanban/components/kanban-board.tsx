@@ -1,7 +1,6 @@
 import { Plus, Tags } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import type { WorkspaceMember } from "@/features/member/model"
 import type { ProjectBoardView } from "@/features/project/model"
 import { WorkItemLabelList } from "@/features/work-item/components/work-item-meta"
 import type { KanbanBoardRecord } from "../model"
@@ -10,7 +9,6 @@ import { KanbanColumn } from "./kanban-column"
 interface KanbanBoardProps {
   columns: KanbanBoardRecord[]
   board: ProjectBoardView
-  membersById: Readonly<Record<string, WorkspaceMember>>
   blockingCountsByWorkItemId: Readonly<Record<string, number>>
   onOpenWorkItem: (
     workItemId: string,
@@ -25,7 +23,6 @@ interface KanbanBoardProps {
 export function KanbanBoard({
   columns,
   board,
-  membersById,
   blockingCountsByWorkItemId,
   onOpenWorkItem,
   onAddTask,
@@ -74,7 +71,6 @@ export function KanbanBoard({
                 key={column.board.id}
                 column={column}
                 labels={board.labels}
-                membersById={membersById}
                 blockingCountsByWorkItemId={blockingCountsByWorkItemId}
                 onOpenWorkItem={onOpenWorkItem}
                 onAddTask={onAddTask}

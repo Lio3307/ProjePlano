@@ -3,7 +3,6 @@
 import {
   FolderKanban,
   LayoutDashboard,
-  UsersRound,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import Link from "next/link"
@@ -109,12 +108,6 @@ export function AppSidebar({ workspaces }: AppSidebarProps) {
                   url={workspace.url}
                   icon={FolderKanban}
                   isActive={pathname === workspace.url}
-                />
-                <SidebarNavigationItem
-                  title="Members"
-                  url={workspace.url + "/members"}
-                  icon={UsersRound}
-                  isActive={pathname === workspace.url + "/members"}
                 />
               </SidebarMenu>
             </SidebarGroupContent>

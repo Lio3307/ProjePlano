@@ -16,7 +16,6 @@ function createWorkItem(overrides = {}) {
     description: "Expose the existing dependency model.",
     type: "feature",
     priority: "medium",
-    assigneeId: null,
     startDate: null,
     dueDate: null,
     estimate: null,

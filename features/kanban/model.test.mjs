@@ -31,7 +31,6 @@ function createWorkItem(id, boardId, position) {
     description: "Description " + id,
     type: "feature",
     priority: "medium",
-    assigneeId: null,
     startDate: null,
     dueDate: null,
     estimate: null,
@@ -130,7 +129,6 @@ test("provides complete seed details for every card", () => {
   )) {
     assert.ok(card.title)
     assert.ok(card.description)
-    assert.ok(card.assigneeId)
     assert.match(card.dueDate, /^\d{4}-\d{2}-\d{2}$/)
     assert.ok(card.labels.length > 0)
     assert.ok(card.checklist.length > 0)

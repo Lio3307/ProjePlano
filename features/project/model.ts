@@ -1,5 +1,4 @@
 import type { WorkItem } from "../work-item/model"
-import type { WorkspaceMember } from "../member/model"
 import type { BoardLabel } from "./board"
 import type { TaskBoard } from "./task-board"
 
@@ -75,8 +74,6 @@ export type Milestone = {
 }
 
 export type ProjectWorkspaceState = {
-  memberIdsByWorkspaceId: Record<string, string[]>
-  membersById: Record<string, WorkspaceMember>
   projectIdsByWorkspaceId: Record<string, string[]>
   projectsById: Record<string, ProjectRecord>
   projectViewsById: Record<string, ProjectViewConfig>

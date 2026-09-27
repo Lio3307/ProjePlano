@@ -50,7 +50,6 @@ export type WorkItem = {
   description: string
   type: WorkItemType
   priority: WorkItemPriority
-  assigneeId: string | null
   startDate: string | null
   dueDate: string | null
   estimate: number | null
@@ -69,7 +68,6 @@ export type EditableWorkItemFields = Pick<
   | "description"
   | "type"
   | "priority"
-  | "assigneeId"
   | "startDate"
   | "dueDate"
   | "estimate"
@@ -129,10 +127,6 @@ export function isValidWorkItem(item: WorkItem) {
   const priorityIsValid = WORK_ITEM_PRIORITIES.some(
     (priority) => priority === item.priority
   )
-  const assigneeIdIsValid =
-    item.assigneeId === null ||
-    (item.assigneeId.length > 0 &&
-      item.assigneeId.trim() === item.assigneeId)
   const estimateIsValid =
     item.estimate === null ||
     (Number.isInteger(item.estimate) && item.estimate >= 0)
@@ -178,7 +172,6 @@ export function isValidWorkItem(item: WorkItem) {
     item.title.trim().length > 0 &&
     typeIsValid &&
     priorityIsValid &&
-    assigneeIdIsValid &&
     estimateIsValid &&
     Number.isInteger(item.position) &&
     item.position >= 0 &&

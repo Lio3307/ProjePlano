@@ -15,7 +15,6 @@ function createWorkItem(id, overrides = {}) {
     description: "",
     type: "feature",
     priority: "medium",
-    assigneeId: null,
     startDate: null,
     dueDate: null,
     estimate: null,

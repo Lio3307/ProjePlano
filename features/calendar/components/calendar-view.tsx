@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { DragDropProvider } from "@dnd-kit/react"
 
-import type { WorkspaceMember } from "@/features/member/model"
 import type { BoardLabel } from "@/features/project/board"
 import type { WorkItem } from "@/features/work-item/model"
 import {
@@ -31,7 +30,6 @@ interface CalendarViewProps {
   workItems: readonly WorkItem[]
   labels: readonly BoardLabel[]
   stagesByBoardId: WorkItemStagesByBoardId
-  membersById: Readonly<Record<string, WorkspaceMember>>
   todayIsoDate: string
   onOpenWorkItem: (workItemId: string, trigger: HTMLElement) => void
   onMoveWorkItemDate: (workItemId: string, dueDate: string) => void
@@ -41,7 +39,6 @@ export function CalendarView({
   workItems,
   labels,
   stagesByBoardId,
-  membersById,
   todayIsoDate,
   onOpenWorkItem,
   onMoveWorkItemDate,
@@ -89,7 +86,6 @@ export function CalendarView({
         workItems={unscheduled}
         labels={labels}
         stagesByBoardId={stagesByBoardId}
-        membersById={membersById}
         blockingCountsByWorkItemId={blockingCountsByWorkItemId}
         onOpenWorkItem={onOpenWorkItem}
       />
@@ -99,7 +95,6 @@ export function CalendarView({
           groups={agendaGroups}
           labels={labels}
           stagesByBoardId={stagesByBoardId}
-          membersById={membersById}
           blockingCountsByWorkItemId={blockingCountsByWorkItemId}
           onOpenWorkItem={onOpenWorkItem}
         />
@@ -137,7 +132,6 @@ export function CalendarView({
             tasks={scheduled}
             labels={labels}
             stagesByBoardId={stagesByBoardId}
-            membersById={membersById}
             blockingCountsByWorkItemId={blockingCountsByWorkItemId}
             todayIsoDate={todayIsoDate}
             onOpenWorkItem={onOpenWorkItem}

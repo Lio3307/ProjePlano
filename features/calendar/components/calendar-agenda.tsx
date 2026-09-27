@@ -1,12 +1,10 @@
 import { Card } from "@/components/ui/card"
-import type { WorkspaceMember } from "@/features/member/model"
 import {
   resolveBoardLabels,
   type BoardLabel,
 } from "@/features/project/board"
 import { WorkItemBlockedBadge } from "@/features/work-item/components/work-item-blocked-badge"
 import {
-  WorkItemAssignee,
   WorkItemLabelList,
   WorkItemPriorityBadge,
   WorkItemStatusBadge,
@@ -20,7 +18,6 @@ interface CalendarAgendaProps {
   groups: readonly CalendarAgendaGroup[]
   labels: readonly BoardLabel[]
   stagesByBoardId: WorkItemStagesByBoardId
-  membersById: Readonly<Record<string, WorkspaceMember>>
   blockingCountsByWorkItemId: Readonly<Record<string, number>>
   onOpenWorkItem: (workItemId: string, trigger: HTMLElement) => void
 }
@@ -29,7 +26,6 @@ export function CalendarAgenda({
   groups,
   labels,
   stagesByBoardId,
-  membersById,
   blockingCountsByWorkItemId,
   onOpenWorkItem,
 }: CalendarAgendaProps) {
@@ -89,13 +85,6 @@ export function CalendarAgenda({
                             }
                           />
                         </div>
-                        {workItem.assigneeId ? (
-                          <WorkItemAssignee
-                            assignee={
-                              membersById[workItem.assigneeId] ?? null
-                            }
-                          />
-                        ) : null}
                       </button>
                     </Card>
                   </li>

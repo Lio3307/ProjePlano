@@ -6,7 +6,6 @@ import { Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import type { WorkspaceMember } from "@/features/member/model"
 import type { BoardLabel } from "@/features/project/board"
 import type { WorkItemFormValue } from "../form"
 import {
@@ -21,7 +20,6 @@ import {
   type WorkItemDocumentOption,
 } from "./work-item-documents-field"
 import { WorkItemLabelsField } from "./work-item-labels-field"
-import { WorkItemAssigneeField } from "./work-item-assignee-field"
 import {
   WORK_ITEM_PRIORITY_LABELS,
   WORK_ITEM_TYPE_LABELS,
@@ -35,7 +33,6 @@ interface WorkItemFormProps {
   workItemId: string | null
   projectWorkItems: readonly WorkItem[]
   stagesByBoardId: WorkItemStagesByBoardId
-  workspaceMembers: readonly WorkspaceMember[]
   disabled?: boolean
   onChange: (value: WorkItemFormValue) => void
 }
@@ -51,7 +48,6 @@ export function WorkItemForm({
   workItemId,
   projectWorkItems,
   stagesByBoardId,
-  workspaceMembers,
   disabled,
   onChange,
 }: WorkItemFormProps) {
@@ -188,24 +184,17 @@ export function WorkItemForm({
       </section>
 
       <section
-        aria-labelledby="work-item-assignment-fields"
+        aria-labelledby="work-item-schedule-fields"
         className="space-y-5 border-t pt-5"
       >
         <h3
-          id="work-item-assignment-fields"
+          id="work-item-schedule-fields"
           className="text-sm font-semibold"
         >
-          Assignment and schedule
+          Schedule and estimate
         </h3>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <WorkItemAssigneeField
-            members={workspaceMembers}
-            value={value.assigneeId}
-            disabled={disabled}
-            onChange={(assigneeId) => setField("assigneeId", assigneeId)}
-          />
-
           <label className="grid gap-1.5 text-xs font-medium">
             Estimate
             <Input

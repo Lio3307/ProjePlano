@@ -1,4 +1,3 @@
-import type { WorkspaceMember } from "@/features/member/model"
 import type { BoardLabel } from "@/features/project/board"
 import type { WorkItemStagesByBoardId } from "@/features/work-item/dependencies"
 import {
@@ -23,7 +22,6 @@ interface CalendarGridProps {
   tasks: ScheduledWorkItem[]
   labels: readonly BoardLabel[]
   stagesByBoardId: WorkItemStagesByBoardId
-  membersById: Readonly<Record<string, WorkspaceMember>>
   blockingCountsByWorkItemId: Readonly<Record<string, number>>
   todayIsoDate: string
   onOpenWorkItem: (workItemId: string, trigger: HTMLElement) => void
@@ -34,7 +32,6 @@ export function CalendarGrid({
   tasks,
   labels,
   stagesByBoardId,
-  membersById,
   blockingCountsByWorkItemId,
   todayIsoDate,
   onOpenWorkItem,
@@ -66,7 +63,6 @@ export function CalendarGrid({
               tasks={tasksByDate.get(day.isoDate) ?? []}
               labels={labels}
               stagesByBoardId={stagesByBoardId}
-              membersById={membersById}
               blockingCountsByWorkItemId={blockingCountsByWorkItemId}
               onOpenWorkItem={onOpenWorkItem}
             />

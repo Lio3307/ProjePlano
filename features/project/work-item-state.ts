@@ -384,14 +384,6 @@ function hasValidReferences(
     return false
   }
 
-  if (workItem.assigneeId !== null) {
-    const member = state.membersById[workItem.assigneeId]
-
-    if (!member || member.workspaceId !== project.workspaceId) {
-      return false
-    }
-  }
-
   if (workItem.milestoneId !== null) {
     const milestone = state.milestonesById[workItem.milestoneId]
 

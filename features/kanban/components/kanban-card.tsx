@@ -9,14 +9,12 @@ import {
 } from "lucide-react"
 
 import { Card } from "@/components/ui/card"
-import type { WorkspaceMember } from "@/features/member/model"
 import {
   resolveBoardLabels,
   type BoardLabel,
 } from "@/features/project/board"
 import { WorkItemBlockedBadge } from "@/features/work-item/components/work-item-blocked-badge"
 import {
-  WorkItemAssignee,
   WorkItemLabelList,
   WorkItemPriorityBadge,
   WorkItemTypeBadge,
@@ -30,7 +28,6 @@ import { getKanbanWorkItemDragId } from "../model"
 interface KanbanCardProps {
   workItem: WorkItem
   labels: readonly BoardLabel[]
-  assignee: WorkspaceMember | null
   blockingCount: number
   onOpen: (workItemId: string, trigger: HTMLElement) => void
 }
@@ -38,7 +35,6 @@ interface KanbanCardProps {
 export function KanbanCard({
   workItem,
   labels,
-  assignee,
   blockingCount,
   onOpen,
 }: KanbanCardProps) {
@@ -135,11 +131,6 @@ export function KanbanCard({
                     aria-hidden="true"
                   />
                   {progress.completed}/{progress.total}
-                </span>
-              ) : null}
-              {assignee ? (
-                <span className="ml-auto">
-                  <WorkItemAssignee assignee={assignee} />
                 </span>
               ) : null}
             </div>
