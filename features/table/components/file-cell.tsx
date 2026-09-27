@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { File, Link2, Plus, Upload } from "lucide-react"
 import { Popover } from "@base-ui/react/popover"
@@ -16,9 +16,9 @@ import {
 import {
   newId,
   parseLink,
-  revokeAttachment,
   type FileAttachment,
 } from "../model"
+import { encodeAttachment } from "../attachments"
 
 type AttachmentChipProps = {
   file: FileAttachment
@@ -30,7 +30,7 @@ function AttachmentChip({ file, onRename, onRemove }: AttachmentChipProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(file.name)
 
-  const isImage = file.kind === "file" && file.type.startsWith("image/")
+  const isImage = file.kind === "file" && /^image\/(png|jpeg|gif|webp|avif)$/.test(file.type)
 
   const commitRename = () => {
     const name = draft.trim()
@@ -43,6 +43,7 @@ function AttachmentChip({ file, onRename, onRemove }: AttachmentChipProps) {
       {isImage ? (
         <Image
           src={file.url}
+          unoptimized
           alt=""
           width={16}
           height={16}
@@ -73,6 +74,7 @@ function AttachmentChip({ file, onRename, onRemove }: AttachmentChipProps) {
       ) : (
         <a
           href={file.url}
+          download={file.kind === "file" ? file.name : undefined}
           target="_blank"
           rel="noreferrer"
           className="truncate hover:underline"
@@ -112,6 +114,15 @@ export function FileCell({ value, label, onChange }: FileCellProps) {
   const [mode, setMode] = useState<"menu" | "link">("menu")
   const [linkUrl, setLinkUrl] = useState("")
   const [linkError, setLinkError] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const latestValue = useRef(value)
+  const mounted = useRef(false)
+  useEffect(() => { latestValue.current = value }, [value])
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false }
+  }, [])
 
   const reset = () => {
     setMode("menu")
@@ -119,18 +130,22 @@ export function FileCell({ value, label, onChange }: FileCellProps) {
     setLinkError(false)
   }
 
-  const addFiles = (files: FileList | null) => {
+  const addFiles = async (files: FileList | null) => {
     if (!files?.length) return
-    onChange([
-      ...value,
-      ...Array.from(files, (file) => ({
-        id: newId(),
-        name: file.name,
-        type: file.type,
-        url: URL.createObjectURL(file),
-        kind: "file" as const,
-      })),
-    ])
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const selected = Array.from(files)
+      if (selected.reduce((size, file) => size + file.size, 0) > 10 * 1024 * 1024) {
+        throw new Error("Select up to 10 MB of files at a time.")
+      }
+      const attachments = await Promise.all(selected.map(encodeAttachment))
+      if (mounted.current) onChange([...latestValue.current, ...attachments])
+    } catch (error) {
+      if (mounted.current) setUploadError(error instanceof Error ? error.message : "File could not be read.")
+    } finally {
+      if (mounted.current) setUploading(false)
+    }
   }
 
   const addLink = () => {
@@ -148,13 +163,13 @@ export function FileCell({ value, label, onChange }: FileCellProps) {
   }
 
   const removeFile = (id: string) => {
-    const target = value.find((file) => file.id === id)
-    if (target) revokeAttachment(target)
     onChange(value.filter((file) => file.id !== id))
   }
 
   return (
-    <div className="flex h-9 items-center gap-1 px-2">
+    <div className="flex min-h-9 items-center gap-1 px-2">
+      {uploadError ? <span role="alert" className="max-w-48 text-xs text-destructive">{uploadError}</span> : null}
+      {uploading ? <span role="status" className="text-xs text-muted-foreground">Reading files…</span> : null}
       {value.length > 0 ? (
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
           {value.map((file) => (
@@ -255,11 +270,12 @@ export function FileCell({ value, label, onChange }: FileCellProps) {
         ref={pickerRef}
         type="file"
         multiple
+        disabled={uploading}
         tabIndex={-1}
         aria-hidden="true"
         className="hidden"
         onChange={(event) => {
-          addFiles(event.target.files)
+          void addFiles(event.target.files)
           event.target.value = ""
         }}
       />

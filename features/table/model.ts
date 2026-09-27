@@ -114,19 +114,11 @@ export const coerceCell = (
   value: CellValue,
   type: ColumnType
 ): CellValue => {
+  if (type === "file") return Array.isArray(value) ? value : []
   if (column.type === "status" && type !== "status") {
     return column.options.find((option) => option.id === value)?.label ?? ""
   }
-  if (type === "file") return Array.isArray(value) ? value : []
   return typeof value === "string" ? value : ""
-}
-
-export const revokeAttachment = (attachment: FileAttachment) => {
-  if (attachment.url.startsWith("blob:")) URL.revokeObjectURL(attachment.url)
-}
-
-export const revokeAttachments = (value: CellValue | undefined) => {
-  if (Array.isArray(value)) value.forEach(revokeAttachment)
 }
 
 export const parseLink = (raw: string) => {
@@ -136,6 +128,7 @@ export const parseLink = (raw: string) => {
     const url = new URL(
       trimmed.includes("://") ? trimmed : `https://${trimmed}`
     )
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null
     return { url: url.href, name: url.hostname }
   } catch {
     return null

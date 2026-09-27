@@ -5,6 +5,8 @@ import type {
   WorkItem,
 } from "../work-item/model"
 import type { ProjectWorkspaceState } from "./model"
+import { isTableSnapshot, type TableSnapshot } from "../table/snapshot.ts"
+import { parseBackup, serializeBackup, type BackupResult } from "./backup.ts"
 import {
   addProjectDocumentState,
   addProjectViewState,
@@ -38,6 +40,9 @@ import {
 } from "./work-item-state.ts"
 
 export type ProjectStoreActions = {
+  exportBackup: () => string
+  importBackup: (text: string) => BackupResult
+  updateTable: (viewId: string, update: (current: TableSnapshot) => TableSnapshot) => boolean
   createProjectFromTemplate: (input: CreateProjectInput) => boolean
   addProjectView: (input: CreateProjectViewInput) => boolean
   createFirstTaskBoard: (input: CreateFirstTaskBoardInput) => boolean
@@ -80,7 +85,9 @@ export type ProjectStoreActions = {
   resetDemo: () => void
 }
 
-export type ProjectStore = ProjectWorkspaceState & ProjectStoreActions
+export type ProjectStore = ProjectWorkspaceState & ProjectStoreActions & {
+  dataRevision: number
+}
 export type ProjectStoreApi = StoreApi<ProjectStore>
 
 export function createProjectStore(
@@ -90,6 +97,27 @@ export function createProjectStore(
 
   return createStore<ProjectStore>()((set, get) => ({
     ...cloneProjectState(baseline),
+    dataRevision: 0,
+
+    exportBackup() {
+      return serializeBackup(readProjectState(get()))
+    },
+
+    importBackup(text) {
+      const result = parseBackup(text)
+      if (!result.ok) return result
+      set({ ...cloneProjectState(result.data), dataRevision: get().dataRevision + 1 })
+      return result
+    },
+
+    updateTable(viewId, update) {
+      const current = get().tablesByViewId[viewId]
+      if (get().projectViewsById[viewId]?.type !== "table" || !current) return false
+      const next = update(current)
+      if (next === current || !isTableSnapshot(next)) return false
+      set({ tablesByViewId: { ...get().tablesByViewId, [viewId]: next } })
+      return true
+    },
 
     createProjectFromTemplate(input) {
       const current = readProjectState(get())
@@ -314,13 +342,14 @@ export function createProjectStore(
     },
 
     resetDemo() {
-      set(cloneProjectState(baseline))
+      set({ ...cloneProjectState(baseline), dataRevision: get().dataRevision + 1 })
     },
   }))
 }
 
 function readProjectState(store: ProjectStore): ProjectWorkspaceState {
   return {
+    tablesByViewId: store.tablesByViewId,
     projectIdsByWorkspaceId: store.projectIdsByWorkspaceId,
     projectsById: store.projectsById,
     projectViewsById: store.projectViewsById,

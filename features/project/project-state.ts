@@ -3,6 +3,7 @@ import type {
   ProjectRecord,
   ProjectWorkspaceState,
 } from "./model"
+import { createTableSnapshot } from "../table/snapshot.ts"
 import {
   normalizeBoardLabels,
   type BoardLabel,
@@ -134,6 +135,11 @@ export function createProjectFromTemplateState(
       [input.id]: project,
     },
     projectViewsById,
+    tablesByViewId: {
+      ...state.tablesByViewId,
+      ...Object.fromEntries(views.filter(view => view.type === "table")
+        .map(view => [view.id, createTableSnapshot()])),
+    },
     resourcesById: document
       ? {
           ...state.resourcesById,
@@ -191,6 +197,9 @@ export function addProjectViewState(
       ...state.projectViewsById,
       [view.id]: view,
     },
+    tablesByViewId: view.type === "table"
+      ? { ...state.tablesByViewId, [view.id]: createTableSnapshot() }
+      : state.tablesByViewId,
   }
 }
 

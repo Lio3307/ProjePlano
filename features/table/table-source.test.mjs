@@ -11,8 +11,8 @@ const projectWorkViewSource = await readFile(
   "utf8"
 )
 
-test("TableView uses the feature-local editable table model", () => {
-  assert.match(tableViewSource, /useEditableTable/)
+test("TableView uses feature-owned actions with a controlled snapshot", () => {
+  assert.match(tableViewSource, /createTableActions/)
   assert.match(tableViewSource, /aria-label="Add column"/)
   assert.match(tableViewSource, /onClick=\{addRow\}/)
   assert.doesNotMatch(tableViewSource, /WorkItem/)
@@ -20,7 +20,8 @@ test("TableView uses the feature-local editable table model", () => {
 
 test("project controller isolates Table from shared work-item controls", () => {
   assert.match(projectWorkViewSource, /if \(view\.type === "table"\)/)
-  assert.match(projectWorkViewSource, /<TableView \/>/)
+  assert.match(projectWorkViewSource, /<ProjectTableView viewId=\{view.id\}/)
+  assert.match(projectWorkViewSource, /<TableView data=\{data\}/)
   assert.match(projectWorkViewSource, /function SharedWorkItemView/)
   assert.doesNotMatch(projectWorkViewSource, /<TableView\s+workItems=/)
 })

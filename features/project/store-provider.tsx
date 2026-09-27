@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useState,
+  Fragment,
   type ReactNode,
 } from "react"
 import { useStore } from "zustand"
@@ -22,10 +23,11 @@ export function ProjectStoreProvider({
   children: ReactNode
 }) {
   const [store] = useState<ProjectStoreApi>(() => createProjectStore())
+  const revision = useStore(store, state => state.dataRevision)
 
   return (
     <ProjectStoreContext.Provider value={store}>
-      {children}
+      <Fragment key={revision}>{children}</Fragment>
     </ProjectStoreContext.Provider>
   )
 }

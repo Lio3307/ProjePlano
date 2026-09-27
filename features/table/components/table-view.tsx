@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ActionsMenu, EditableInput, IconButton } from "./primitives"
 import { CellEditor } from "./cell-editor"
-import { useEditableTable } from "../use-editable-table"
+import { createTableActions } from "../editable-table"
+import type { TableSnapshot, UpdateTable } from "../snapshot"
 import {
   COLUMN_TYPES,
   emptyCell,
@@ -140,10 +141,9 @@ function DataRow({
   )
 }
 
-export function TableView() {
+export function TableView({ data, onUpdate }: { data: TableSnapshot; onUpdate: UpdateTable }) {
+  const { columns, rows } = data
   const {
-    columns,
-    rows,
     addColumn,
     renameColumn,
     changeColumnType,
@@ -152,7 +152,7 @@ export function TableView() {
     deleteRow,
     updateCell,
     statusOptionActions,
-  } = useEditableTable()
+  } = createTableActions(onUpdate)
 
   return (
     <section

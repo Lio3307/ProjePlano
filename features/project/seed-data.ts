@@ -1,5 +1,6 @@
 import { INITIAL_CALENDAR_TASKS } from "../calendar/mock-data.ts"
 import { INITIAL_KANBAN_COLUMNS } from "../kanban/mock-data.ts"
+import { createTableSnapshot } from "../table/snapshot.ts"
 import type {
   WorkItem,
   WorkItemStatus,
@@ -62,6 +63,10 @@ export function createProjectSeedState(): ProjectWorkspaceState {
   }
 
   return {
+    tablesByViewId: Object.fromEntries(
+      projectViews.filter(view => view.type === "table")
+        .map(view => [view.id, createTableSnapshot()])
+    ),
     projectIdsByWorkspaceId: groupProjectIdsByWorkspace(PROJECTS),
     projectsById: indexById(projectRecords),
     projectViewsById: indexById(projectViews),

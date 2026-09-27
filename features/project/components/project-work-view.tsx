@@ -58,7 +58,7 @@ export function ProjectWorkView({
         data-project-work-view="table"
         className="min-w-0 p-4 sm:p-6"
       >
-        <TableView />
+        <ProjectTableView viewId={view.id} />
       </div>
     )
   }
@@ -73,6 +73,13 @@ export function ProjectWorkView({
       onSetLabels={onSetLabels}
     />
   )
+}
+
+function ProjectTableView({ viewId }: { viewId: string }) {
+  const data = useProjectStore(state => state.tablesByViewId[viewId])
+  const updateTable = useProjectStore(state => state.updateTable)
+  if (!data) return null
+  return <TableView data={data} onUpdate={update => { updateTable(viewId, update) }} />
 }
 
 function SharedWorkItemView({

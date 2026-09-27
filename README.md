@@ -5,8 +5,10 @@ projects bring tasks, Work views, and documents together.
 
 This is a single-user frontend prototype without members or task assignees.
 Dashboard data stays in memory while navigating and resets after a full page
-reload. There is no backend, account system,
-invitation delivery, or realtime collaboration.
+reload. Export/import JSON backups manually to keep a copy or move your work.
+There is no automatic browser storage, database, backend, account system,
+invitation delivery, or realtime collaboration. PostgreSQL is planned for a
+later phase.
 
 ## Run locally
 
@@ -24,9 +26,9 @@ Open [localhost:3000](http://localhost:3000). The root route opens Workspaces.
 
 | Work view | Purpose | Data lifetime |
 | --- | --- | --- |
-| Board | A Kanban canvas containing user-created Boards and their tasks | Dashboard session |
-| Calendar | All project Board tasks grouped by due date; mobile agenda or desktop month grid | Dashboard session |
-| Table | Independent editable rows and columns; cells and column names are editable | Resets when that view unmounts, including when navigating away |
+| Board | A Kanban canvas containing user-created Boards and their tasks | Dashboard session; manual JSON backup |
+| Calendar | All project Board tasks grouped by due date; mobile agenda or desktop month grid | Dashboard session; manual JSON backup |
+| Table | Independent editable rows and columns, stored per Work view | Dashboard session; manual JSON backup |
 
 A project has at most one Board Work view. Its Boards share a label catalog.
 Tasks derive status from their owning Board's stage; renaming a Board does not
@@ -64,7 +66,37 @@ Project query parameters select the area: `view=overview`, `view=work`,
 
 The dashboard layout mounts one `ProjectStoreProvider`. Feature cards receive
 typed records and callbacks; they do not read the store themselves. Table owns
-its local data and never seeds hidden normalized tasks.
+its data model and editing actions; snapshots live in the dashboard store and
+never create hidden normalized tasks.
+
+## JSON backups
+
+Use **Backup** in the dashboard header to export or import a JSON file.
+The file contains `app`, `schemaVersion`, `exportedAt`, fixed workspace definitions,
+and all saved project data, including Board order, task relationships, labels,
+document HTML, and Table columns, rows, status options, and attachments.
+
+Import first validates the entire file and shows record counts. **Replace data**
+then replaces all current dashboard data and discards unsaved drafts; it does
+not merge. Export current data from the confirmation dialog if you want to keep
+it. Cancel and invalid input leave the current data untouched. Imports return
+to Workspaces and remount editors so old drafts cannot overwrite restored data.
+Only version 1 with this app's fixed workspace definitions is supported.
+
+There is no automatic save across reloads. Export before reloading or closing
+the page, and import the file to resume work. Documents still require **Save**
+before export; unfinished forms and unsaved document drafts are excluded. Workspace
+definitions remain the app's fixed fixtures, since workspace editing is not
+implemented.
+
+Table uploads embed file bytes in the backup, with a 2 MiB limit per file and
+10 MiB per selection. JSON files are limited to 20 MiB. Reduce attachments if the
+backup exceeds 20 MiB. External links store the
+URL, not a downloaded copy of the linked website.
+
+JSON backups are unencrypted, so store them as carefully as the documents and
+files they contain. The versioned file format is separate from the store actions;
+a later PostgreSQL integration can keep these import/export boundaries.
 
 Read [AGENTS.md](AGENTS.md) before changing code. This repository uses Next.js
 16.2.12: consult its installed guides in `node_modules/next/dist/docs/` before
