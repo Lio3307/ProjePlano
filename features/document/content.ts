@@ -2,10 +2,14 @@ const TEXT_TAGS = new Set(["P", "H1", "H2", "H3", "H4", "H5", "H6", "LI", "BLOCK
 const EXPORT_TAGS = new Set([...TEXT_TAGS, "STRONG", "B", "EM", "I", "S", "U", "CODE", "UL", "OL", "HR", "A", "SPAN", "DIV", "LABEL", "INPUT"])
 
 export function getDocumentText(html: string) {
+  return getDocumentPlainText(html).replace(/\s+/g, " ")
+}
+
+export function getDocumentPlainText(html: string) {
   const body = new DOMParser().parseFromString(html, "text/html").body
   body.querySelectorAll("script, style, template, noscript").forEach(node => node.remove())
-  body.querySelectorAll([...TEXT_TAGS].join(",")).forEach(node => node.append(" "))
-  return body.textContent?.replace(/\s+/g, " ").trim() ?? ""
+  body.querySelectorAll([...TEXT_TAGS].join(",")).forEach(node => node.append("\n"))
+  return body.textContent?.replace(/[^\S\n]+/g, " ").replace(/ *\n */g, "\n").replace(/\n{3,}/g, "\n\n").trim() ?? ""
 }
 
 export function matchesDocumentSearch(title: string, text: string, query: string) {
@@ -48,9 +52,18 @@ export function createDocumentHtml(title: string, html: string) {
 </head><body><h1>${escapeDocumentText(title)}</h1>${Array.from(body.childNodes, render).join("")}</body></html>`
 }
 
-export function getDocumentFilename(title: string) {
+export function getDocumentFilename(title: string, extension: "html" | "md" = "html") {
   const safeTitle = Array.from(title, character => character.charCodeAt(0) < 32 || '<>:"/\\|?*'.includes(character) ? "-" : character)
     .join("").slice(0, 100).replace(/[. ]+$/g, "")
   const reserved = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(safeTitle)
-  return (reserved ? "document-" + safeTitle : safeTitle || "document") + ".html"
+  return (reserved ? "document-" + safeTitle : safeTitle || "document") + "." + extension
+}
+
+export function countDocumentText(text: string) {
+  const words = new Intl.Segmenter(undefined, { granularity: "word" })
+  const characters = new Intl.Segmenter(undefined, { granularity: "grapheme" })
+  return {
+    words: Array.from(words.segment(text)).filter(segment => segment.isWordLike).length,
+    characters: Array.from(characters.segment(text)).length,
+  }
 }

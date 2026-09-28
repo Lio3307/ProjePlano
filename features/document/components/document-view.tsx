@@ -1,9 +1,11 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Save } from "lucide-react"
 import { DocumentNavigationLink as Link, useDocumentNavigation } from "./document-navigation"
-import { createDocumentHtml, getDocumentFilename } from "../content"
+import { createDocumentHtml, getDocumentFilename, getDocumentPlainText } from "../content"
+import { createDocumentMarkdown } from "../markdown"
+import { DocumentActions, type DocumentManagement } from "./document-actions"
 
 import { Button } from "@/components/ui/button"
 
@@ -27,6 +29,7 @@ interface DocumentViewProps {
   linkedWorkItems: readonly DocumentLinkedWorkLink[]
   onSave: (resourceId: string, content: string) => boolean
   onDuplicate: (resourceId: string) => boolean
+  management: DocumentManagement
 }
 
 export function DocumentView({
@@ -39,12 +42,15 @@ export function DocumentView({
   linkedWorkItems,
   onSave,
   onDuplicate,
+  management,
 }: DocumentViewProps) {
   const navigation = useDocumentNavigation()
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const content = draftContent ?? savedContent
   const [editorRevision, setEditorRevision] = useState(0)
+  const [focused, setFocused] = useState(false)
+  const container = useRef<HTMLDivElement>(null)
   const [saveState, setSaveState] = useState<
     "idle" | "saved" | "error"
   >("idle")
@@ -76,15 +82,66 @@ export function DocumentView({
     return navigation.register({ save: handleSave, discard: handleDiscard })
   }, [hasChanges, navigation, handleSave, handleDiscard])
 
-  function exportHtml() {
+  useEffect(() => {
+    function handleKey(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.isComposing || (event.target instanceof Element && event.target.closest('[role="dialog"], [role="alertdialog"]'))) return
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "s") {
+        event.preventDefault()
+        handleSave()
+      }
+      if (event.key === "Escape") setFocused(false)
+    }
+    window.addEventListener("keydown", handleKey)
+    return () => window.removeEventListener("keydown", handleKey)
+  }, [handleSave])
+
+  useEffect(() => {
+    if (!focused || !container.current) return
+    const siblings = new Map<HTMLElement, string>()
+    let current: HTMLElement = container.current
+    // Keep body portals available for menus and dialogs while isolating the app shell.
+    while (current.parentElement && current.parentElement !== document.body) {
+      for (const sibling of current.parentElement.children) {
+        if (sibling instanceof HTMLElement && sibling !== current) {
+          siblings.set(sibling, sibling.style.display)
+          sibling.style.display = "none"
+        }
+      }
+      current = current.parentElement
+    }
+    const overflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      for (const [sibling, display] of siblings) sibling.style.display = display
+      document.body.style.overflow = overflow
+    }
+  }, [focused])
+
+  function reportAction(ok: boolean, message: string) {
+    setActionMessage(ok ? message : null)
+    setActionError(ok ? null : "The document action could not be completed.")
+  }
+
+  async function copyText() {
+    try {
+      await navigator.clipboard.writeText(getDocumentPlainText(content))
+      reportAction(true, "Current text copied, including unsaved changes.")
+    } catch {
+      setActionMessage(null)
+      setActionError("Text could not be copied. Check clipboard permissions or select and copy it manually.")
+    }
+  }
+
+  function exportDocument(format: "html" | "md") {
     setActionError(null)
     setActionMessage(null)
     try {
-      const blob = new Blob([createDocumentHtml(resourceTitle, savedContent)], { type: "text/html;charset=utf-8" })
+      const output = format === "html" ? createDocumentHtml(resourceTitle, savedContent) : createDocumentMarkdown(resourceTitle, savedContent)
+      const blob = new Blob([output], { type: format === "html" ? "text/html;charset=utf-8" : "text/markdown;charset=utf-8" })
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement("a")
       anchor.href = url
-      anchor.download = getDocumentFilename(resourceTitle)
+      anchor.download = getDocumentFilename(resourceTitle, format)
       document.body.append(anchor)
       anchor.click()
       anchor.remove()
@@ -101,7 +158,7 @@ export function DocumentView({
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div ref={container} className={focused ? "fixed inset-0 flex flex-col bg-background" : "flex h-full min-h-0 flex-col"}>
       <div className="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b px-4 py-3">
         <div className="min-w-0 flex-1 basis-56">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -112,13 +169,12 @@ export function DocumentView({
           </h2>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => {
-            setActionMessage(null)
-            setActionError(null)
-            if (onDuplicate(resourceId)) setActionMessage("Saved document copied. Available in Select document.")
-            else setActionError("The document could not be duplicated.")
-          }}>Duplicate saved</Button>
-          <Button type="button" variant="outline" onClick={exportHtml}>Export HTML</Button>
+          <DocumentActions title={resourceTitle} management={management} onResult={reportAction}
+            onDuplicate={() => reportAction(onDuplicate(resourceId), "Saved document copied. Available in Select document.")}
+            onExport={exportDocument} onCopy={copyText} />
+          <Button type="button" variant="outline" aria-pressed={focused} onClick={() => setFocused(value => !value)}>
+            {focused ? "Exit focus" : "Focus mode"}
+          </Button>
           <Button type="button" variant="outline" disabled={!hasChanges} onClick={handleDiscard}>Discard draft</Button>
           {saveState === "error" ? (
             <p role="alert" className="text-xs text-destructive">
@@ -137,6 +193,7 @@ export function DocumentView({
             type="button"
             disabled={!hasChanges}
             onClick={handleSave}
+            aria-keyshortcuts="Control+s Meta+s"
           >
             <Save aria-hidden="true" />
             Save
@@ -145,8 +202,8 @@ export function DocumentView({
       </div>
       {actionMessage ? <p role="status" className="px-4 py-2 text-sm text-muted-foreground">{actionMessage}</p> : null}
       {actionError ? <p role="alert" className="px-4 py-2 text-sm text-destructive">{actionError}</p> : null}
-      <div className="flex-1 overflow-y-auto">
-        <section
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {!focused ? <section
           aria-labelledby="document-linked-work-title"
           className="min-w-0 space-y-2 border-b px-4 py-2.5"
         >
@@ -193,7 +250,7 @@ export function DocumentView({
               ))}
             </ul>
           )}
-        </section>
+        </section> : null}
         <div className="mx-auto w-full max-w-3xl px-6 py-2">
           <RichEditor
             key={editorRevision}

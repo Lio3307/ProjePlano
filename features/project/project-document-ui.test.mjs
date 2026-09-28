@@ -118,7 +118,7 @@ test("renders controlled document backlinks to exact Board views", () => {
     ? readFileSync(documentView, "utf8")
     : ""
   const scrollBodyIndex = documentSource.indexOf(
-    '<div className="flex-1 overflow-y-auto">'
+    '<div className="min-h-0 flex-1 overflow-y-auto">'
   )
   const linkedWorkIndex = documentSource.indexOf("<section")
   const richEditorIndex = documentSource.indexOf("<RichEditor")
@@ -143,7 +143,7 @@ test("renders controlled document backlinks to exact Board views", () => {
   assert.ok(richEditorIndex > linkedWorkIndex)
   assert.match(
     documentSource,
-    /<div className="flex-1 overflow-y-auto">\s*<section[\s\S]*?Linked work[\s\S]*?<\/section>\s*<div className="mx-auto w-full max-w-3xl px-6 py-2">\s*<RichEditor/
+    /<div className="min-h-0 flex-1 overflow-y-auto">\s*\{!focused \? <section[\s\S]*?Linked work[\s\S]*?<\/section> : null\}\s*<div className="mx-auto w-full max-w-3xl px-6 py-2">\s*<RichEditor/
   )
   assert.match(documentSource, /onSave\(resourceId, content\)/)
 })

@@ -37,11 +37,15 @@ export function ProjectDocumentNavigation({
   const drafts = useProjectStore(state => state.documentDraftsById)
   const [searchOpen, setSearchOpen] = useState(false)
   const [query, setQuery] = useState("")
+  const [pinnedOnly, setPinnedOnly] = useState(false)
+  const [draftsOnly, setDraftsOnly] = useState(false)
   const searchTrigger = useRef<HTMLButtonElement>(null)
   const searchable = useMemo(() => searchOpen ? documents.map(document => ({
     document, text: getDocumentText(document.content),
   })) : [], [documents, searchOpen])
-  const matches = searchable.filter(({ document, text }) => matchesDocumentSearch(document.title, text, query))
+  const matches = searchable.filter(({ document, text }) =>
+    (!pinnedOnly || document.isPinned) && (!draftsOnly || Object.hasOwn(drafts, document.id)) &&
+    matchesDocumentSearch(document.title, text, query))
   const activeDocument =
     documents.find((document) => document.id === activeDocumentId) ??
     documents[0]
@@ -124,7 +128,7 @@ export function ProjectDocumentNavigation({
           New document
         </Button>
         <Button ref={searchTrigger} variant="ghost" className="rounded-none border-0 px-3"
-          onClick={() => { setQuery(""); setSearchOpen(true) }}>Search documents</Button>
+          onClick={() => { setQuery(""); setPinnedOnly(false); setDraftsOnly(false); setSearchOpen(true) }}>Search documents</Button>
       </nav>
       <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
         <DialogContent finalFocus={searchTrigger} className="flex max-w-xl flex-col overflow-hidden p-0">
@@ -132,12 +136,17 @@ export function ProjectDocumentNavigation({
           <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
             <Input autoFocus aria-label="Search document titles and saved content" placeholder="Search titles and saved content…"
               value={query} onChange={event => setQuery(event.target.value)} />
+            <div className="flex flex-wrap gap-4 text-sm">
+              <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={pinnedOnly} onChange={event => setPinnedOnly(event.target.checked)} />Pinned only</label>
+              <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={draftsOnly} onChange={event => setDraftsOnly(event.target.checked)} />Unsaved drafts only</label>
+            </div>
             <p role="status" className="text-sm text-muted-foreground">{matches.length} documents found</p>
             <ul className="space-y-2">
               {matches.map(({ document, text }) => <li key={document.id}>
                 <Link href={getProjectViewHref(workspaceId, projectId, "documents", { resourceId: document.id })}
                   onClick={() => setSearchOpen(false)} className="block rounded-md border p-3 hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring">
                   <p className="font-medium wrap-anywhere">{document.title}</p>
+                  {document.isPinned ? <p className="text-xs text-muted-foreground">Pinned</p> : null}
                   {Object.hasOwn(drafts, document.id) ? <p className="text-xs text-muted-foreground">Unsaved draft</p> : null}
                   <p className="line-clamp-2 text-sm text-muted-foreground wrap-anywhere">{text || "Empty document"}</p>
                 </Link>

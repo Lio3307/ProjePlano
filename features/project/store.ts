@@ -33,6 +33,7 @@ import {
   type UpdateTaskBoardInput,
 } from "./project-state.ts"
 import { createProjectSeedState } from "./seed-data.ts"
+import { renameProjectDocumentState, setDocumentPinnedState, moveProjectDocumentState, deleteProjectDocumentState } from "./document-state.ts"
 import {
   captureBulkWorkItemChange, retainBulkWorkItemChange, undoBulkWorkItemChangeState,
   type BulkWorkItemChange,
@@ -82,6 +83,10 @@ export type ProjectStoreActions = {
   saveProjectDocument: (resourceId: string, content: string) => boolean
   updateDocumentDraft: (resourceId: string, content: string) => boolean
   discardDocumentDraft: (resourceId: string) => boolean
+  renameProjectDocument: (resourceId: string, title: string) => boolean
+  setDocumentPinned: (resourceId: string, pinned: boolean) => boolean
+  moveProjectDocument: (resourceId: string, direction: -1 | 1) => boolean
+  deleteProjectDocument: (resourceId: string) => boolean
   duplicateProjectDocument: (resourceId: string, newResourceId: string) => boolean
   setWorkItemArchived: (workItemId: string, archived: boolean) => boolean
   createWorkItem: (workItem: WorkItem) => boolean
@@ -328,6 +333,44 @@ export function createProjectStore(
       }
 
       set(next)
+      return true
+    },
+
+    renameProjectDocument(id, title) {
+      const current = readProjectState(get())
+      const next = renameProjectDocumentState(current, id, title)
+      if (next === current) return false
+      set(next)
+      return true
+    },
+
+    setDocumentPinned(id, pinned) {
+      const current = readProjectState(get())
+      const next = setDocumentPinnedState(current, id, pinned)
+      if (next === current) return false
+      set(next)
+      return true
+    },
+
+    moveProjectDocument(id, direction) {
+      const current = readProjectState(get())
+      const next = moveProjectDocumentState(current, id, direction)
+      if (next === current) return false
+      set(next)
+      return true
+    },
+
+    deleteProjectDocument(id) {
+      const current = readProjectState(get())
+      const next = deleteProjectDocumentState(current, id)
+      if (next === current) return false
+      const deletion = get().lastWorkItemDeletion
+      set({ ...next,
+        documentDraftsById: retainDocumentDrafts(get().documentDraftsById, next),
+        lastWorkItemDeletion: deletion ? { ...deletion, workItem: {
+          ...deletion.workItem, linkedResourceIds: deletion.workItem.linkedResourceIds.filter(resourceId => resourceId !== id),
+        } } : null,
+      })
       return true
     },
 

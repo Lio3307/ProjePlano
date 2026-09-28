@@ -1,6 +1,7 @@
 "use client"
 
-import { useEditor, EditorContent, ReactRenderer, Extension } from "@tiptap/react"
+import { useEditor, useEditorState, EditorContent, ReactRenderer, Extension } from "@tiptap/react"
+import { countDocumentText } from "../content"
 import StarterKit from "@tiptap/starter-kit"
 import TaskList from "@tiptap/extension-task-list"
 import TaskItem from "@tiptap/extension-task-item"
@@ -280,6 +281,8 @@ export function RichEditor({
     immediatelyRender: false,
   })
 
+  const counts = useEditorState({ editor, selector: ({ editor }) => countDocumentText(editor?.getText() ?? "") })
+
   if (!editor) return null
 
   return (
@@ -341,6 +344,9 @@ export function RichEditor({
         editor={editor}
         className="rich-editor"
       />
+      <p className="mt-4 border-t py-3 text-xs text-muted-foreground">
+        {counts?.words ?? 0} words · {counts?.characters ?? 0} characters
+      </p>
     </div>
   )
 }

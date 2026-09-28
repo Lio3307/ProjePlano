@@ -90,6 +90,23 @@ task `archived` field; omitted fields in older backups mean unarchived. Older ap
 versions may reject backups containing this new field.
 
 Documents provide **Duplicate saved**, **Search documents**, and **Export HTML**.
+The **Document actions** menu also supports renaming, deletion, pinning to Overview,
+and moving a document up/down in the project document order. Deletion requires
+confirmation and removes the document's draft and task links without deleting tasks.
+Task deletion Undo remains usable but no longer restores links to deleted documents.
+Names, pin flags, and document order are included in the existing JSON backup format.
+Search combines title/saved-content matching with **Pinned only** and **Unsaved
+drafts only**; these filters reset when reopening search and are not backed up.
+
+**Export saved Markdown** downloads headings, lists (including tasks), quotes,
+code, emphasis, and safe HTTP(S)/mailto links. Underlining becomes plain text.
+Exports use saved content; **Copy current text** includes the open draft and needs
+browser clipboard permission. Word/character counts reflect the current editor;
+words use language-aware segmentation and characters include spaces and line breaks.
+**Ctrl/Cmd+S** saves the current document, except while another dialog is active.
+**Focus mode** hides surrounding navigation and linked work while retaining the
+same editor and draft; use **Exit focus** or Escape to leave it. It does not persist.
+
 Duplicate creates an independent, unpinned copy of saved HTML in the same project,
 without copying task backlinks or the open draft. Search matches titles and saved
 plain text within the current project. Export downloads the saved document as a
