@@ -1,4 +1,5 @@
 import type { ProjectStore, ProjectStoreApi } from "./store"
+import { warnBeforeUnload } from "../../lib/before-unload.ts"
 
 export function hasUnexportedChanges(state: ProjectStore) {
   const saved = state.backupBaseline
@@ -18,22 +19,17 @@ export function watchUnexportedChanges(
   store: ProjectStoreApi,
   target: Pick<Window, "addEventListener" | "removeEventListener">
 ) {
-  let listening = false
-  function warn(event: BeforeUnloadEvent) {
-    event.preventDefault()
-    event.returnValue = "Unexported changes"
-  }
+  let stopWarning: (() => void) | null = null
   function sync() {
     const dirty = hasUnexportedChanges(store.getState())
-    if (dirty === listening) return
-    if (dirty) target.addEventListener("beforeunload", warn)
-    else target.removeEventListener("beforeunload", warn)
-    listening = dirty
+    if (dirty === (stopWarning !== null)) return
+    stopWarning?.()
+    stopWarning = dirty ? warnBeforeUnload(target) : null
   }
   const unsubscribe = store.subscribe(sync)
   sync()
   return () => {
     unsubscribe()
-    if (listening) target.removeEventListener("beforeunload", warn)
+    stopWarning?.()
   }
 }

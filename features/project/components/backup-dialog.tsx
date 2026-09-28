@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { MAX_BACKUP_BYTES, parseBackup, type BackupResult } from "../backup"
 import { useProjectStore } from "../store-provider"
+import { hasUnexportedChanges } from "../unexported-changes"
 
 type Preview = { text: string; filename: string; backup: Extract<BackupResult, { ok: true }> }
 
@@ -20,6 +21,8 @@ export function BackupDialog() {
   const exportBackup = useProjectStore(state => state.exportBackup)
   const markBackupDownloaded = useProjectStore(state => state.markBackupDownloaded)
   const importBackup = useProjectStore(state => state.importBackup)
+  const unexported = useProjectStore(hasUnexportedChanges)
+  const [lastDownloadStartedAt, setLastDownloadStartedAt] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
   const [preview, setPreview] = useState<Preview | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -54,7 +57,7 @@ export function BackupDialog() {
       anchor.click()
       anchor.remove()
       window.setTimeout(() => URL.revokeObjectURL(url), 1000)
-      markBackupDownloaded(text)
+      if (markBackupDownloaded(text)) setLastDownloadStartedAt(new Date().toISOString())
       setMessage("Backup download started.")
     } catch {
       setError("The backup could not be downloaded. Try again.")
@@ -100,7 +103,14 @@ export function BackupDialog() {
   }
 
   return (
-    <div className="ml-auto flex min-w-0 items-center gap-3">
+    <div className="ml-auto flex min-w-0 flex-1 flex-wrap items-center justify-end gap-x-3 gap-y-1">
+      <p role="status" aria-atomic="true" className="min-w-0 text-right text-xs text-muted-foreground">
+        {unexported ? "Changes not exported" : lastDownloadStartedAt ? <>
+          Last download started at <time dateTime={lastDownloadStartedAt}>
+            {new Date(lastDownloadStartedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          </time>
+        </> : "No changes to export"}
+      </p>
       <Button ref={trigger} variant="outline" onClick={() => changeOpen(true)}>
         <HardDrive aria-hidden="true" />
         Backup

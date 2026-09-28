@@ -247,10 +247,21 @@ from the app requests the browser's native leave-page warning. Internal dashboar
 navigation does not trigger it. The warning clears when a backup download starts
 without an error, after a valid import, or after resetting the demo. Creating JSON
 alone, failed/oversized exports and invalid imports do not clear it. A later edit
-enables it again; undoing edits may still require another export. Only store data
-is tracked, not unfinished forms or document drafts before **Save**. The browser
+enables it again; undoing edits may still require another export. Unfinished forms
+are not tracked. The open document separately warns on reload/close while its
+content differs from the saved version, including after a failed Save or after
+exporting store data. Saving or reverting the draft clears that document warning;
+saved but unexported store changes still warn. Internal navigation away from a
+document discards its draft and removes its warning. The browser
 controls the warning text and may not show it on mobile or after a crash. Download
 completion/cancellation cannot be detected, so confirm the JSON file was saved.
+
+The header beside **Backup** shows **Changes not exported** when store data has
+changed, otherwise the local time the last download started, or **No changes to
+export** before a download. It tracks store data, not document drafts. Download
+time remains across dashboard navigation and resets on reload, valid import or
+demo reset; failed/oversized exports do not update it. It is not saved in backups
+and does not confirm that the file was written to disk.
 
 Table uploads embed file bytes in the backup, with a 2 MiB limit per file and
 10 MiB per selection. JSON files are limited to 20 MiB. Reduce attachments if the
