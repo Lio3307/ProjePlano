@@ -1,7 +1,7 @@
 # ProjePlano
 
-A personal project planning interface for developers. Workspaces group projects;
-projects bring tasks, Work views, and documents together.
+A personal app for planning projects. You can group projects in workspaces,
+manage tasks, write documents, and plan your work.
 
 This is a single-user frontend prototype without members or task assignees.
 Dashboard data stays in memory while navigating and resets after a full page
@@ -9,6 +9,130 @@ reload. Export/import JSON backups manually to keep a copy or move your work.
 There is no automatic browser storage, database, backend, account system,
 invitation delivery, or realtime collaboration. PostgreSQL is planned for a
 later phase.
+
+## Current features
+
+This list describes features in the current code. It does not mean every screen
+has passed manual testing. The app is still a prototype.
+
+### Workspaces and projects
+
+- Create, edit, and delete workspaces.
+- Create projects inside a workspace. Edit their name, description, and status.
+- Start with Web Application, Mobile Application, API Service, Landing Page,
+  or Empty Project templates.
+- Archive a project to hide it from the active list. Restore it later.
+- Open a project Overview to see progress, Work views, and pinned documents.
+- Copy a project to a selected workspace from **Planning > Projects**.
+  The copy includes tasks, Boards, Tables, milestones, and saved documents.
+  It does not include document drafts, work schedules, repeat rules, or time logs.
+
+Deleting a workspace also deletes its projects. Deleting a project also deletes
+its content. These actions ask for confirmation and have no Undo.
+
+### Boards and tasks
+
+- Add Boards and edit their names and descriptions.
+- Create, view, edit, copy, and delete tasks.
+- Add a description, type, priority, estimate, start date, and deadline to a task.
+- Add checklist items, color labels, and links to project documents.
+- Link tasks that depend on other tasks in the same project.
+  See which tasks still block the work.
+- Drag tasks to change their order or move them between Boards.
+- Mark a Board as **Completed board**. Tasks on that Board count as done.
+  Move a task to an unfinished Board to reopen it.
+- Search task titles and filter by label, priority, and status.
+- Archive completed tasks and restore them later.
+- Undo the last task deletion while the dashboard session is still open.
+
+A project has one Board Work view at most. That view can contain many Boards.
+Tasks get their status from their Board. There are no task assignees.
+
+### Calendar and Tables
+
+- See project tasks by deadline in a Calendar. Use a month grid or mobile agenda.
+- See tasks without a deadline and drag tasks to change their due dates.
+- Add more than one Calendar or Table view to a project.
+- Add, edit, and delete Table rows and columns.
+- Use text, number, URL, date, status, and file columns.
+- Add status options, choose their colors, and attach files or links.
+
+Calendar shows the same tasks as the Boards. Table rows are separate records;
+they do not become Board tasks.
+
+### Today, Upcoming, and Search tasks
+
+- **Today:** see unfinished tasks that are late or due today.
+- **Upcoming:** see unfinished tasks due tomorrow through seven days from today.
+- **Search tasks:** find tasks by title across workspaces and projects.
+  You can include completed tasks or show only tasks without a deadline.
+- Filter by workspace, project, priority, or unfinished dependencies.
+- Sort search results by title, deadline, or priority.
+- Open and edit tasks directly from these lists.
+- Create a task from Today or Upcoming.
+- Complete a task by moving it to a Completed Board. Undo the last completion.
+- Select several unfinished tasks to change their deadline or priority together.
+  Within one project, you can also move them to a Board or add/remove a label.
+- Undo the last bulk change. A bulk change means changing several tasks at once.
+
+These pages hide archived tasks and archived projects. Undo may be unavailable
+if later changes make it unsafe. Undo history is not saved in backups.
+
+### Documents
+
+- Create and edit project documents with formatted text and checklists.
+- Save a document, or discard its unsaved draft.
+- Rename, delete, copy, pin, and reorder documents.
+- Search document titles and saved text. Filter pinned documents or unsaved drafts.
+- Link one document to several tasks and see links back to those tasks.
+- Export saved content as HTML or Markdown. Copy the current text to the clipboard.
+- See word and character counts. Use **Ctrl/Cmd+S** to save.
+- Use **Focus mode** to hide the surrounding navigation while writing.
+
+Drafts stay available when you move between dashboard pages. They are lost on
+reload and are not part of a backup. Save documents before exporting JSON.
+Deleting a document removes its task links, but does not delete those tasks.
+
+### Planning
+
+Open **Planning** in the sidebar. It has six sections:
+
+| Section | What you can do |
+| --- | --- |
+| Week | Pick a work date and planned minutes for each task. Set available minutes for each day and see when the plan is over that limit. |
+| Tasks & views | Filter, sort, and group tasks. Save these settings as a named view and use it again during the session or after importing a backup. |
+| Projects | Manage milestones, assign tasks to them, and see progress. View task dependency links and copy a project. |
+| Templates | Save a task template, edit it, and use it to create new tasks. You can also start a template from an existing task. |
+| CSV | Export task fields, or match CSV columns and preview tasks before importing them into a Board. |
+| Time report | See recorded minutes for each task and compare them with its planned minutes. |
+
+Use **Plan & track** on a task to set its schedule, repeat rule, or time entries.
+You can add time entries by hand or use one start/stop timer.
+
+Repeat rules support daily, weekly, and monthly tasks. Completing a repeating
+task creates the next task from its previous deadline. Nothing runs while the
+app is closed. Undoing completion does not remove the new task.
+
+A planned work date is separate from a task deadline. Planned minutes are also
+separate from the task's original estimate field. Stop the timer before backup;
+only recorded time entries are exported.
+
+### Backup and current limits
+
+- Export a JSON file to keep your dashboard data. Import it to restore the data.
+- Import checks the file before replacing current data. It does not merge data.
+- Backups include saved documents, Table attachments, and saved planning data.
+- The header shows when saved data has not been exported.
+- The app asks before leaving a changed document through dashboard links.
+  It also requests a browser warning when closing or reloading with unsaved work.
+- CSV transfers basic task fields only. Use JSON for a full backup.
+
+**Data resets after a full page reload.** There is no automatic save to your
+browser or a server. Browser warnings are not guaranteed, so check that your
+backup file was downloaded. There are no accounts, members, invitations, or live
+collaboration. Database and backend work are planned for later.
+
+The sections below explain setup, detailed behavior, code locations, and checks.
 
 ## Run locally
 
@@ -22,7 +146,7 @@ npm.cmd run dev
 
 Open [localhost:3000](http://localhost:3000). The root route opens Workspaces.
 
-## Data model
+## Detailed behavior: projects and Work views
 
 | Work view | Purpose | Data lifetime |
 | --- | --- | --- |
@@ -123,7 +247,7 @@ also clears the draft. Drafts are excluded from JSON/HTML export, duplication, a
 saved-content search. They reset on reload, valid import, or demo reset; deleting
 a project/workspace removes only its owned drafts. No browser storage is used.
 
-## Routes and ownership
+## Detailed behavior: Planning and task lists
 
 **Planning** (`/dashboard/planning`) provides six sections backed by the same
 dashboard store:
@@ -289,12 +413,15 @@ whole operation. A newer successful bulk action replaces the previous history;
 failed/no-op actions preserve it. Deleting an affected task or its project/workspace,
 successful backup import, reset or reload clears it. History is not exported.
 
+## Routes and code locations
+
 | Route | Purpose |
 | --- | --- |
 | `/dashboard` | Workspaces |
 | `/dashboard/today` | Due-today and overdue tasks across projects |
 | `/dashboard/upcoming` | Tasks due tomorrow through the next seven days |
 | `/dashboard/search` | Title search across project tasks, regardless of deadline |
+| `/dashboard/planning` | Weekly plans, saved views, milestones, templates, CSV, and time reports |
 | `/dashboard/workspaces/[workspaceId]` | Workspace overview and projects |
 | `/dashboard/workspaces/[workspaceId]/projects/[projectId]` | Project shell |
 
