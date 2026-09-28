@@ -1,5 +1,5 @@
 import {
-  arrayOf, isBoolean, isId, isNumber, isPosition, isString,
+  arrayOf, isBoolean, isId, isNumber, isPosition, isString, isRecord,
   nullable, objectOf, oneOf, recordOf, uniqueIds,
 } from "../../lib/json-validation.ts"
 import { isPortableAttachment, isTableMap } from "../table/snapshot.ts"
@@ -16,6 +16,7 @@ import type {
 } from "./model"
 import type { TaskBoard } from "./task-board"
 import type { Workspace } from "../workspace/types"
+import { isPlanningData } from "./planning.ts"
 
 const isDate = (value: unknown): value is string =>
   isString(value) && isValidWorkItemDate(value)
@@ -90,12 +91,33 @@ const snapshotShape = {
   milestonesById: recordOf(isMilestone), tablesByViewId: isTableMap,
 }
 
-export const isProjectSnapshot = objectOf<ProjectWorkspaceState>({
+const isBaseProjectSnapshot = objectOf<Omit<ProjectWorkspaceState, "planning">>({
   ...snapshotShape, workspaceIds: uniqueIds, workspacesById: recordOf(isWorkspace),
   projectsById: recordOf(isProject),
 })
 
-type LegacyProjectSnapshot = Omit<ProjectWorkspaceState, "workspaceIds" | "workspacesById" | "projectsById"> & {
+export function isProjectSnapshot(value: unknown): value is ProjectWorkspaceState {
+  if (!isRecord(value)) return false
+  if (!Object.hasOwn(value, "planning")) return isBaseProjectSnapshot(value)
+  const { planning, ...base } = value
+  return isBaseProjectSnapshot(base) && isPlanningData(planning)
+}
+
+export function hasValidPlanningRelationships(state: ProjectWorkspaceState) {
+  const data = state.planning
+  if (!data) return true
+  if (!isPlanningData(data)) return false
+  for (const [id, plan] of Object.entries(data.tasks)) {
+    const task = state.workItemsById[id]
+    if (!Object.hasOwn(state.workItemsById, id) || !task || (plan.recurrence &&
+      (!Object.hasOwn(state.taskBoardsById, plan.recurrence.boardId) || state.taskBoardsById[plan.recurrence.boardId]?.projectId !== task.projectId))) return false
+  }
+  return Object.entries(data.entries).every(([id, entry]) => id === entry.id && Object.hasOwn(state.workItemsById, entry.taskId)) &&
+    Object.entries(data.templates).every(([id, template]) => id === template.id) &&
+    Object.entries(data.views).every(([id, view]) => id === view.id && (!view.projectId || Object.hasOwn(state.projectsById, view.projectId)))
+}
+
+type LegacyProjectSnapshot = Omit<ProjectWorkspaceState, "workspaceIds" | "workspacesById" | "projectsById" | "planning"> & {
   projectsById: Record<string, Omit<ProjectRecord, "archived">>
 }
 

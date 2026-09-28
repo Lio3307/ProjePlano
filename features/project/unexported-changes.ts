@@ -3,7 +3,7 @@ import { warnBeforeUnload } from "../../lib/before-unload.ts"
 
 export function hasUnexportedChanges(state: ProjectStore) {
   const saved = state.backupBaseline
-  return state.workspaceIds !== saved.workspaceIds ||
+  return state.planning !== saved.planning || state.workspaceIds !== saved.workspaceIds ||
     state.workspacesById !== saved.workspacesById ||
     state.projectIdsByWorkspaceId !== saved.projectIdsByWorkspaceId ||
     state.projectsById !== saved.projectsById ||
@@ -22,7 +22,7 @@ export function watchUnexportedChanges(
   let stopWarning: (() => void) | null = null
   function sync() {
     const state = store.getState()
-    const dirty = hasUnexportedChanges(state) || Object.keys(state.documentDraftsById).length > 0
+    const dirty = hasUnexportedChanges(state) || Object.keys(state.documentDraftsById).length > 0 || !!state.runningTimer
     if (dirty === (stopWarning !== null)) return
     stopWarning?.()
     stopWarning = dirty ? warnBeforeUnload(target) : null

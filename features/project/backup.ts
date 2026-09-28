@@ -1,7 +1,7 @@
 import { isRecord, isString } from "../../lib/json-validation.ts"
 import { WORKSPACES } from "../workspace/mock-data.ts"
 import { normalizeBoardLabels } from "./board.ts"
-import { isLegacyProjectSnapshot, isProjectSnapshot } from "./backup-schema.ts"
+import { hasValidPlanningRelationships, isLegacyProjectSnapshot, isProjectSnapshot } from "./backup-schema.ts"
 import type { ProjectWorkspaceState } from "./model"
 
 export const MAX_BACKUP_BYTES = 20 * 1024 * 1024
@@ -52,7 +52,7 @@ export function parseBackup(text: string): BackupResult {
   if (!isProjectSnapshot(data)) {
     return { ok: false, error: "The backup contains invalid records or Table data." }
   }
-  if (!hasValidRelationships(data)) {
+  if (!hasValidRelationships(data) || !hasValidPlanningRelationships(data)) {
     return { ok: false, error: "The backup contains missing, duplicate, or conflicting record relationships." }
   }
   return { ok: true, data, exportedAt: value.exportedAt }

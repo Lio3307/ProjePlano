@@ -9,6 +9,7 @@ import {
   type WorkItemPriority,
 } from "../work-item/model.ts"
 import type { ProjectWorkspaceState } from "./model"
+import type { TaskPlan, TimeEntry } from "./planning"
 import { addProjectDocumentState } from "./project-state.ts"
 
 export type WorkItemDetailsPatch = Partial<
@@ -31,6 +32,7 @@ export type CreateAndLinkWorkItemDocumentInput = {
 }
 
 export type WorkItemDeletion = {
+  planning?: { task: TaskPlan | null; entries: TimeEntry[] }
   workItem: WorkItem
   dependents: { id: string; dependencyIndex: number }[]
 }

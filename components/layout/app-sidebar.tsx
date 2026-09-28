@@ -106,6 +106,12 @@ export function AppSidebar() {
                 icon={Search}
                 isActive={pathname === "/dashboard/search"}
               />
+              <SidebarNavigationItem
+                title="Planning"
+                url="/dashboard/planning"
+                icon={CalendarRange}
+                isActive={pathname === "/dashboard/planning"}
+              />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

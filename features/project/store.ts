@@ -33,6 +33,9 @@ import {
   type UpdateTaskBoardInput,
 } from "./project-state.ts"
 import { createProjectSeedState } from "./seed-data.ts"
+import { applyPlanningAction, reconcilePlanning, type PlanningAction } from "./planning-state.ts"
+import { EMPTY_PLANNING, isPlanningDate } from "./planning.ts"
+import { duplicateProjectState } from "./duplicate-project.ts"
 import { renameProjectDocumentState, setDocumentPinnedState, moveProjectDocumentState, deleteProjectDocumentState } from "./document-state.ts"
 import {
   captureBulkWorkItemChange, retainBulkWorkItemChange, undoBulkWorkItemChangeState,
@@ -63,6 +66,10 @@ import {
 } from "./work-item-state.ts"
 
 export type ProjectStoreActions = {
+  plan: (action: PlanningAction) => boolean
+  duplicateProject: (sourceId: string, workspaceId: string, title: string) => boolean
+  startTimer: (taskId: string, date: string, now?: number) => boolean
+  stopTimer: (now?: number) => boolean
   createWorkspace: (input: Workspace) => boolean
   updateWorkspace: (id: string, details: WorkspaceDetails) => boolean
   deleteWorkspace: (id: string) => boolean
@@ -132,6 +139,7 @@ export type ProjectStoreActions = {
 }
 
 export type ProjectStore = ProjectWorkspaceState & ProjectStoreActions & {
+  runningTimer: { taskId: string; date: string; startedAt: number } | null
   documentDraftsById: Record<string, string>
   backupBaseline: ProjectWorkspaceState
   dataRevision: number
@@ -148,14 +156,65 @@ export function createProjectStore(
   const initialData = cloneProjectState(baseline)
   let pendingExport: { text: string; data: ProjectWorkspaceState } | null = null
 
-  return createStore<ProjectStore>()((set, get) => ({
+  return createStore<ProjectStore>()((rawSet, get) => {
+    function set(patch: Partial<ProjectStore>) {
+      const before = get()
+      const merged = { ...before, ...patch }
+      const replaced = merged.dataRevision !== before.dataRevision
+      const next = replaced ? merged : reconcilePlanning(before, merged, () => crypto.randomUUID())
+      const timer = merged.runningTimer
+      rawSet({ ...patch, planning: next.planning, workItemsById: next.workItemsById,
+        runningTimer: replaced || (timer && !next.workItemsById[timer.taskId]) ? null : timer,
+      })
+    }
+    return ({
     ...initialData,
+    runningTimer: null,
     documentDraftsById: {},
     backupBaseline: initialData,
     dataRevision: 0,
     lastWorkItemDeletion: null,
     lastWorkItemCompletion: null,
     lastBulkWorkItemChange: null,
+
+    plan(action) {
+      const current = readProjectState(get())
+      const next = applyPlanningAction(current, action, () => crypto.randomUUID())
+      if (next === current) return false
+      const deletion = get().lastWorkItemDeletion
+      set({ ...next, lastWorkItemDeletion: action.type === "delete-milestone" && deletion?.workItem.milestoneId === action.id
+        ? { ...deletion, workItem: { ...deletion.workItem, milestoneId: null } } : deletion })
+      return true
+    },
+
+    duplicateProject(sourceId, workspaceId, title) {
+      const current = readProjectState(get())
+      const next = duplicateProjectState(current, sourceId, workspaceId, title, () => crypto.randomUUID())
+      if (next === current) return false
+      set(next)
+      return true
+    },
+
+    startTimer(taskId, date, now = Date.now()) {
+      const task = get().workItemsById[taskId]
+      if (get().runningTimer || !Object.hasOwn(get().workItemsById, taskId) || !task || task.archived || get().projectsById[task.projectId]?.archived ||
+        !isPlanningDate(date) || !Number.isFinite(now) || now < 0) return false
+      set({ runningTimer: { taskId, date, startedAt: now } })
+      return true
+    },
+
+    stopTimer(now = Date.now()) {
+      const timer = get().runningTimer
+      if (!timer || !Number.isFinite(now) || now < timer.startedAt) return false
+      const current = readProjectState(get())
+      const next = applyPlanningAction(current, { type: "entry", entry: {
+        id: crypto.randomUUID(), taskId: timer.taskId, date: timer.date,
+        minutes: Math.max(1, Math.ceil((now - timer.startedAt) / 60000)), note: "Timer",
+      } }, () => crypto.randomUUID())
+      if (next === current) return false
+      set({ ...next, runningTimer: null })
+      return true
+    },
 
     createWorkspace(input) {
       const current = readProjectState(get())
@@ -239,7 +298,7 @@ export function createProjectStore(
       if (!result.ok) return result
       const data = cloneProjectState(result.data)
       pendingExport = null
-      set({ ...data, documentDraftsById: {}, backupBaseline: data, dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null, lastWorkItemCompletion: null, lastBulkWorkItemChange: null })
+      set({ ...data, planning: data.planning, documentDraftsById: {}, backupBaseline: data, dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null, lastWorkItemCompletion: null, lastBulkWorkItemChange: null })
       return result
     },
 
@@ -621,6 +680,10 @@ export function createProjectStore(
       }
 
       const deletion: WorkItemDeletion = {
+        planning: {
+          task: current.planning?.tasks[workItemId] ?? null,
+          entries: Object.values(current.planning?.entries ?? {}).filter(entry => entry.taskId === workItemId),
+        },
         workItem: structuredClone(current.workItemsById[workItemId]),
         dependents: Object.values(current.workItemsById).flatMap(item => {
           const dependencyIndex = item.dependencyIds.indexOf(workItemId)
@@ -641,20 +704,27 @@ export function createProjectStore(
       const current = readProjectState(get())
       const next = restoreDeletedWorkItemState(current, deletion)
       if (next === current) return false
-      set({ ...next, lastWorkItemDeletion: null })
+      const planning = next.planning ?? EMPTY_PLANNING
+      const restoredPlanning = deletion.planning && (deletion.planning.task || deletion.planning.entries.length)
+        ? { ...planning, tasks: deletion.planning.task ? { ...planning.tasks, [deletion.workItem.id]: deletion.planning.task } : planning.tasks,
+          entries: { ...planning.entries, ...Object.fromEntries(deletion.planning.entries.map(entry => [entry.id, entry])) } }
+        : next.planning
+      set({ ...next, planning: restoredPlanning, lastWorkItemDeletion: null })
       return true
     },
 
     resetDemo() {
       const data = cloneProjectState(baseline)
       pendingExport = null
-      set({ ...data, documentDraftsById: {}, backupBaseline: data, dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null, lastWorkItemCompletion: null, lastBulkWorkItemChange: null })
+      set({ ...data, planning: data.planning, documentDraftsById: {}, backupBaseline: data, dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null, lastWorkItemCompletion: null, lastBulkWorkItemChange: null })
     },
-  }))
+    })
+  })
 }
 
 function readProjectState(store: ProjectStore): ProjectWorkspaceState {
   return {
+    ...(store.planning ? { planning: store.planning } : {}),
     workspaceIds: store.workspaceIds,
     workspacesById: store.workspacesById,
     tablesByViewId: store.tablesByViewId,

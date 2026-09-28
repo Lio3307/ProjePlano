@@ -125,6 +125,64 @@ a project/workspace removes only its owned drafts. No browser storage is used.
 
 ## Routes and ownership
 
+**Planning** (`/dashboard/planning`) provides six sections backed by the same
+dashboard store:
+
+- **Week:** schedule a work date and estimated minutes per task independently of
+  its start/deadline dates. Weeks start Monday. Set each day's available minutes
+  (default 480); planned time over that capacity is highlighted. Tasks without a
+  time estimate are counted separately. Completed scheduled tasks still count
+  toward that day's plan; archived tasks/projects are excluded.
+- **Tasks & views:** combine title, project, priority and completion filters;
+  sort by title, deadline or priority and group by project or workflow stage.
+  Name, save, update, copy or delete a view. Open task titles for the existing
+  View/Edit dialog, or **Plan & track** for scheduling, recurrence and time logs.
+- **Projects:** create/edit/delete milestones and assign project tasks. Progress
+  follows Board completion, including archived completed tasks; milestone status
+  and target date are explicit. Deleting a milestone unlinks its tasks. The
+  dependency graph traces prerequisites and downstream tasks with a textual list
+  of current blockers. Duplicate a project into a selected workspace with new IDs
+  for its views, Boards, labels, tasks, checklists, documents and milestones.
+  Table snapshots and portable attachments are copied independently. Task state,
+  dates, dependencies and saved document content are preserved. Drafts, planning
+  schedules/recurrence and time logs are not copied.
+- **Templates:** create/edit/delete personal task templates, optionally starting
+  from an existing task. Applying one creates a task on the selected Board with
+  its description, type, priority, estimate and fresh unchecked checklist. Dates,
+  dependencies, labels and document/milestone links start empty.
+- **CSV:** export the selected project's tasks or import into its selected Board.
+  Map title, description, priority, type, start/due dates and estimate columns.
+  Preview the first five rows and validate all rows before one atomic import.
+  CSV is limited to 2 MiB and 1,000 tasks; it transfers those fields only, not
+  relationships or planning data. Spreadsheet-formula-like text is prefixed with
+  an apostrophe on export; reimport retains that apostrophe. JSON is the full backup.
+- **Time report:** compare logged minutes against the planning estimate for each
+  task. **Plan & track** supports dated manual entries with notes, editing/deletion,
+  and a single active start/stop timer. Stop rounds elapsed time up to whole minutes
+  and assigns it to the start date; review long sessions manually. A timer follows
+  dashboard navigation but ends on reload/import/reset or task deletion. Only
+  stopped/recorded entries are backed up. The running timer keeps unload protection
+  active even after exporting. The original task estimate field has no assumed
+  time unit and is separate from the planning estimate in minutes.
+
+Recurrence is configured through **Plan & track** with a deadline, daily/weekly/
+monthly interval and an unfinished destination Board. Completing a task through
+Board moves, bulk moves or completion actions creates one successor, advancing
+dates from the previous deadline. Month-end rules retain their original day and
+clamp to shorter months. Successors preserve content/labels/document/milestone
+links but reset checklist progress and dependencies. Undoing completion leaves
+the successor intact; completing the original again does not generate another.
+If the destination Board has become completed, the rule stays pending: choose
+an unfinished Board and use **Create next occurrence**. Nothing runs while the
+app is closed; recurrence does not catch up missed periods automatically.
+
+Planning records use a validated optional `planning` field in JSON schema 2.
+Older schema 1/2 backups without it still import; older app versions can reject
+new backups with the field. Schedules, recurrence, capacity, templates, time
+entries and saved views stay in memory until reload and require manual export.
+Task deletion prunes its planning/time entries; task deletion Undo restores them.
+Project/workspace deletion removes owned planning and project-specific saved views.
+
 **Today** lists unfinished Board tasks across all workspaces and unarchived
 projects, grouped into **Overdue** and **Due today** using the browser's local
 date. It excludes undated/future tasks and completed Boards. Results sort by

@@ -3,6 +3,7 @@ import type { Workspace } from "../workspace/types"
 import type { BoardLabel } from "./board"
 import type { TaskBoard } from "./task-board"
 import type { TableSnapshot } from "../table/snapshot"
+import type { PlanningData } from "./planning"
 
 export type ProjectStatus = "planned" | "active" | "paused" | "completed"
 
@@ -77,6 +78,7 @@ export type Milestone = {
 }
 
 export type ProjectWorkspaceState = {
+  planning?: PlanningData
   workspaceIds: string[]
   workspacesById: Record<string, Workspace>
   tablesByViewId: Record<string, TableSnapshot>
