@@ -67,6 +67,7 @@ export type ProjectStoreActions = {
   setProjectArchived: (id: string, archived: boolean) => boolean
   deleteProject: (id: string) => boolean
   exportBackup: () => string
+  markBackupDownloaded: (text: string) => boolean
   importBackup: (text: string) => BackupResult
   updateTable: (viewId: string, update: (current: TableSnapshot) => TableSnapshot) => boolean
   createProjectFromTemplate: (input: CreateProjectInput) => boolean
@@ -120,6 +121,7 @@ export type ProjectStoreActions = {
 }
 
 export type ProjectStore = ProjectWorkspaceState & ProjectStoreActions & {
+  backupBaseline: ProjectWorkspaceState
   dataRevision: number
   lastWorkItemDeletion: WorkItemDeletion | null
   lastWorkItemCompletion: WorkItemCompletion | null
@@ -131,9 +133,12 @@ export function createProjectStore(
   initialState: ProjectWorkspaceState = createProjectSeedState()
 ): ProjectStoreApi {
   const baseline = cloneProjectState(initialState)
+  const initialData = cloneProjectState(baseline)
+  let pendingExport: { text: string; data: ProjectWorkspaceState } | null = null
 
   return createStore<ProjectStore>()((set, get) => ({
-    ...cloneProjectState(baseline),
+    ...initialData,
+    backupBaseline: initialData,
     dataRevision: 0,
     lastWorkItemDeletion: null,
     lastWorkItemCompletion: null,
@@ -200,13 +205,26 @@ export function createProjectStore(
     },
 
     exportBackup() {
-      return serializeBackup(readProjectState(get()))
+      const data = readProjectState(get())
+      const text = serializeBackup(data)
+      pendingExport = { text, data }
+      return text
+    },
+
+    markBackupDownloaded(text) {
+      if (!pendingExport || pendingExport.text !== text) return false
+      const backupBaseline = pendingExport.data
+      pendingExport = null
+      set({ backupBaseline })
+      return true
     },
 
     importBackup(text) {
       const result = parseBackup(text)
       if (!result.ok) return result
-      set({ ...cloneProjectState(result.data), dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null, lastWorkItemCompletion: null, lastBulkWorkItemChange: null })
+      const data = cloneProjectState(result.data)
+      pendingExport = null
+      set({ ...data, backupBaseline: data, dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null, lastWorkItemCompletion: null, lastBulkWorkItemChange: null })
       return result
     },
 
@@ -536,7 +554,9 @@ export function createProjectStore(
     },
 
     resetDemo() {
-      set({ ...cloneProjectState(baseline), dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null, lastWorkItemCompletion: null, lastBulkWorkItemChange: null })
+      const data = cloneProjectState(baseline)
+      pendingExport = null
+      set({ ...data, backupBaseline: data, dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null, lastWorkItemCompletion: null, lastBulkWorkItemChange: null })
     },
   }))
 }

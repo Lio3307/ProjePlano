@@ -18,6 +18,7 @@ type Preview = { text: string; filename: string; backup: Extract<BackupResult, {
 export function BackupDialog() {
   const router = useRouter()
   const exportBackup = useProjectStore(state => state.exportBackup)
+  const markBackupDownloaded = useProjectStore(state => state.markBackupDownloaded)
   const importBackup = useProjectStore(state => state.importBackup)
   const [open, setOpen] = useState(false)
   const [preview, setPreview] = useState<Preview | null>(null)
@@ -53,6 +54,7 @@ export function BackupDialog() {
       anchor.click()
       anchor.remove()
       window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+      markBackupDownloaded(text)
       setMessage("Backup download started.")
     } catch {
       setError("The backup could not be downloaded. Try again.")

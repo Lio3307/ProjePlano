@@ -3,6 +3,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useState,
   Fragment,
   type ReactNode,
@@ -14,6 +15,7 @@ import {
   type ProjectStore,
   type ProjectStoreApi,
 } from "./store"
+import { watchUnexportedChanges } from "./unexported-changes"
 
 const ProjectStoreContext = createContext<ProjectStoreApi | null>(null)
 
@@ -24,6 +26,7 @@ export function ProjectStoreProvider({
 }) {
   const [store] = useState<ProjectStoreApi>(() => createProjectStore())
   const revision = useStore(store, state => state.dataRevision)
+  useEffect(() => watchUnexportedChanges(store, window), [store])
 
   return (
     <ProjectStoreContext.Provider value={store}>

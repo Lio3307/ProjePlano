@@ -242,6 +242,16 @@ the page, and import the file to resume work. Documents still require **Save**
 before export; unfinished forms and unsaved document drafts are excluded.
 Created/edited workspaces and archived projects are included in version 2 backups.
 
+After saved dashboard data changes, closing/reloading the page or navigating away
+from the app requests the browser's native leave-page warning. Internal dashboard
+navigation does not trigger it. The warning clears when a backup download starts
+without an error, after a valid import, or after resetting the demo. Creating JSON
+alone, failed/oversized exports and invalid imports do not clear it. A later edit
+enables it again; undoing edits may still require another export. Only store data
+is tracked, not unfinished forms or document drafts before **Save**. The browser
+controls the warning text and may not show it on mobile or after a crash. Download
+completion/cancellation cannot be detected, so confirm the JSON file was saved.
+
 Table uploads embed file bytes in the backup, with a 2 MiB limit per file and
 10 MiB per selection. JSON files are limited to 20 MiB. Reduce attachments if the
 backup exceeds 20 MiB. External links store the
