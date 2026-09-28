@@ -14,6 +14,7 @@ import {
   selectTaskBoards,
 } from "../selectors"
 import { ProjectWorkItemDialog, type DialogSession } from "./project-work-item-dialog"
+import { TaskArchive } from "./task-archive"
 import { useProjectStore } from "../store-provider"
 import type {
   SupportedProjectView,
@@ -82,6 +83,7 @@ function SharedWorkItemView({
   onEditBoard,
   onSetLabels,
 }: SharedWorkItemViewProps) {
+  const setWorkItemArchived = useProjectStore(state => state.setWorkItemArchived)
   const projectViews = useProjectStore(
     useShallow((state) => selectSupportedProjectViews(state, projectId))
   )
@@ -285,10 +287,11 @@ function SharedWorkItemView({
         value={filters}
         labels={boardViews[0]?.labels ?? []}
         matchingCount={visibleWorkItemIds.size}
-        totalCount={workItems.length}
+        totalCount={workItems.filter(item => !item.archived).length}
         searchInputRef={searchInputRef}
         onChange={setFilters}
       />
+      <TaskArchive items={resolvedWorkItems} onArchive={setWorkItemArchived} />
       <p
         role="alert"
         aria-live="polite"

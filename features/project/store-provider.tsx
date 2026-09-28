@@ -16,6 +16,7 @@ import {
   type ProjectStoreApi,
 } from "./store"
 import { watchUnexportedChanges } from "./unexported-changes"
+import { DocumentNavigationProvider } from "@/features/document/components/document-navigation"
 
 const ProjectStoreContext = createContext<ProjectStoreApi | null>(null)
 
@@ -30,7 +31,7 @@ export function ProjectStoreProvider({
 
   return (
     <ProjectStoreContext.Provider value={store}>
-      <Fragment key={revision}>{children}</Fragment>
+      <Fragment key={revision}><DocumentNavigationProvider>{children}</DocumentNavigationProvider></Fragment>
     </ProjectStoreContext.Provider>
   )
 }

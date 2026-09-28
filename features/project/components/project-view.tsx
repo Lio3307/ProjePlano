@@ -19,6 +19,7 @@ interface ProjectViewProps {
   onEditBoard: (boardId: string, trigger: HTMLElement) => void
   onSetLabels: (trigger: HTMLElement) => void
   onSaveDocument: (resourceId: string, content: string) => boolean
+  onDuplicateDocument: (resourceId: string) => boolean
 }
 
 export function ProjectView({
@@ -29,6 +30,7 @@ export function ProjectView({
   onEditBoard,
   onSetLabels,
   onSaveDocument,
+  onDuplicateDocument,
 }: ProjectViewProps) {
   if (selection.kind === "document") {
     return (
@@ -39,6 +41,7 @@ export function ProjectView({
         savedContent={selection.resource.content}
         linkedWorkItems={linkedWorkItems}
         onSave={onSaveDocument}
+        onDuplicate={onDuplicateDocument}
       />
     )
   }

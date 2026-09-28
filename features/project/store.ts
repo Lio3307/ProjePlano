@@ -21,6 +21,7 @@ import {
   createFirstTaskBoardState,
   createProjectFromTemplateState,
   saveProjectDocumentState,
+  duplicateProjectDocumentState,
   updateBoardLabelsState,
   updateTaskBoardState,
   type CreateProjectDocumentInput,
@@ -39,6 +40,7 @@ import {
 import {
   createAndLinkWorkItemDocumentState,
   createWorkItemState,
+  setWorkItemArchivedState,
   completeWorkItemState,
   deleteWorkItemState,
   linkWorkItemDocumentState,
@@ -78,6 +80,8 @@ export type ProjectStoreActions = {
   updateBoardLabels: (input: UpdateBoardLabelsInput) => boolean
   addProjectDocument: (input: CreateProjectDocumentInput) => boolean
   saveProjectDocument: (resourceId: string, content: string) => boolean
+  duplicateProjectDocument: (resourceId: string, newResourceId: string) => boolean
+  setWorkItemArchived: (workItemId: string, archived: boolean) => boolean
   createWorkItem: (workItem: WorkItem) => boolean
   updateWorkItem: (
     workItemId: string,
@@ -318,6 +322,26 @@ export function createProjectStore(
       }
 
       set(next)
+      return true
+    },
+
+    duplicateProjectDocument(resourceId, newResourceId) {
+      const current = readProjectState(get())
+      const next = duplicateProjectDocumentState(current, resourceId, newResourceId)
+      if (next === current) return false
+      set(next)
+      return true
+    },
+
+    setWorkItemArchived(workItemId, archived) {
+      const current = readProjectState(get())
+      const next = setWorkItemArchivedState(current, workItemId, archived)
+      if (next === current) return false
+      set({ ...next,
+        lastWorkItemCompletion: get().lastWorkItemCompletion?.workItemId === workItemId ? null : get().lastWorkItemCompletion,
+        lastBulkWorkItemChange: get().lastBulkWorkItemChange?.entries.some(entry => entry.before.id === workItemId)
+          ? null : get().lastBulkWorkItemChange,
+      })
       return true
     },
 

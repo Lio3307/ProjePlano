@@ -1,8 +1,11 @@
 "use client"
 
-import { useId } from "react"
+import { useId, useMemo, useRef, useState } from "react"
 import { Check, ChevronDown, FileText, Plus } from "lucide-react"
-import Link from "next/link"
+import { DocumentNavigationLink as Link } from "@/features/document/components/document-navigation"
+import { getDocumentText, matchesDocumentSearch } from "@/features/document/content"
+import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -30,6 +33,13 @@ export function ProjectDocumentNavigation({
   onAddDocument,
 }: ProjectDocumentNavigationProps) {
   const availableDocumentsId = useId()
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [query, setQuery] = useState("")
+  const searchTrigger = useRef<HTMLButtonElement>(null)
+  const searchable = useMemo(() => searchOpen ? documents.map(document => ({
+    document, text: getDocumentText(document.content),
+  })) : [], [documents, searchOpen])
+  const matches = searchable.filter(({ document, text }) => matchesDocumentSearch(document.title, text, query))
   const activeDocument =
     documents.find((document) => document.id === activeDocumentId) ??
     documents[0]
@@ -109,7 +119,28 @@ export function ProjectDocumentNavigation({
           <Plus aria-hidden="true" />
           New document
         </Button>
+        <Button ref={searchTrigger} variant="ghost" className="rounded-none border-0 px-3"
+          onClick={() => { setQuery(""); setSearchOpen(true) }}>Search documents</Button>
       </nav>
+      <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
+        <DialogContent finalFocus={searchTrigger} className="flex max-w-xl flex-col overflow-hidden p-0">
+          <DialogHeader className="shrink-0 border-b py-5 pl-6 pr-14"><DialogTitle>Search documents</DialogTitle></DialogHeader>
+          <div className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
+            <Input autoFocus aria-label="Search document titles and saved content" placeholder="Search titles and saved content…"
+              value={query} onChange={event => setQuery(event.target.value)} />
+            <p role="status" className="text-sm text-muted-foreground">{matches.length} documents found</p>
+            <ul className="space-y-2">
+              {matches.map(({ document, text }) => <li key={document.id}>
+                <Link href={getProjectViewHref(workspaceId, projectId, "documents", { resourceId: document.id })}
+                  onClick={() => setSearchOpen(false)} className="block rounded-md border p-3 hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring">
+                  <p className="font-medium wrap-anywhere">{document.title}</p>
+                  <p className="line-clamp-2 text-sm text-muted-foreground wrap-anywhere">{text || "Empty document"}</p>
+                </Link>
+              </li>)}
+            </ul>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

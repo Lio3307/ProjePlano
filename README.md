@@ -52,7 +52,7 @@ tasks and does not create its own task records.
 Board and Calendar support title search plus one label, priority, and status
 filter each. Search ignores case and surrounding spaces; selected criteria
 combine. Status comes from the owning Board. **Clear filters** restores all
-tasks, and the result count covers the whole project, including other Calendar
+unarchived tasks, and the result count covers the whole project, including other Calendar
 months and unscheduled tasks. An empty result does not delete any records.
 Hidden dependencies still count as blockers, and drag positions use the complete
 Board order. Filters reset when switching Work views/projects or restoring a
@@ -77,6 +77,25 @@ dependency cycle prevent a valid restore, Undo reports an error and changes
 nothing. A newer task deletion replaces the previous Undo. Reload, successful
 backup import, demo reset, or deletion of the owning project/workspace clears it.
 Undo history is not included in JSON backups.
+
+**Archived tasks** in Board and Calendar opens the archive. Its **Completed tasks**
+list offers **Archive**; the **Archived** list offers **Restore**. Only tasks on
+Completed Boards can be archived. Archive hides their cards from Board, Calendar,
+and task search while preserving task order, content, dependencies, document links,
+and Overview completion totals. Restore returns the card to its existing Board.
+Reopening a Completed Board restores its archived tasks automatically. Moving an
+archived task also clears its archive flag. Archiving/restoring a task clears any
+completion or bulk Undo involving it. JSON schema 2 accepts the optional boolean
+task `archived` field; omitted fields in older backups mean unarchived. Older app
+versions may reject backups containing this new field.
+
+Documents provide **Duplicate saved**, **Search documents**, and **Export HTML**.
+Duplicate creates an independent, unpinned copy of saved HTML in the same project,
+without copying task backlinks or the open draft. Search matches titles and saved
+plain text within the current project. Export downloads the saved document as a
+standalone HTML file, preserving supported text formatting, checkboxes, and safe
+HTTP(S)/mailto links; scripts, embedded content, styling attributes, and remote
+assets are excluded. These actions do not save drafts or mark JSON data exported.
 
 ## Routes and ownership
 
@@ -251,8 +270,13 @@ enables it again; undoing edits may still require another export. Unfinished for
 are not tracked. The open document separately warns on reload/close while its
 content differs from the saved version, including after a failed Save or after
 exporting store data. Saving or reverting the draft clears that document warning;
-saved but unexported store changes still warn. Internal navigation away from a
-document discards its draft and removes its warning. The browser
+saved but unexported store changes still warn. Dashboard links (including project
+tabs, sidebar, breadcrumbs, document selection/search, and linked Boards) ask
+**Save & leave**, **Discard**, or **Stay** before leaving a dirty document. Failed
+saves keep the draft open. Creating another document asks before opening its form.
+Browser Back/Forward is outside this Link-based confirmation; save before using
+those controls. Explicit project deletion and backup replacement keep their own
+destructive confirmation. The browser
 controls the warning text and may not show it on mobile or after a crash. Download
 completion/cancellation cannot be detected, so confirm the JSON file was saved.
 

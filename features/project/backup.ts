@@ -116,6 +116,7 @@ function hasValidRelationships(state: ProjectWorkspaceState) {
     const board = boards[task.boardId]
     const view = board ? views[board.viewId] : undefined
     if (!board || board.projectId !== task.projectId || view?.type !== "board" ||
+      (task.archived === true && board.stage !== "done") ||
       !task.labelIds.every(id => view.labels.some(label => label.id === id)) ||
       (task.milestoneId !== null && milestones[task.milestoneId]?.projectId !== task.projectId) ||
       !task.linkedResourceIds.every(id => resources[id]?.projectId === task.projectId && resources[id].type === "document") ||

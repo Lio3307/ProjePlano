@@ -8,7 +8,7 @@ import {
   Search,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
-import Link from "next/link"
+import { DocumentNavigationLink as Link } from "@/features/document/components/document-navigation"
 import { usePathname } from "next/navigation"
 import { useShallow } from "zustand/react/shallow"
 

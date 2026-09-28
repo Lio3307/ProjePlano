@@ -70,16 +70,18 @@ const isChecklistItem = objectOf<ChecklistItem>({
 const isFieldValue = (value: unknown): value is FieldValue =>
   value === null || isString(value) || isNumber(value) || isBoolean(value) ||
   arrayOf(isString)(value) || arrayOf(isPortableAttachment)(value)
-const isTaskShape = objectOf<WorkItem>({
+const taskShape = {
   id: isId, projectId: isId, boardId: isId, title: isTitle, description: isString,
   type: oneOf(...WORK_ITEM_TYPES), priority: oneOf(...WORK_ITEM_PRIORITIES),
   startDate: nullable(isDate), dueDate: nullable(isDate), estimate: nullable(isPosition),
   position: isPosition, labelIds: uniqueIds, checklist: arrayOf(isChecklistItem),
   milestoneId: nullable(isId), dependencyIds: uniqueIds, linkedResourceIds: uniqueIds,
   customFields: recordOf(isFieldValue),
-})
+}
+const isTaskShape = objectOf<Omit<WorkItem, "archived">>(taskShape)
+const isArchivedTaskShape = objectOf<Required<WorkItem>>({ ...taskShape, archived: isBoolean })
 const isTask = (value: unknown): value is WorkItem =>
-  isTaskShape(value) && isValidWorkItem(value)
+  (isTaskShape(value) || isArchivedTaskShape(value)) && isValidWorkItem(value)
 
 const snapshotShape = {
   projectIdsByWorkspaceId: recordOf(uniqueIds),

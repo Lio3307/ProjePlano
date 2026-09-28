@@ -20,6 +20,7 @@ export type WorkItemDetailsPatch = Partial<
     | "position"
     | "startDate"
     | "dueDate"
+    | "archived"
   >
 >
 
@@ -79,6 +80,14 @@ export function createWorkItemState(
   writeOrderedItems(nextWorkItems, nextBoardItems)
 
   return { ...state, workItemsById: nextWorkItems }
+}
+
+export function setWorkItemArchivedState(state: ProjectWorkspaceState, workItemId: string, archived: boolean) {
+  const item = state.workItemsById[workItemId]
+  if (!item || typeof archived !== "boolean" || Boolean(item.archived) === archived ||
+    (archived && state.taskBoardsById[item.boardId]?.stage !== "done") ||
+    !isValidWorkItem(item) || !hasValidReferences(state, item)) return state
+  return { ...state, workItemsById: { ...state.workItemsById, [item.id]: { ...item, archived } } }
 }
 
 export function updateWorkItemState(
@@ -197,6 +206,7 @@ export function moveWorkItemState(
   const insertIndex = clampIndex(index, targetItems.length)
   const movedWorkItem = {
     ...current,
+    ...(current.archived ? { archived: false } : {}),
     boardId: targetBoardId,
     position: insertIndex,
   }
@@ -536,6 +546,7 @@ function hasValidReferences(
   if (
     !project ||
     !board ||
+    (workItem.archived === true && board.stage !== "done") ||
     boardView?.type !== "board" ||
     board.projectId !== workItem.projectId ||
     boardView.projectId !== workItem.projectId ||

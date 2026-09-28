@@ -1,8 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Save } from "lucide-react"
-import Link from "next/link"
+import { DocumentNavigationLink as Link, useDocumentNavigation } from "./document-navigation"
+import { createDocumentHtml, getDocumentFilename } from "../content"
 
 import { Button } from "@/components/ui/button"
 import { warnBeforeUnload } from "@/lib/before-unload"
@@ -23,6 +24,7 @@ interface DocumentViewProps {
   savedContent: string
   linkedWorkItems: readonly DocumentLinkedWorkLink[]
   onSave: (resourceId: string, content: string) => boolean
+  onDuplicate: (resourceId: string) => boolean
 }
 
 export function DocumentView({
@@ -31,8 +33,13 @@ export function DocumentView({
   savedContent,
   linkedWorkItems,
   onSave,
+  onDuplicate,
 }: DocumentViewProps) {
+  const navigation = useDocumentNavigation()
+  const [actionMessage, setActionMessage] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [content, setContent] = useState(savedContent)
+  const [editorRevision, setEditorRevision] = useState(0)
   const [saveState, setSaveState] = useState<
     "idle" | "saved" | "error"
   >("idle")
@@ -42,17 +49,46 @@ export function DocumentView({
     if (hasChanges) return warnBeforeUnload(window)
   }, [hasChanges])
 
-  function handleSave() {
+  const handleSave = useCallback(() => {
     if (!hasChanges) {
-      return
+      return true
     }
 
     if (!onSave(resourceId, content)) {
       setSaveState("error")
-      return
+      return false
     }
 
     setSaveState("saved")
+    return true
+  }, [hasChanges, onSave, resourceId, content])
+
+  useEffect(() => {
+    if (!hasChanges) return
+    return navigation.register({ save: handleSave, discard: () => {
+      setContent(savedContent)
+      setEditorRevision(value => value + 1)
+      setSaveState("idle")
+    } })
+  }, [hasChanges, navigation, handleSave, savedContent])
+
+  function exportHtml() {
+    setActionError(null)
+    setActionMessage(null)
+    try {
+      const blob = new Blob([createDocumentHtml(resourceTitle, savedContent)], { type: "text/html;charset=utf-8" })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement("a")
+      anchor.href = url
+      anchor.download = getDocumentFilename(resourceTitle)
+      document.body.append(anchor)
+      anchor.click()
+      anchor.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+      setActionMessage("Saved document download started.")
+    } catch {
+      setActionError("The document could not be exported.")
+    }
   }
 
   function handleChange(nextContent: string) {
@@ -72,6 +108,13 @@ export function DocumentView({
           </h2>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-3">
+          <Button type="button" variant="outline" onClick={() => {
+            setActionMessage(null)
+            setActionError(null)
+            if (onDuplicate(resourceId)) setActionMessage("Saved document copied. Available in Select document.")
+            else setActionError("The document could not be duplicated.")
+          }}>Duplicate saved</Button>
+          <Button type="button" variant="outline" onClick={exportHtml}>Export HTML</Button>
           {saveState === "error" ? (
             <p role="alert" className="text-xs text-destructive">
               Save failed
@@ -95,6 +138,8 @@ export function DocumentView({
           </Button>
         </div>
       </div>
+      {actionMessage ? <p role="status" className="px-4 py-2 text-sm text-muted-foreground">{actionMessage}</p> : null}
+      {actionError ? <p role="alert" className="px-4 py-2 text-sm text-destructive">{actionError}</p> : null}
       <div className="flex-1 overflow-y-auto">
         <section
           aria-labelledby="document-linked-work-title"
@@ -146,6 +191,7 @@ export function DocumentView({
         </section>
         <div className="mx-auto w-full max-w-3xl px-6 py-2">
           <RichEditor
+            key={editorRevision}
             content={content}
             onChange={handleChange}
             placeholder="Type / to insert blocks..."

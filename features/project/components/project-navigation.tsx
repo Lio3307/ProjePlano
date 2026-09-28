@@ -2,7 +2,7 @@
 
 import { useRef } from "react"
 import { Plus } from "lucide-react"
-import Link from "next/link"
+import { DocumentNavigationLink as Link } from "@/features/document/components/document-navigation"
 
 import { Button, buttonVariants } from "@/components/ui/button"
 import {

@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useRef, useState } from "react"
-import Link from "next/link"
+import { DocumentNavigationLink as Link, useDocumentNavigation } from "@/features/document/components/document-navigation"
 import { useRouter } from "next/navigation"
 import { useShallow } from "zustand/react/shallow"
 
@@ -82,6 +82,7 @@ function ProjectWorkspaceContent({
   resourceQuery,
 }: Omit<ProjectWorkspaceProps, "workspaceId"> & { workspace: Workspace }) {
   const router = useRouter()
+  const documentNavigation = useDocumentNavigation()
   const [actionError, setActionError] = useState<string | null>(null)
   const [boardDialogSession, setBoardDialogSession] =
     useState<BoardDialogSession | null>(null)
@@ -145,6 +146,7 @@ function ProjectWorkspaceContent({
   const saveProjectDocument = useProjectStore(
     (state) => state.saveProjectDocument
   )
+  const duplicateProjectDocument = useProjectStore(state => state.duplicateProjectDocument)
   const selection = useMemo(
     () =>
       resolveProjectSelection(
@@ -328,7 +330,7 @@ function ProjectWorkspaceContent({
   function handleAddDocument(trigger: HTMLButtonElement) {
     documentDialogTriggerRef.current = trigger
     setActionError(null)
-    setDocumentDialogOpen(true)
+    documentNavigation.request(() => setDocumentDialogOpen(true))
   }
 
   function handleCreateDocument(title: string) {
@@ -515,6 +517,10 @@ function ProjectWorkspaceContent({
             onEditBoard={openEditBoardDialog}
             onSetLabels={openLabelManagerDialog}
             onSaveDocument={saveProjectDocument}
+            onDuplicateDocument={(resourceId) => {
+              const newResourceId = "resource-" + projectId + "-document-" + crypto.randomUUID()
+              return duplicateProjectDocument(resourceId, newResourceId)
+            }}
           />
         )}
       </div>

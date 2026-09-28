@@ -124,7 +124,7 @@ export function selectSearchWorkItems(
   const normalizedQuery = query.trim().toLowerCase()
   return getCachedArray(searchWorkItemCache, state, JSON.stringify([normalizedQuery, includeCompleted]), () =>
     selectWorkspaceWorkItems(state).filter(({ workItem, board }) =>
-      (includeCompleted || board.stage !== "done") && workItem.title.toLowerCase().includes(normalizedQuery)
+      !workItem.archived && (includeCompleted || board.stage !== "done") && workItem.title.toLowerCase().includes(normalizedQuery)
     ).sort((left, right) => left.workItem.title.localeCompare(right.workItem.title) || left.workItem.id.localeCompare(right.workItem.id))
   )
 }

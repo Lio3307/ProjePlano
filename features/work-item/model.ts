@@ -43,6 +43,7 @@ export type FieldValue =
   | WorkItemAttachment[]
 
 export type WorkItem = {
+  archived?: boolean
   id: string
   projectId: string
   boardId: string
@@ -166,6 +167,7 @@ export function isValidWorkItem(item: WorkItem) {
       item.linkedResourceIds.length
 
   return (
+    (item.archived === undefined || typeof item.archived === "boolean") &&
     isNormalizedIdentity(item.id) &&
     isNormalizedIdentity(item.projectId) &&
     isNormalizedIdentity(item.boardId) &&

@@ -355,6 +355,11 @@ export function updateTaskBoardState(
       ...state.taskBoardsById,
       [current.id]: { ...current, ...fields },
     },
+    workItemsById: current.stage === "done" && fields.stage !== "done"
+      ? Object.fromEntries(Object.entries(state.workItemsById).map(([id, item]) => [
+          id, item.boardId === current.id && item.archived ? { ...item, archived: false } : item,
+        ]))
+      : state.workItemsById,
   }
 }
 
@@ -490,6 +495,20 @@ export function addProjectDocumentState(
       [document.id]: document,
     },
   }
+}
+
+export function duplicateProjectDocumentState(
+  state: ProjectWorkspaceState,
+  resourceId: string,
+  newResourceId: string
+) {
+  const source = state.resourcesById[resourceId]
+  if (source?.type !== "document" || !state.projectsById[source.projectId]?.resourceIds.includes(source.id)) return state
+  const next = addProjectDocumentState(state, {
+    id: newResourceId, projectId: source.projectId, title: source.title + " (copy)",
+  })
+  if (next === state) return state
+  return saveProjectDocumentState(next, newResourceId, source.content)
 }
 
 export function saveProjectDocumentState(

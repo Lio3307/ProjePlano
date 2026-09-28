@@ -21,6 +21,7 @@ export function filterWorkItems(
 
   return workItems.filter(
     (workItem) =>
+      !workItem.archived &&
       workItem.title.toLowerCase().includes(query) &&
       (filters.labelId === null || workItem.labelIds.includes(filters.labelId)) &&
       (filters.priority === null || workItem.priority === filters.priority) &&
