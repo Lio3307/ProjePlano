@@ -6,7 +6,6 @@ import { DocumentNavigationLink as Link, useDocumentNavigation } from "./documen
 import { createDocumentHtml, getDocumentFilename } from "../content"
 
 import { Button } from "@/components/ui/button"
-import { warnBeforeUnload } from "@/lib/before-unload"
 
 import { RichEditor } from "./rich-editor"
 
@@ -22,6 +21,9 @@ interface DocumentViewProps {
   resourceId: string
   resourceTitle: string
   savedContent: string
+  draftContent?: string
+  onDraftChange: (resourceId: string, content: string) => void
+  onDiscardDraft: (resourceId: string) => void
   linkedWorkItems: readonly DocumentLinkedWorkLink[]
   onSave: (resourceId: string, content: string) => boolean
   onDuplicate: (resourceId: string) => boolean
@@ -31,6 +33,9 @@ export function DocumentView({
   resourceId,
   resourceTitle,
   savedContent,
+  draftContent,
+  onDraftChange,
+  onDiscardDraft,
   linkedWorkItems,
   onSave,
   onDuplicate,
@@ -38,16 +43,13 @@ export function DocumentView({
   const navigation = useDocumentNavigation()
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
-  const [content, setContent] = useState(savedContent)
+  const content = draftContent ?? savedContent
   const [editorRevision, setEditorRevision] = useState(0)
   const [saveState, setSaveState] = useState<
     "idle" | "saved" | "error"
   >("idle")
   const hasChanges = content !== savedContent
   const saveMessage = getSaveMessage(hasChanges, saveState)
-  useEffect(() => {
-    if (hasChanges) return warnBeforeUnload(window)
-  }, [hasChanges])
 
   const handleSave = useCallback(() => {
     if (!hasChanges) {
@@ -63,14 +65,16 @@ export function DocumentView({
     return true
   }, [hasChanges, onSave, resourceId, content])
 
+  const handleDiscard = useCallback(() => {
+    onDiscardDraft(resourceId)
+    setEditorRevision(value => value + 1)
+    setSaveState("idle")
+  }, [onDiscardDraft, resourceId])
+
   useEffect(() => {
     if (!hasChanges) return
-    return navigation.register({ save: handleSave, discard: () => {
-      setContent(savedContent)
-      setEditorRevision(value => value + 1)
-      setSaveState("idle")
-    } })
-  }, [hasChanges, navigation, handleSave, savedContent])
+    return navigation.register({ save: handleSave, discard: handleDiscard })
+  }, [hasChanges, navigation, handleSave, handleDiscard])
 
   function exportHtml() {
     setActionError(null)
@@ -92,7 +96,7 @@ export function DocumentView({
   }
 
   function handleChange(nextContent: string) {
-    setContent(nextContent)
+    onDraftChange(resourceId, nextContent)
     setSaveState("idle")
   }
 
@@ -115,6 +119,7 @@ export function DocumentView({
             else setActionError("The document could not be duplicated.")
           }}>Duplicate saved</Button>
           <Button type="button" variant="outline" onClick={exportHtml}>Export HTML</Button>
+          <Button type="button" variant="outline" disabled={!hasChanges} onClick={handleDiscard}>Discard draft</Button>
           {saveState === "error" ? (
             <p role="alert" className="text-xs text-destructive">
               Save failed
@@ -207,7 +212,7 @@ function getSaveMessage(
   saveState: "idle" | "saved" | "error"
 ) {
   if (hasChanges) {
-    return "Unsaved changes"
+    return "Unsaved draft"
   }
 
   return saveState === "saved"

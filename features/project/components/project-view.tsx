@@ -1,3 +1,5 @@
+"use client"
+
 import {
   DocumentView,
   type DocumentLinkedWorkLink,
@@ -5,6 +7,7 @@ import {
 
 import type { ProjectSelection } from "../query-state"
 import { ProjectWorkView } from "./project-work-view"
+import { useProjectStore } from "../store-provider"
 
 type RendererSelection = Extract<
   ProjectSelection,
@@ -32,6 +35,10 @@ export function ProjectView({
   onSaveDocument,
   onDuplicateDocument,
 }: ProjectViewProps) {
+  const draftContent = useProjectStore(state => selection.kind === "document"
+    ? state.documentDraftsById[selection.resource.id] : undefined)
+  const updateDocumentDraft = useProjectStore(state => state.updateDocumentDraft)
+  const discardDocumentDraft = useProjectStore(state => state.discardDocumentDraft)
   if (selection.kind === "document") {
     return (
       <DocumentView
@@ -39,6 +46,9 @@ export function ProjectView({
         resourceId={selection.resource.id}
         resourceTitle={selection.resource.title}
         savedContent={selection.resource.content}
+        draftContent={draftContent}
+        onDraftChange={updateDocumentDraft}
+        onDiscardDraft={discardDocumentDraft}
         linkedWorkItems={linkedWorkItems}
         onSave={onSaveDocument}
         onDuplicate={onDuplicateDocument}

@@ -97,6 +97,15 @@ standalone HTML file, preserving supported text formatting, checkboxes, and safe
 HTTP(S)/mailto links; scripts, embedded content, styling attributes, and remote
 assets are excluded. These actions do not save drafts or mark JSON data exported.
 
+Document edits are retained per document in the dashboard session, including when
+Back/Forward unmounts the editor. Reopening the document restores its draft,
+including an intentionally empty draft. **Unsaved draft** appears in the editor,
+document selector, and search results. **Save** saves its content and clears that
+draft; **Discard draft** restores the saved content. Reverting to the saved content
+also clears the draft. Drafts are excluded from JSON/HTML export, duplication, and
+saved-content search. They reset on reload, valid import, or demo reset; deleting
+a project/workspace removes only its owned drafts. No browser storage is used.
+
 ## Routes and ownership
 
 **Today** lists unfinished Board tasks across all workspaces and unarchived
@@ -267,15 +276,17 @@ navigation does not trigger it. The warning clears when a backup download starts
 without an error, after a valid import, or after resetting the demo. Creating JSON
 alone, failed/oversized exports and invalid imports do not clear it. A later edit
 enables it again; undoing edits may still require another export. Unfinished forms
-are not tracked. The open document separately warns on reload/close while its
-content differs from the saved version, including after a failed Save or after
-exporting store data. Saving or reverting the draft clears that document warning;
+are not tracked. Retained document drafts warn on reload/close even while their
+editors are closed, including after a failed Save or after exporting store data.
+Saving, discarding, or reverting all drafts clears that draft warning;
 saved but unexported store changes still warn. Dashboard links (including project
 tabs, sidebar, breadcrumbs, document selection/search, and linked Boards) ask
 **Save & leave**, **Discard**, or **Stay** before leaving a dirty document. Failed
 saves keep the draft open. Creating another document asks before opening its form.
-Browser Back/Forward is outside this Link-based confirmation; save before using
-those controls. Explicit project deletion and backup replacement keep their own
+Browser Back/Forward within the dashboard does not show this Link-based
+confirmation, but retains the draft for reopening in the same session. Leaving
+the dashboard or reloading still ends the in-memory session. Explicit project
+deletion and backup replacement keep their own
 destructive confirmation. The browser
 controls the warning text and may not show it on mobile or after a crash. Download
 completion/cancellation cannot be detected, so confirm the JSON file was saved.

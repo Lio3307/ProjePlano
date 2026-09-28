@@ -80,6 +80,8 @@ export type ProjectStoreActions = {
   updateBoardLabels: (input: UpdateBoardLabelsInput) => boolean
   addProjectDocument: (input: CreateProjectDocumentInput) => boolean
   saveProjectDocument: (resourceId: string, content: string) => boolean
+  updateDocumentDraft: (resourceId: string, content: string) => boolean
+  discardDocumentDraft: (resourceId: string) => boolean
   duplicateProjectDocument: (resourceId: string, newResourceId: string) => boolean
   setWorkItemArchived: (workItemId: string, archived: boolean) => boolean
   createWorkItem: (workItem: WorkItem) => boolean
@@ -125,6 +127,7 @@ export type ProjectStoreActions = {
 }
 
 export type ProjectStore = ProjectWorkspaceState & ProjectStoreActions & {
+  documentDraftsById: Record<string, string>
   backupBaseline: ProjectWorkspaceState
   dataRevision: number
   lastWorkItemDeletion: WorkItemDeletion | null
@@ -142,6 +145,7 @@ export function createProjectStore(
 
   return createStore<ProjectStore>()((set, get) => ({
     ...initialData,
+    documentDraftsById: {},
     backupBaseline: initialData,
     dataRevision: 0,
     lastWorkItemDeletion: null,
@@ -171,6 +175,7 @@ export function createProjectStore(
       const deletion = get().lastWorkItemDeletion
       const completion = get().lastWorkItemCompletion
       set({ ...next,
+        documentDraftsById: retainDocumentDrafts(get().documentDraftsById, next),
         lastWorkItemDeletion: deletion && next.projectsById[deletion.workItem.projectId] ? deletion : null,
         lastWorkItemCompletion: completion && next.projectsById[completion.projectId] ? completion : null,
         lastBulkWorkItemChange: retainBulkWorkItemChange(get().lastBulkWorkItemChange, next),
@@ -201,6 +206,7 @@ export function createProjectStore(
       const deletion = get().lastWorkItemDeletion
       const completion = get().lastWorkItemCompletion
       set({ ...next,
+        documentDraftsById: retainDocumentDrafts(get().documentDraftsById, next),
         lastWorkItemDeletion: deletion && next.projectsById[deletion.workItem.projectId] ? deletion : null,
         lastWorkItemCompletion: completion && next.projectsById[completion.projectId] ? completion : null,
         lastBulkWorkItemChange: retainBulkWorkItemChange(get().lastBulkWorkItemChange, next),
@@ -228,7 +234,7 @@ export function createProjectStore(
       if (!result.ok) return result
       const data = cloneProjectState(result.data)
       pendingExport = null
-      set({ ...data, backupBaseline: data, dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null, lastWorkItemCompletion: null, lastBulkWorkItemChange: null })
+      set({ ...data, documentDraftsById: {}, backupBaseline: data, dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null, lastWorkItemCompletion: null, lastBulkWorkItemChange: null })
       return result
     },
 
@@ -345,6 +351,23 @@ export function createProjectStore(
       return true
     },
 
+    updateDocumentDraft(resourceId, content) {
+      const resource = get().resourcesById[resourceId]
+      if (resource?.type !== "document" || typeof content !== "string") return false
+      if (content === resource.content) return get().discardDocumentDraft(resourceId)
+      if (get().documentDraftsById[resourceId] === content) return false
+      set({ documentDraftsById: { ...get().documentDraftsById, [resourceId]: content } })
+      return true
+    },
+
+    discardDocumentDraft(resourceId) {
+      if (!Object.hasOwn(get().documentDraftsById, resourceId)) return false
+      const documentDraftsById = { ...get().documentDraftsById }
+      delete documentDraftsById[resourceId]
+      set({ documentDraftsById })
+      return true
+    },
+
     saveProjectDocument(resourceId, content) {
       const current = readProjectState(get())
       const next = saveProjectDocumentState(current, resourceId, content)
@@ -353,7 +376,9 @@ export function createProjectStore(
         return false
       }
 
-      set(next)
+      const documentDraftsById = { ...get().documentDraftsById }
+      if (documentDraftsById[resourceId] === content) delete documentDraftsById[resourceId]
+      set({ ...next, documentDraftsById })
       return true
     },
 
@@ -580,7 +605,7 @@ export function createProjectStore(
     resetDemo() {
       const data = cloneProjectState(baseline)
       pendingExport = null
-      set({ ...data, backupBaseline: data, dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null, lastWorkItemCompletion: null, lastBulkWorkItemChange: null })
+      set({ ...data, documentDraftsById: {}, backupBaseline: data, dataRevision: get().dataRevision + 1, lastWorkItemDeletion: null, lastWorkItemCompletion: null, lastBulkWorkItemChange: null })
     },
   }))
 }
@@ -602,4 +627,8 @@ function readProjectState(store: ProjectStore): ProjectWorkspaceState {
 
 function cloneProjectState(state: ProjectWorkspaceState) {
   return structuredClone(state)
+}
+
+function retainDocumentDrafts(drafts: Record<string, string>, state: ProjectWorkspaceState) {
+  return Object.fromEntries(Object.entries(drafts).filter(([id]) => state.resourcesById[id]?.type === "document"))
 }

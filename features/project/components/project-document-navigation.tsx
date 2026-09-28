@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import type { ProjectDocumentResource } from "../model"
 import { getProjectViewHref } from "../query-state"
+import { useProjectStore } from "../store-provider"
 
 type ProjectDocumentNavigationProps = {
   workspaceId: string
@@ -33,6 +34,7 @@ export function ProjectDocumentNavigation({
   onAddDocument,
 }: ProjectDocumentNavigationProps) {
   const availableDocumentsId = useId()
+  const drafts = useProjectStore(state => state.documentDraftsById)
   const [searchOpen, setSearchOpen] = useState(false)
   const [query, setQuery] = useState("")
   const searchTrigger = useRef<HTMLButtonElement>(null)
@@ -73,6 +75,7 @@ export function ProjectDocumentNavigation({
               <span className="truncate">
                 {activeDocument?.title ?? "Select document"}
               </span>
+              {activeDocument && Object.hasOwn(drafts, activeDocument.id) ? <span className="shrink-0 text-xs text-muted-foreground">Unsaved draft</span> : null}
             </span>
             <ChevronDown aria-hidden="true" />
           </DropdownMenuTrigger>
@@ -100,6 +103,7 @@ export function ProjectDocumentNavigation({
                   <span className="min-w-0 flex-1 truncate">
                     {document.title}
                   </span>
+                  {Object.hasOwn(drafts, document.id) ? <span className="shrink-0 text-xs text-muted-foreground">Unsaved draft</span> : null}
                   {active ? (
                     <Check aria-hidden="true" className="ml-auto" />
                   ) : null}
@@ -134,6 +138,7 @@ export function ProjectDocumentNavigation({
                 <Link href={getProjectViewHref(workspaceId, projectId, "documents", { resourceId: document.id })}
                   onClick={() => setSearchOpen(false)} className="block rounded-md border p-3 hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring">
                   <p className="font-medium wrap-anywhere">{document.title}</p>
+                  {Object.hasOwn(drafts, document.id) ? <p className="text-xs text-muted-foreground">Unsaved draft</p> : null}
                   <p className="line-clamp-2 text-sm text-muted-foreground wrap-anywhere">{text || "Empty document"}</p>
                 </Link>
               </li>)}

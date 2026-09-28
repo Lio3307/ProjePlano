@@ -2,11 +2,10 @@ import assert from "node:assert/strict"
 import test from "node:test"
 import { createProjectStore } from "./store.ts"
 import { hasUnexportedChanges, watchUnexportedChanges } from "./unexported-changes.ts"
-import { warnBeforeUnload } from "../../lib/before-unload.ts"
 
 const taskId = "work-item-2-audit-onboarding"
 
-test("exporting store data does not remove the separate document draft warning", () => {
+test("exporting saved data keeps draft protection, and saving the draft still requires export", () => {
   const store = createProjectStore()
   const listeners = new Set()
   const target = {
@@ -14,18 +13,18 @@ test("exporting store data does not remove the separate document draft warning",
     removeEventListener: (_name, handler) => listeners.delete(handler),
   }
   const stopStore = watchUnexportedChanges(store, target)
-  const stopDraft = warnBeforeUnload(target)
+  const document = Object.values(store.getState().resourcesById).find(resource => resource.type === "document")
+  store.getState().updateDocumentDraft(document.id, "<p>Draft</p>")
   assert.equal(listeners.size, 1)
   store.getState().updateWorkItem(taskId, { title: "Changed" })
-  assert.equal(listeners.size, 2)
+  assert.equal(listeners.size, 1)
   store.getState().markBackupDownloaded(store.getState().exportBackup())
   assert.equal(listeners.size, 1)
   const event = { prevented: false, returnValue: "", preventDefault() { this.prevented = true } }
   for (const listener of listeners) listener(event)
   assert.equal(event.prevented, true)
   assert.ok(event.returnValue)
-  store.getState().updateWorkItem(taskId, { title: "Saved new content" })
-  stopDraft()
+  store.getState().saveProjectDocument(document.id, "<p>Draft</p>")
   assert.equal(listeners.size, 1, "saving the draft must not remove the store warning")
   stopStore()
   assert.equal(listeners.size, 0)

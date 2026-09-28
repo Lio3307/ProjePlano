@@ -21,7 +21,8 @@ export function watchUnexportedChanges(
 ) {
   let stopWarning: (() => void) | null = null
   function sync() {
-    const dirty = hasUnexportedChanges(store.getState())
+    const state = store.getState()
+    const dirty = hasUnexportedChanges(state) || Object.keys(state.documentDraftsById).length > 0
     if (dirty === (stopWarning !== null)) return
     stopWarning?.()
     stopWarning = dirty ? warnBeforeUnload(target) : null
